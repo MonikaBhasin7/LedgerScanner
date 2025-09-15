@@ -30,7 +30,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ExamListingActivity"
+            android:name=".feature.scanner.exam.ui.ExamListingActivity"
             android:theme="@style/Theme.LedgerScanner">
         </activity>
     </application>

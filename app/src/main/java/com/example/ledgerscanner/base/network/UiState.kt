@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.base.ui.network
+package com.example.ledgerscanner.base.network
 
 sealed class UiState<T> {
     data class Success<T>(val data: T?) : UiState<T>()

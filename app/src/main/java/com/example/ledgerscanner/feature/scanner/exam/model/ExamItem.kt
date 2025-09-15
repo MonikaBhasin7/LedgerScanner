@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.models
+package com.example.ledgerscanner.feature.scanner.exam.model
 
 data class ExamItem(
     val id: String,                // unique exam ID

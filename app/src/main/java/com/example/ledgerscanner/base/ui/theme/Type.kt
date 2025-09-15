@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.ui.theme
+package com.example.ledgerscanner.base.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

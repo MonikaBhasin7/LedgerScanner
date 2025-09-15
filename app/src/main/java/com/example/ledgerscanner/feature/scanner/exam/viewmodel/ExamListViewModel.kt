@@ -1,10 +1,10 @@
-package com.example.ledgerscanner
+package com.example.ledgerscanner.feature.scanner.exam.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.ledgerscanner.base.ui.network.UiState
-import com.example.ledgerscanner.models.ExamItem
-import com.example.ledgerscanner.models.ExamStatus
+import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamItem
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch

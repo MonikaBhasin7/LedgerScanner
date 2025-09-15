@@ -1,4 +1,4 @@
-package com.example.ledgerscanner
+package com.example.ledgerscanner.feature.scanner.exam.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -26,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -48,19 +47,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.ledgerscanner.base.ui.GenericToolbar
-import com.example.ledgerscanner.base.ui.network.UiState
-import com.example.ledgerscanner.models.ExamItem
-import com.example.ledgerscanner.models.ExamStatus
-import com.example.ledgerscanner.ui.theme.Black
-import com.example.ledgerscanner.ui.theme.Blue100
-import com.example.ledgerscanner.ui.theme.Blue500
-import com.example.ledgerscanner.ui.theme.Grey100
-import com.example.ledgerscanner.ui.theme.Grey200
-import com.example.ledgerscanner.ui.theme.Grey50
-import com.example.ledgerscanner.ui.theme.Grey500
-import com.example.ledgerscanner.ui.theme.LedgerScannerTheme
-import com.example.ledgerscanner.ui.theme.White
+import com.example.ledgerscanner.base.ui.components.GenericToolbar
+import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.ui.components.GenericEmptyState
+import com.example.ledgerscanner.base.ui.components.GenericLoader
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamItem
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.base.ui.theme.Black
+import com.example.ledgerscanner.base.ui.theme.Blue100
+import com.example.ledgerscanner.base.ui.theme.Blue500
+import com.example.ledgerscanner.base.ui.theme.Grey100
+import com.example.ledgerscanner.base.ui.theme.Grey200
+import com.example.ledgerscanner.base.ui.theme.Grey50
+import com.example.ledgerscanner.base.ui.theme.Grey500
+import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
+import com.example.ledgerscanner.base.ui.theme.White
+import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 
 class ExamListingActivity : ComponentActivity() {
     private val examListViewModel = ExamListViewModel()
@@ -123,11 +125,10 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             is UiState.Success<*> -> {
-                @Suppress("UNCHECKED_CAST")
                 val items = (state as UiState.Success<List<ExamItem>>).data ?: emptyList()
 
                 if (items.isEmpty()) {
-                    EmptyState(text = "No exams found")
+                    GenericEmptyState(text = "No exams found")
                     return
                 }
 
@@ -228,20 +229,6 @@ class ExamListingActivity : ComponentActivity() {
             contentAlignment = Alignment.Center
         ) {
             Text(text = status.name, color = Grey500)
-        }
-    }
-
-    @Composable
-    private fun EmptyState(text: String) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = text)
-        }
-    }
-
-    @Composable
-    private fun GenericLoader() {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Blue500)
         }
     }
 
