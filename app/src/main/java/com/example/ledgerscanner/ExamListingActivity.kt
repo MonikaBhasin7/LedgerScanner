@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +63,8 @@ import com.example.ledgerscanner.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.ui.theme.White
 
 class ExamListingActivity : ComponentActivity() {
-    val examListViewModel = ExamListViewModel()
+    private val examListViewModel = ExamListViewModel()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -81,108 +83,61 @@ class ExamListingActivity : ComponentActivity() {
                                 .padding(innerPadding)
                         ) {
                             var examFilter by remember { mutableStateOf<ExamStatus?>(null) }
+                            val examListResponse by examListViewModel.examList.collectAsState()
+
                             SearchBar()
-                            FilterChips { selectedFilter ->
+
+                            // Disable chips while loading
+                            val isLoading = examListResponse is UiState.Loading
+                            FilterChips(disableClicking = isLoading) { selectedFilter ->
                                 examFilter = selectedFilter
                             }
-                            ExamList(examFilter)
+
+                            ExamList(examFilter, examListResponse)
                         }
                     }
-
                 )
             }
         }
     }
 
     @Composable
-    private fun ExamList(examFilter: ExamStatus?) {
-        val examListResponse by examListViewModel.examList.collectAsState()
+    private fun ExamList(examFilter: ExamStatus?, examListResponse: UiState<List<ExamItem>>) {
+        // load whenever filter changes
         LaunchedEffect(examFilter) {
             examListViewModel.getExamList(examFilter)
         }
-        when (val state = examListResponse) {
-            is UiState.Error -> GenericLoader()
-            is UiState.Loading -> GenericLoader()
-            is UiState.Success<List<ExamItem>> -> {
-                val items = state.data ?: emptyList()
+
+        val state = examListResponse
+
+        when (state) {
+            is UiState.Loading -> {
+                GenericLoader()
+            }
+
+            is UiState.Error -> {
+                ErrorScreen(
+                    message = (state as UiState.Error).message,
+                    onRetry = { examListViewModel.getExamList(examFilter) }
+                )
+            }
+
+            is UiState.Success<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                val items = (state as UiState.Success<List<ExamItem>>).data ?: emptyList()
 
                 if (items.isEmpty()) {
                     EmptyState(text = "No exams found")
-                } else {
-                    return LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                            Box(
-                                modifier = Modifier
-                                    .border(
-                                        width = 1.dp,
-                                        color = Grey200,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .background(color = Grey100)
-                                    .padding(13.dp)
-                            ) {
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp) // overall size
-                                            .background(
-                                                color = Blue100,         // your light blue (#DBE7FB)
-                                                shape = RoundedCornerShape(12.dp) // rounded square
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.DateRange,
-                                            contentDescription = "Exam Icon",
-                                            tint = Blue500,
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        // title + status row
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = item.title,
-                                                color = Black,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.weight(1f)
-                                            )
+                    return
+                }
 
-                                            Spacer(modifier = Modifier.width(8.dp))
-
-                                            // Status badge
-                                            StatusBadge(status = item.status)
-                                        }
-
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        // meta line 1: questions · created date · sheets
-                                        Text(
-                                            text = "${item.totalQuestions} questions \u2022 Created ${item.createdDate} \u2022 Sheets: ${item.sheetsCount}",
-                                            color = Grey500,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        // stats line
-                                        Text(
-                                            text = "Avg ${item.avgScorePercent}% \u2022 Top ${item.topScorePercent}% \u2022 Median ${item.medianScorePercent}%",
-                                            color = Grey500
-                                        )
-                                    }
-                                }
-                            }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(items, key = { _, item -> item.id }) { _, item ->
+                        ExamCardRow(item = item) {
                         }
                     }
                 }
@@ -191,11 +146,76 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
+    private fun ExamCardRow(item: ExamItem, onClick: (() -> Unit)? = null) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .border(width = 1.dp, color = Grey200, shape = RoundedCornerShape(12.dp))
+                .background(color = Grey100, shape = RoundedCornerShape(12.dp))
+                .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+                .padding(13.dp)
+        ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Blue100),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.DateRange,
+                        contentDescription = "Exam Icon",
+                        tint = Blue500,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.title,
+                            color = Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        StatusBadge(status = item.status)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "${item.totalQuestions} questions \u2022 Created ${item.createdDate} \u2022 Sheets: ${item.sheetsCount}",
+                        color = Grey500,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Avg ${item.avgScorePercent}% \u2022 Top ${item.topScorePercent}% \u2022 Median ${item.medianScorePercent}%",
+                        color = Grey500
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
     private fun StatusBadge(status: ExamStatus) {
-        //todo monika will think in future
 //        val (bg, textColor) = when (status) {
-//            ExamStatus.Processing -> Pair(Blue50, Blue500)
-//            ExamStatus.Completed -> Pair(Green50, Green500)
+//            ExamStatus.Processing -> Pair(Grey100, Blue500)
+//            ExamStatus.Completed -> Pair(Grey100, /* green text - define in Color.kt if needed */ Blue500)
 //            ExamStatus.Draft -> Pair(Grey100, Grey500)
 //        }
 
@@ -207,35 +227,31 @@ class ExamListingActivity : ComponentActivity() {
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = status.name,
-                color = Grey500,
-            )
+            Text(text = status.name, color = Grey500)
         }
     }
 
-
     @Composable
     private fun EmptyState(text: String) {
-
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = text)
+        }
     }
 
     @Composable
     private fun GenericLoader() {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(
-                color = Blue500
-            )
+            CircularProgressIndicator(color = Blue500)
         }
     }
 
-
     @Composable
-    private fun FilterChips(onSelect: (ExamStatus?) -> Unit) {
-        val filters : MutableList<ExamStatus?> = ExamStatus.entries.toMutableList()
-        filters.add(0, null)
+    private fun FilterChips(disableClicking: Boolean, onSelect: (ExamStatus?) -> Unit) {
+        val filters: MutableList<ExamStatus?> = ExamStatus.entries.toMutableList()
+        filters.add(0, null) // null represents "All"
         var selectedIndex by remember { mutableIntStateOf(0) }
-        return Row(
+
+        Row(
             modifier = Modifier
                 .padding(start = 12.dp, top = 12.dp, end = 16.dp)
                 .fillMaxWidth()
@@ -244,7 +260,7 @@ class ExamListingActivity : ComponentActivity() {
                 FilterChip(
                     selected = (selectedIndex == i),
                     onClick = {
-                        if (selectedIndex != i) {
+                        if (!disableClicking && selectedIndex != i) {
                             selectedIndex = i
                             onSelect(filters[selectedIndex])
                         }
@@ -258,13 +274,11 @@ class ExamListingActivity : ComponentActivity() {
                     ),
                     shape = RoundedCornerShape(24.dp),
                     border = null,
-                    modifier = Modifier.padding(end = 8.dp)
+                    modifier = Modifier.padding(end = 8.dp),
                 )
-
             }
         }
     }
-
 
     @Composable
     private fun SearchBar() {
@@ -279,10 +293,7 @@ class ExamListingActivity : ComponentActivity() {
             },
             trailingIcon = {
                 if (text.text.isNotEmpty())
-                    Icon(
-                        Icons.Default.ArrowForward,
-                        contentDescription = null,
-                    )
+                    Icon(Icons.Filled.ArrowForward, contentDescription = null)
             },
             modifier = Modifier
                 .padding(horizontal = 16.dp)
@@ -301,5 +312,24 @@ class ExamListingActivity : ComponentActivity() {
                 unfocusedPlaceholderColor = Grey500
             )
         )
+    }
+
+    @Composable
+    private fun ErrorScreen(message: String?, onRetry: () -> Unit) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = message ?: "Something went wrong")
+            Spacer(modifier = Modifier.height(12.dp))
+            // simple retry text button
+            Text(
+                text = "Retry",
+                modifier = Modifier.clickable { onRetry() }
+            )
+        }
     }
 }

@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 
 class ExamListViewModel : ViewModel() {
 
-    private val _examList = MutableStateFlow<UiState<List<ExamItem>>>(UiState.Loading("initial"))
+    private val _examList = MutableStateFlow<UiState<List<ExamItem>>>(UiState.Loading())
     val examList: MutableStateFlow<UiState<List<ExamItem>>> = _examList
 
     fun getExamList(examFilter: ExamStatus?) {
