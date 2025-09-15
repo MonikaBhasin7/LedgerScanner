@@ -4,15 +4,28 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -21,17 +34,27 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.GenericToolbar
+import com.example.ledgerscanner.base.ui.network.UiState
+import com.example.ledgerscanner.models.ExamItem
+import com.example.ledgerscanner.models.ExamStatus
+import com.example.ledgerscanner.ui.theme.Black
 import com.example.ledgerscanner.ui.theme.Blue100
 import com.example.ledgerscanner.ui.theme.Blue500
+import com.example.ledgerscanner.ui.theme.Grey100
 import com.example.ledgerscanner.ui.theme.Grey200
 import com.example.ledgerscanner.ui.theme.Grey50
 import com.example.ledgerscanner.ui.theme.Grey500
@@ -39,6 +62,7 @@ import com.example.ledgerscanner.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.ui.theme.White
 
 class ExamListingActivity : ComponentActivity() {
+    val examListViewModel = ExamListViewModel()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -56,8 +80,12 @@ class ExamListingActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
+                            var examFilter by remember { mutableStateOf<ExamStatus?>(null) }
                             SearchBar()
-                            FilterChips()
+                            FilterChips { selectedFilter ->
+                                examFilter = selectedFilter
+                            }
+                            ExamList(examFilter)
                         }
                     }
 
@@ -67,8 +95,145 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun FilterChips() {
-        val filters = listOf("All", "Processing", "Draft", "Completed")
+    private fun ExamList(examFilter: ExamStatus?) {
+        val examListResponse by examListViewModel.examList.collectAsState()
+        LaunchedEffect(examFilter) {
+            examListViewModel.getExamList(examFilter)
+        }
+        when (val state = examListResponse) {
+            is UiState.Error -> GenericLoader()
+            is UiState.Loading -> GenericLoader()
+            is UiState.Success<List<ExamItem>> -> {
+                val items = state.data ?: emptyList()
+
+                if (items.isEmpty()) {
+                    EmptyState(text = "No exams found")
+                } else {
+                    return LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                            Box(
+                                modifier = Modifier
+                                    .border(
+                                        width = 1.dp,
+                                        color = Grey200,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .background(color = Grey100)
+                                    .padding(13.dp)
+                            ) {
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp) // overall size
+                                            .background(
+                                                color = Blue100,         // your light blue (#DBE7FB)
+                                                shape = RoundedCornerShape(12.dp) // rounded square
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.DateRange,
+                                            contentDescription = "Exam Icon",
+                                            tint = Blue500,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        // title + status row
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = item.title,
+                                                color = Black,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f)
+                                            )
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            // Status badge
+                                            StatusBadge(status = item.status)
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        // meta line 1: questions · created date · sheets
+                                        Text(
+                                            text = "${item.totalQuestions} questions \u2022 Created ${item.createdDate} \u2022 Sheets: ${item.sheetsCount}",
+                                            color = Grey500,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        // stats line
+                                        Text(
+                                            text = "Avg ${item.avgScorePercent}% \u2022 Top ${item.topScorePercent}% \u2022 Median ${item.medianScorePercent}%",
+                                            color = Grey500
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun StatusBadge(status: ExamStatus) {
+        //todo monika will think in future
+//        val (bg, textColor) = when (status) {
+//            ExamStatus.Processing -> Pair(Blue50, Blue500)
+//            ExamStatus.Completed -> Pair(Green50, Green500)
+//            ExamStatus.Draft -> Pair(Grey100, Grey500)
+//        }
+
+        Box(
+            modifier = Modifier
+                .height(28.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Grey200)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = status.name,
+                color = Grey500,
+            )
+        }
+    }
+
+
+    @Composable
+    private fun EmptyState(text: String) {
+
+    }
+
+    @Composable
+    private fun GenericLoader() {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                color = Blue500
+            )
+        }
+    }
+
+
+    @Composable
+    private fun FilterChips(onSelect: (ExamStatus?) -> Unit) {
+        val filters : MutableList<ExamStatus?> = ExamStatus.entries.toMutableList()
+        filters.add(0, null)
         var selectedIndex by remember { mutableIntStateOf(0) }
         return Row(
             modifier = Modifier
@@ -79,9 +244,12 @@ class ExamListingActivity : ComponentActivity() {
                 FilterChip(
                     selected = (selectedIndex == i),
                     onClick = {
-                        selectedIndex = i
+                        if (selectedIndex != i) {
+                            selectedIndex = i
+                            onSelect(filters[selectedIndex])
+                        }
                     },
-                    label = { Text(filter) },
+                    label = { Text(filter?.name ?: "All") },
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = Blue100,
                         selectedContainerColor = Blue500,
@@ -129,6 +297,8 @@ class ExamListingActivity : ComponentActivity() {
                 unfocusedIndicatorColor = Grey200,
                 focusedTrailingIconColor = Grey500,
                 unfocusedTrailingIconColor = Grey500,
+                focusedPlaceholderColor = Grey500,
+                unfocusedPlaceholderColor = Grey500
             )
         )
     }
