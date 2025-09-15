@@ -1,0 +1,23 @@
+package com.example.ledgerscanner
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+
+class SplashActivity : AppCompatActivity() {
+
+    private var openTheScreen = true
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val splashScreen = installSplashScreen()
+
+        splashScreen.setKeepOnScreenCondition {
+            openTheScreen
+        }
+
+        openTheScreen = false
+        startActivity(Intent(this@SplashActivity, ExamListingActivity::class.java))
+        finish()
+    }
+}
