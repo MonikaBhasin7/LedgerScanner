@@ -12,39 +12,48 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+// Light color scheme using only your provided colors
 private val LightColorScheme = lightColorScheme(
-    primary = BluePrimary,         // #277EFF
-    onPrimary = White,             // text/icons on primary
-    secondary = BlueLight,         // #DBE8FB (soft blue)
-    onSecondary = Color(0xFF1C1B1F),
-    tertiary = SuccessGreen,       // accent (success green)
+    primary = Blue500,          // main brand color
+    onPrimary = White,
+
+    secondary = Blue100,
+    onSecondary = Black,
+
+    tertiary = Grey500,
     onTertiary = White,
 
     background = White,
-    onBackground = Color(0xFF1C1B1F),
-    surface = Gray50,              // subtle grey
-    onSurface = Color(0xFF1C1B1F),
+    onBackground = Black,
 
-    error = ErrorRed,
+    surface = Grey50,           // subtle card / surface background in light theme
+    onSurface = Black,
+
+    error = Grey500,            // fallback (no red in palette)
     onError = White
 )
 
+// Dark color scheme using only your provided colors
 private val DarkColorScheme = darkColorScheme(
-    primary = BlueLight,           // softer for dark mode
-    onPrimary = Color(0xFF000000),
-    secondary = BluePrimary,       // stronger blue in dark
-    onSecondary = White,
-    tertiary = SuccessGreen,
-    onTertiary = Color(0xFF000000),
+    primary = Blue100,         // softer blue looks better as primary in dark
+    onPrimary = Black,
 
-    background = Color(0xFF121212),
+    secondary = Blue500,
+    onSecondary = White,
+
+    tertiary = Grey200,
+    onTertiary = Black,
+
+    background = Black,
     onBackground = White,
-    surface = Color(0xFF1E1E1E),
+
+    surface = Grey200,         // cards / surfaces in dark use light grey from your palette
     onSurface = White,
 
-    error = ErrorRed,
-    onError = Color(0xFF000000)
+    error = Grey500,           // fallback
+    onError = White
 )
+
 
 @Composable
 fun LedgerScannerTheme(
