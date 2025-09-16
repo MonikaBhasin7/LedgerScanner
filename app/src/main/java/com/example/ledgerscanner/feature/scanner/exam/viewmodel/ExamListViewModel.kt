@@ -5,11 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamItem
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ExamListViewModel : ViewModel() {
+@HiltViewModel
+class ExamListViewModel @Inject constructor() : ViewModel() {
 
     private val _examList = MutableStateFlow<UiState<List<ExamItem>>>(UiState.Loading())
     val examList: MutableStateFlow<UiState<List<ExamItem>>> = _examList

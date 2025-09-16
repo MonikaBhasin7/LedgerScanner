@@ -3,8 +3,9 @@ package com.example.ledgerscanner.feature.scanner.exam.repo
 import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.entity.ExamEntity
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
-class ExamRepository(private val dao: ExamDao) {
+class ExamRepository @Inject constructor(private val dao: ExamDao) {
     fun observeExams(): Flow<List<ExamEntity>> = dao.getAllExamsFlow()
 
     suspend fun getExam(id: String): ExamEntity? = dao.getExamById(id)
