@@ -54,7 +54,7 @@ fun GenericToolbar(title: String, onBackClick: (() -> Unit)? = null) {
                             .padding(start = 8.dp, end = 10.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(color = Blue100)
-                            .padding(12.dp),
+                            .padding(8.dp),
                     ) {
                         Icon(
                             Icons.Sharp.ArrowBack,

@@ -80,4 +80,5 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)   //
+    implementation("androidx.compose.material:material-icons-extended:1.7.2")
 }

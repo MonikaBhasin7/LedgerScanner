@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericLoader
+import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.utils.ImageUtils
 import java.io.File
@@ -57,7 +59,6 @@ class PreviewImageActivity : BaseActivity() {
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Image area
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -79,20 +80,25 @@ class PreviewImageActivity : BaseActivity() {
                 }
             }
 
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .background(color = Grey200)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Button(modifier = Modifier.weight(1f), onClick = { onClose() }) {
-                    Text("Rescan")
-                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(modifier = Modifier.weight(1f), onClick = { onClose() }) {
+                        Text("Rescan", style = MaterialTheme.typography.labelMedium)
+                    }
 
-                Button(modifier = Modifier.weight(1f), onClick = {
-                    onSubmit(File(imagePath))
-                }) {
-                    Text("Submit")
+                    Button(modifier = Modifier.weight(1f), onClick = {
+                        onSubmit(File(imagePath))
+                    }) {
+                        Text("Submit", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }

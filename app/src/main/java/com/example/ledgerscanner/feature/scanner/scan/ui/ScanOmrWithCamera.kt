@@ -31,8 +31,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.OpenWith
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -161,9 +165,9 @@ class ScanOmrWithCamera : BaseActivity() {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Settings, // Material icon
+                        imageVector = Icons.Filled.CameraAlt,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -263,15 +267,15 @@ class ScanOmrWithCamera : BaseActivity() {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 TipRow(
-                    icon = Icons.Outlined.Info,
+                    icon = Icons.Outlined.OpenWith,
                     text = "Fill the frame, include all four corners."
                 )
                 TipRow(
-                    icon = Icons.Outlined.Info,
+                    icon = Icons.Outlined.WbSunny,
                     text = "Avoid glare and shadows on bubbles."
                 )
                 TipRow(
-                    icon = Icons.Outlined.Info,
+                    icon = Icons.Outlined.Crop,
                     text = "Perspective will be corrected automatically."
                 )
             }
