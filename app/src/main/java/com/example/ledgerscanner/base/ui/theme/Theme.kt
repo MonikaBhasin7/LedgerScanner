@@ -31,27 +31,6 @@ private val LightColorScheme = lightColorScheme(
     onError = White
 )
 
-// Dark color scheme using only your provided colors
-private val DarkColorScheme = darkColorScheme(
-    primary = Blue100,         // softer blue looks better as primary in dark
-    onPrimary = Black,
-
-    secondary = Blue500,
-    onSecondary = White,
-
-    tertiary = Grey200,
-    onTertiary = Black,
-
-    background = Black,
-    onBackground = White,
-
-    surface = Grey200,         // cards / surfaces in dark use light grey from your palette
-    onSurface = White,
-
-    error = Grey500,           // fallback
-    onError = White
-)
-
 
 @Composable
 fun LedgerScannerTheme(
@@ -63,15 +42,15 @@ fun LedgerScannerTheme(
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            dynamicLightColorScheme(context)
         }
 
-        darkTheme -> DarkColorScheme
+        darkTheme -> LightColorScheme
         else -> LightColorScheme
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = LightColorScheme,
         typography = Typography,
         content = content
     )

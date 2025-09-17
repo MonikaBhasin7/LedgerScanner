@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey100
@@ -34,8 +36,11 @@ import com.example.ledgerscanner.base.ui.theme.White
 fun GenericToolbar(title: String, onBackClick: (() -> Unit)? = null) {
     return Column {
         TopAppBar(
-            modifier = Modifier.padding(end = 16.dp),
-            title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(color = Grey100)
+                .padding(end = 16.dp),
+            title = { Text(title, style = MaterialTheme.typography.headlineSmall, color = Black) },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Grey100,
             ),
