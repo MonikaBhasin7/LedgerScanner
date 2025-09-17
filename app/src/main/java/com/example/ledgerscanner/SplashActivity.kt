@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.ledgerscanner.feature.scanner.exam.ui.ExamListingActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.ScanOmrWithCamera
 
 class SplashActivity : AppCompatActivity() {
 
@@ -18,7 +19,7 @@ class SplashActivity : AppCompatActivity() {
         }
 
         openTheScreen = false
-        startActivity(Intent(this@SplashActivity, ExamListingActivity::class.java))
+        startActivity(Intent(this@SplashActivity, ScanOmrWithCamera::class.java))
         finish()
     }
 }

@@ -34,6 +34,11 @@
             android:name=".feature.scanner.exam.ui.ExamListingActivity"
             android:theme="@style/Theme.LedgerScanner">
         </activity>
+
+        <activity
+            android:name=".feature.scanner.scan.ui.ScanOmrWithCamera"
+            android:theme="@style/Theme.LedgerScanner">
+        </activity>
     </application>
 
 </manifest>
