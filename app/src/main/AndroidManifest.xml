@@ -22,8 +22,8 @@
         android:theme="@style/Theme.LedgerScanner">
         <activity
             android:name=".SplashActivity"
-            android:theme="@style/SplashTheme"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/SplashTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -32,13 +32,15 @@
         </activity>
         <activity
             android:name=".feature.scanner.exam.ui.ExamListingActivity"
-            android:theme="@style/Theme.LedgerScanner">
-        </activity>
+            android:theme="@style/Theme.LedgerScanner" />
 
         <activity
             android:name=".feature.scanner.scan.ui.ScanOmrWithCamera"
-            android:theme="@style/Theme.LedgerScanner">
-        </activity>
+            android:theme="@style/Theme.LedgerScanner" />
+
+        <activity
+            android:name=".feature.scanner.scan.ui.PreviewImageActivity"
+            android:theme="@style/Theme.LedgerScanner" />
     </application>
 
 </manifest>

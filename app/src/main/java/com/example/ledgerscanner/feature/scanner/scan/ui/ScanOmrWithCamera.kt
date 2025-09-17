@@ -6,9 +6,12 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -63,6 +66,8 @@ import com.example.ledgerscanner.base.extensions.customBorder
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.*
+import com.example.ledgerscanner.base.utils.FileUtils
+import java.io.File
 
 class ScanOmrWithCamera : BaseActivity() {
 
@@ -72,6 +77,7 @@ class ScanOmrWithCamera : BaseActivity() {
 
         setContent {
             LedgerScannerTheme {
+                val imageCapture = remember { ImageCapture.Builder().build() }
                 Scaffold(
                     containerColor = White,
                     topBar = {
@@ -80,7 +86,7 @@ class ScanOmrWithCamera : BaseActivity() {
                         }
                     },
                     bottomBar = {
-                        CaptureButton()
+                        CaptureButton(imageCapture)
                     },
                     content = { innerPadding ->
                         Column(
@@ -89,7 +95,7 @@ class ScanOmrWithCamera : BaseActivity() {
                                 .padding(innerPadding)
                                 .padding(horizontal = 16.dp)
                         ) {
-                            CameraWidget()
+                            CameraWidget(imageCapture)
                         }
                     }
                 )
@@ -98,7 +104,9 @@ class ScanOmrWithCamera : BaseActivity() {
     }
 
     @Composable
-    private fun CaptureButton() {
+    private fun CaptureButton(imageCapture: ImageCapture) {
+        val context = LocalContext.current
+
         Column {
             Divider(
                 color = Grey200,  // or any color you want
@@ -113,7 +121,38 @@ class ScanOmrWithCamera : BaseActivity() {
             ) {
                 Button(
                     onClick = {
+                        val photoFile = File(
+                            FileUtils.getOutputDirectory(context),
+                            "${System.currentTimeMillis()}.jpg"
+                        )
+                        val outputOptions =
+                            ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
+                        imageCapture.takePicture(
+                            outputOptions,
+                            ContextCompat.getMainExecutor(context),
+                            object : ImageCapture.OnImageSavedCallback {
+
+                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                    onImageCaptured(Uri.fromFile(photoFile))
+                                }
+
+                                private fun onImageCaptured(fromFile: Uri) {
+                                    val intent =
+                                        Intent(context, PreviewImageActivity::class.java).apply {
+                                            putExtra("image_path", fromFile.path)
+                                        }
+                                    context.startActivity(intent)
+                                }
+
+                                override fun onError(exception: ImageCaptureException) {
+                                    Toast.makeText(
+                                        context, "Exception while capturing image",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        )
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -128,7 +167,7 @@ class ScanOmrWithCamera : BaseActivity() {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Enable Camera",
+                        text = "Capture Image",
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -137,7 +176,7 @@ class ScanOmrWithCamera : BaseActivity() {
     }
 
     @Composable
-    fun CameraWidget() {
+    fun CameraWidget(imageCapture: ImageCapture) {
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         var cameraPermissionStatus by remember { mutableStateOf(PermissionStatus.PermissionDenied) }
@@ -158,6 +197,7 @@ class ScanOmrWithCamera : BaseActivity() {
             CameraViewOrPermissionCard(
                 context,
                 lifecycleOwner,
+                imageCapture,
                 cameraPermissionStatus,
                 takePermissionCallback = {
                     if (cameraPermissionStatus == PermissionStatus.PermissionPermanentlyDenied) {
@@ -242,6 +282,7 @@ class ScanOmrWithCamera : BaseActivity() {
     fun CameraViewOrPermissionCard(
         context: Context,
         lifecycleOwner: LifecycleOwner,
+        imageCapture: ImageCapture,
         cameraPermissionStatus: PermissionStatus,
         takePermissionCallback: () -> Unit
     ) {
@@ -266,7 +307,8 @@ class ScanOmrWithCamera : BaseActivity() {
                         cameraProvider.bindToLifecycle(
                             lifecycleOwner,
                             cameraSelector,
-                            preview
+                            preview,
+                            imageCapture
                         )
                     }, ContextCompat.getMainExecutor(ctx))
                     previewView
