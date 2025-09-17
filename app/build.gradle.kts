@@ -70,8 +70,13 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.core.splashscreen)
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
+//    implementation(libs.androidx.room.runtime)
+//    implementation(libs.androidx.room.ktx)
     implementation("com.google.dagger:hilt-android:2.57.1")
     kapt("com.google.dagger:hilt-compiler:2.57.1")
+//    kapt(libs.androidx.room.compiler)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)   //
 }

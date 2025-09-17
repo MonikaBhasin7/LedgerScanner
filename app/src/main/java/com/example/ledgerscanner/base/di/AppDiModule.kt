@@ -25,6 +25,7 @@ class AppDiModule {
     }
 
     @Provides
+    @Singleton
     fun provideExamDao(db: AppDatabase): ExamDao = db.examDao()
 }
 
@@ -34,6 +35,5 @@ class AppDiModule {
 class ActivityDiModule {
 
     @Provides
-    @Singleton
     fun provideExamRepository(dao: ExamDao): ExamRepository = ExamRepository(dao)
 }

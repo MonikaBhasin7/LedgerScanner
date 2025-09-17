@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -23,4 +24,8 @@ interface ExamDao {
 
     @Query("DELETE FROM exams")
     suspend fun clearAll()
+
+
+    @Query("SELECT * FROM exams WHERE status = :status")
+    fun getExamByStatus(status: ExamStatus?): Flow<List<ExamEntity>>
 }

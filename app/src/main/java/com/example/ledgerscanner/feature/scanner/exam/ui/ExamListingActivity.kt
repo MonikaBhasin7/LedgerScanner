@@ -52,7 +52,6 @@ import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamItem
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
@@ -63,6 +62,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey50
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
+import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -107,7 +107,7 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ExamList(examFilter: ExamStatus?, examListResponse: UiState<List<ExamItem>>) {
+    private fun ExamList(examFilter: ExamStatus?, examListResponse: UiState<List<ExamEntity>>) {
         // load whenever filter changes
         LaunchedEffect(examFilter) {
             examListViewModel.getExamList(examFilter)
@@ -128,7 +128,7 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             is UiState.Success<*> -> {
-                val items = (state as UiState.Success<List<ExamItem>>).data ?: emptyList()
+                val items = (state as UiState.Success<List<ExamEntity>>).data ?: emptyList()
 
                 if (items.isEmpty()) {
                     GenericEmptyState(text = "No exams found")
@@ -150,7 +150,7 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ExamCardRow(item: ExamItem, onClick: (() -> Unit)? = null) {
+    private fun ExamCardRow(item: ExamEntity, onClick: (() -> Unit)? = null) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
@@ -183,7 +183,7 @@ class ExamListingActivity : ComponentActivity() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = item.title,
+                            text = item.title ?: "",
                             color = Black,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -216,7 +216,10 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun StatusBadge(status: ExamStatus) {
+    private fun StatusBadge(status: ExamStatus?) {
+        if(status == null) {
+            return Spacer(modifier = Modifier.width(0.dp))
+        }
 //        val (bg, textColor) = when (status) {
 //            ExamStatus.Processing -> Pair(Grey100, Blue500)
 //            ExamStatus.Completed -> Pair(Grey100, /* green text - define in Color.kt if needed */ Blue500)
