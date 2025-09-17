@@ -20,104 +20,117 @@ val Inter = FontFamily(
     Font(R.font.inter, weight = FontWeight.Black),
 )
 
+
 val Typography = Typography(
+    // Display
     displayLarge = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Bold,
-        fontSize = 57.sp,
-        lineHeight = 64.sp,
-        letterSpacing = (-0.25).sp
+        fontWeight = FontWeight.W600,
+        fontSize = 80.sp,
+        lineHeight = 82.sp,
+        letterSpacing = (-2.4).sp
     ),
     displayMedium = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Bold,
-        fontSize = 45.sp,
-        lineHeight = 52.sp
+        fontWeight = FontWeight.W700,
+        fontSize = 80.sp,
+        lineHeight = 82.sp,
+        letterSpacing = (-2.4).sp
     ),
     displaySmall = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Bold,
-        fontSize = 36.sp,
-        lineHeight = 44.sp
+        fontWeight = FontWeight.W500,
+        fontSize = 64.sp,
+        lineHeight = 70.sp,
+        letterSpacing = (-1.92).sp
     ),
-    headlineLarge = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 32.sp,
-        lineHeight = 40.sp
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 24.sp,
-        lineHeight = 32.sp
-    ),
+
+    // Titles
     titleLarge = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp
+        fontWeight = FontWeight.W700,
+        fontSize = 64.sp,
+        lineHeight = 70.sp,
+        letterSpacing = (-1.92).sp
     ),
     titleMedium = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
+        fontWeight = FontWeight.W500,
+        fontSize = 40.sp,
+        lineHeight = 42.sp,
+        letterSpacing = (-0.8).sp
     ),
     titleSmall = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        fontWeight = FontWeight.W700,
+        fontSize = 40.sp,
+        lineHeight = 42.sp,
+        letterSpacing = (-0.8).sp
     ),
+
+    // Headings (H1, H2, H3, H4)
+    headlineLarge = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.W700,
+        fontSize = 28.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.56).sp
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.W700,
+        fontSize = 26.sp,
+        lineHeight = 30.sp,
+        letterSpacing = (-0.26).sp
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.W700,
+        fontSize = 24.sp,
+        lineHeight = 28.sp,
+        letterSpacing = (-0.24).sp
+    ),
+
+    // Body
     bodyLarge = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
+        fontWeight = FontWeight.W400,
+        fontSize = 18.sp,
+        lineHeight = 28.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.25.sp
+        fontWeight = FontWeight.W400,
+        fontSize = 16.sp,
+        lineHeight = 24.sp
     ),
     bodySmall = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
+        fontWeight = FontWeight.W400,
+        fontSize = 14.sp,
+        lineHeight = 20.sp
     ),
+
+    // Labels
     labelLarge = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        fontWeight = FontWeight.W400,
+        fontSize = 18.sp,
+        lineHeight = 24.sp,
+        letterSpacing = (-0.18).sp
     ),
     labelMedium = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        fontWeight = FontWeight.W400,
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
+        letterSpacing = (-0.16).sp
     ),
     labelSmall = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
+        fontWeight = FontWeight.W400,
+        fontSize = 14.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = (-0.14).sp
     )
 )
