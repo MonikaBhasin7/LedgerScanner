@@ -40,7 +40,7 @@ fun GenericToolbar(title: String, onBackClick: (() -> Unit)? = null) {
                 .fillMaxWidth()
                 .background(color = Grey100)
                 .padding(end = 16.dp),
-            title = { Text(title, style = MaterialTheme.typography.headlineSmall, color = Black) },
+            title = { Text(title, style = MaterialTheme.typography.labelLarge, color = Black) },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Grey100,
             ),
@@ -67,7 +67,7 @@ fun GenericToolbar(title: String, onBackClick: (() -> Unit)? = null) {
         )
         Divider(
             color = Grey200,  // or any color you want
-            thickness = 2.dp,
+            thickness = 1.dp,
             modifier = Modifier.padding(bottom = 12.dp),
         )
     }
