@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Crop
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.Button
@@ -69,7 +68,12 @@ import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
-import com.example.ledgerscanner.base.ui.theme.*
+import com.example.ledgerscanner.base.ui.theme.Blue500
+import com.example.ledgerscanner.base.ui.theme.Grey100
+import com.example.ledgerscanner.base.ui.theme.Grey200
+import com.example.ledgerscanner.base.ui.theme.Grey500
+import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
+import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.FileUtils
 import java.io.File
 
@@ -82,6 +86,7 @@ class ScanOmrWithCamera : BaseActivity() {
         setContent {
             LedgerScannerTheme {
                 val imageCapture = remember { ImageCapture.Builder().build() }
+                var cameraReady by remember { mutableStateOf(false) }
                 Scaffold(
                     containerColor = White,
                     topBar = {
@@ -90,7 +95,7 @@ class ScanOmrWithCamera : BaseActivity() {
                         }
                     },
                     bottomBar = {
-                        CaptureButton(imageCapture)
+                        CaptureButton(imageCapture, cameraReady)
                     },
                     content = { innerPadding ->
                         Column(
@@ -99,7 +104,9 @@ class ScanOmrWithCamera : BaseActivity() {
                                 .padding(innerPadding)
                                 .padding(horizontal = 16.dp)
                         ) {
-                            CameraWidget(imageCapture)
+                            CameraWidget(imageCapture, cameraReadyCallback = {
+                                cameraReady = true
+                            })
                         }
                     }
                 )
@@ -108,7 +115,7 @@ class ScanOmrWithCamera : BaseActivity() {
     }
 
     @Composable
-    private fun CaptureButton(imageCapture: ImageCapture) {
+    private fun CaptureButton(imageCapture: ImageCapture, cameraReady: Boolean) {
         val context = LocalContext.current
 
         Column {
@@ -124,6 +131,7 @@ class ScanOmrWithCamera : BaseActivity() {
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Button(
+                    enabled = cameraReady,
                     onClick = {
                         val photoFile = File(
                             FileUtils.getOutputDirectory(context),
@@ -180,7 +188,7 @@ class ScanOmrWithCamera : BaseActivity() {
     }
 
     @Composable
-    fun CameraWidget(imageCapture: ImageCapture) {
+    fun CameraWidget(imageCapture: ImageCapture, cameraReadyCallback: () -> Unit) {
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         var cameraPermissionStatus by remember { mutableStateOf(PermissionStatus.PermissionDenied) }
@@ -213,7 +221,8 @@ class ScanOmrWithCamera : BaseActivity() {
                     } else {
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
-                })
+                }, cameraReadyCallback
+            )
             ScanningTipsCard()
         }
     }
@@ -288,7 +297,8 @@ class ScanOmrWithCamera : BaseActivity() {
         lifecycleOwner: LifecycleOwner,
         imageCapture: ImageCapture,
         cameraPermissionStatus: PermissionStatus,
-        takePermissionCallback: () -> Unit
+        takePermissionCallback: () -> Unit,
+        cameraReadyCallback: () -> Unit
     ) {
         val fraction = 0.65f
 
@@ -313,7 +323,9 @@ class ScanOmrWithCamera : BaseActivity() {
                             cameraSelector,
                             preview,
                             imageCapture
-                        )
+                        ).also {
+                            cameraReadyCallback()
+                        }
                     }, ContextCompat.getMainExecutor(ctx))
                     previewView
                 })

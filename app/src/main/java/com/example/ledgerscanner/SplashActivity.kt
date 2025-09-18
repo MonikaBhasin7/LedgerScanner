@@ -19,7 +19,7 @@ class SplashActivity : AppCompatActivity() {
         }
 
         openTheScreen = false
-        startActivity(Intent(this@SplashActivity, ScanOmrWithCamera::class.java))
+        startActivity(Intent(this@SplashActivity, ExamListingActivity::class.java))
         finish()
     }
 }
