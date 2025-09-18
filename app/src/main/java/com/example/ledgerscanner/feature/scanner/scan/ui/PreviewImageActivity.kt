@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,6 +28,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
+import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
@@ -90,15 +93,21 @@ class PreviewImageActivity : BaseActivity() {
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(modifier = Modifier.weight(1f), onClick = { onClose() }) {
-                        Text("Rescan", style = MaterialTheme.typography.labelMedium)
-                    }
+                    GenericButton(
+                        text = "Rescan",
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            onClose()
+                        }
+                    )
 
-                    Button(modifier = Modifier.weight(1f), onClick = {
-                        onSubmit(File(imagePath))
-                    }) {
-                        Text("Submit", style = MaterialTheme.typography.labelMedium)
-                    }
+                    GenericButton(
+                        text = "Submit",
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            onSubmit(File(imagePath))
+                        }
+                    )
                 }
             }
         }

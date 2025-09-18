@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
@@ -96,7 +97,9 @@ class ExamListingActivity : ComponentActivity() {
                     },
                     floatingActionButton = {
                         val context = LocalContext.current
-                        Button(
+                        GenericButton(
+                            text = "Create Exam",
+                            icon = Icons.Default.Add,
                             modifier = Modifier
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                                 .fillMaxWidth(),
@@ -107,23 +110,8 @@ class ExamListingActivity : ComponentActivity() {
                                         ScanOmrWithCamera::class.java
                                     )
                                 )
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White
-                            ),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Create Exam",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
+                            }
+                        )
                     },
                     floatingActionButtonPosition = FabPosition.Center,
                     content = { innerPadding ->

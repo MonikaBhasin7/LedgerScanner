@@ -31,7 +31,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.OpenWith
@@ -67,6 +69,7 @@ import com.example.ledgerscanner.base.enums.PermissionStatus
 import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
+import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey100
@@ -91,7 +94,7 @@ class ScanOmrWithCamera : BaseActivity() {
                     containerColor = White,
                     topBar = {
                         GenericToolbar(title = "Scan OMR with Camera") {
-                            //todo monika add
+                           finish()
                         }
                     },
                     bottomBar = {
@@ -130,8 +133,12 @@ class ScanOmrWithCamera : BaseActivity() {
                     .background(color = Grey100)
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Button(
-                    enabled = cameraReady,
+
+                GenericButton(
+                    text = "Capture Image",
+                    icon = Icons.Default.PhotoCamera,
+                    modifier = Modifier
+                        .fillMaxWidth(),
                     onClick = {
                         val photoFile = File(
                             FileUtils.getOutputDirectory(context),
@@ -165,24 +172,8 @@ class ScanOmrWithCamera : BaseActivity() {
                                 }
                             }
                         )
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CameraAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Capture Image",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
+                    }
+                )
             }
         }
     }
@@ -302,8 +293,8 @@ class ScanOmrWithCamera : BaseActivity() {
     ) {
         val fraction = 0.65f
 
-        if (cameraPermissionStatus == PermissionStatus.PermissionGranted)
-            return AndroidView(
+        if (cameraPermissionStatus == PermissionStatus.PermissionGranted) {
+            AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(fraction)
@@ -329,7 +320,7 @@ class ScanOmrWithCamera : BaseActivity() {
                     }, ContextCompat.getMainExecutor(ctx))
                     previewView
                 })
-        else
+        } else {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -358,30 +349,19 @@ class ScanOmrWithCamera : BaseActivity() {
                             color = Grey500,
                             textAlign = TextAlign.Center
                         )
-                        Button(
+
+                        GenericButton(
+                            text = "Enable Camera",
+                            icon = Icons.Default.PhotoCamera,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
                             onClick = {
                                 takePermissionCallback()
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .padding(horizontal = 24.dp, vertical = 12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings, // Material icon
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Enable Camera",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
+                            }
+                        )
                     }
                 }
             }
+        }
     }
 }
