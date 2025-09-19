@@ -35,29 +35,13 @@ import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.utils.ImageUtils
-import com.example.ledgerscanner.base.utils.ImageUtils.findDocumentContour
-import com.example.ledgerscanner.base.utils.ImageUtils.warpToRectangle
-import com.example.ledgerscanner.base.utils.bitmapToGrayMat
-import com.example.ledgerscanner.base.utils.computeBrightness
-import com.example.ledgerscanner.base.utils.computeSharpness
-import com.example.ledgerscanner.base.utils.denoise
-import com.example.ledgerscanner.base.utils.downscaleForDetection
-import com.example.ledgerscanner.base.utils.equalizeContrast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.opencv.android.Utils
-import org.opencv.core.Mat
-import org.opencv.core.MatOfPoint2f
-import org.opencv.core.Point
-import org.opencv.imgproc.Imgproc
-import java.io.File
-import androidx.core.graphics.createBitmap
-import com.example.ledgerscanner.base.utils.ImageUtils.binarizeForBubbles
-import com.example.ledgerscanner.base.utils.PreProcessOmrUtils
-import com.example.ledgerscanner.base.utils.isImageBlurry
+import com.example.ledgerscanner.base.utils.PerplexityNewUtils
+import com.example.ledgerscanner.base.utils.PerplexityUtils
+import com.example.ledgerscanner.base.utils.debugPreprocessFile
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
+import kotlinx.coroutines.launch
+import java.io.File
 
 class PreviewImageActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,9 +82,10 @@ class PreviewImageActivity : BaseActivity() {
 
         Column(modifier = Modifier.fillMaxSize()) {
 
-            if (showFinalProcessedImageDialog && preProcessImage?.warpedBitmap != null) {
+            if (showFinalProcessedImageDialog && (preProcessImage?.warpedBitmap != null || preProcessImage?.intermediate?.isNotEmpty() == true)) {
                 WarpedImageDialog(
                     warpedBitmap = preProcessImage?.warpedBitmap,
+                    intermediateBitmaps = preProcessImage?.intermediate,
                     onDismiss = { showFinalProcessedImageDialog = false },
                     onRetry = {
                         showFinalProcessedImageDialog = false
@@ -156,23 +141,27 @@ class PreviewImageActivity : BaseActivity() {
                                     modifier = Modifier.weight(1f),
                                     onClick = {
                                         coroutineScope.launch {
-                                            val result = PreProcessOmrUtils.preprocessFile(bm)
-                                            if (result.ok) {
-                                                preProcessImage = result
-                                                showFinalProcessedImageDialog = true
-                                            } else {
-                                                result.reason?.let {
-                                                    Toast.makeText(
-                                                        context, it,
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                } ?: run {
-                                                    Toast.makeText(
-                                                        context, "Not able to process the image",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-                                            }
+                                            preProcessImage = PerplexityNewUtils.processOMR(bm, "1")
+                                            showFinalProcessedImageDialog = true
+//                                            val result = debugPreprocessFile(bm, context, true)
+//                                            preProcessImage = result
+//                                            showFinalProcessedImageDialog = true
+//                                            if (result.ok) {
+//                                                preProcessImage = result
+//                                                showFinalProcessedImageDialog = true
+//                                            } else {
+//                                                result.reason?.let {
+//                                                    Toast.makeText(
+//                                                        context, it,
+//                                                        Toast.LENGTH_SHORT
+//                                                    ).show()
+//                                                } ?: run {
+//                                                    Toast.makeText(
+//                                                        context, "Not able to process the image",
+//                                                        Toast.LENGTH_SHORT
+//                                                    ).show()
+//                                                }
+//                                            }
                                         }
                                     }
                                 )
