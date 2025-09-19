@@ -174,12 +174,91 @@ object PerplexityNewUtils {
     }
 
     // Crop the region where bubbles typically live (heuristic fraction of page).
+//    private fun cropBubbleArea(warped: Mat): Mat {
+//        val r0 = (warped.rows() * 0.10).toInt()
+//        val r1 = (warped.rows() * 0.90).toInt()
+//        val c0 = (warped.cols() * 0.05).toInt()
+//        val c1 = (warped.cols() * 0.85).toInt()
+//        return warped.submat(r0, r1, c0, c1).clone() // clone so parent can be released
+//    }
+
+    // Replace the old cropBubbleArea() with this function
     private fun cropBubbleArea(warped: Mat): Mat {
-        val r0 = (warped.rows() * 0.10).toInt()
-        val r1 = (warped.rows() * 0.90).toInt()
-        val c0 = (warped.cols() * 0.05).toInt()
-        val c1 = (warped.cols() * 0.85).toInt()
-        return warped.submat(r0, r1, c0, c1).clone() // clone so parent can be released
+        // warped: single-channel grayscale Mat (CV_8U)
+        // 1) Make a clean binary image that highlights bubbles
+        val bin = Mat()
+        // adaptive threshold with inverted output (bubbles -> white)
+        Imgproc.adaptiveThreshold(
+            warped,
+            bin,
+            255.0,
+            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
+            Imgproc.THRESH_BINARY_INV,
+            15,
+            8.0
+        )
+
+        // small close to join broken bubble strokes (tune kernel size if needed)
+        val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(15.0, 3.0))
+        Imgproc.morphologyEx(bin, bin, Imgproc.MORPH_CLOSE, kernel)
+
+        val rows = bin.rows()
+        val cols = bin.cols()
+
+        // 2) Row-wise projection (count of white pixels per row)
+        val rowSums = DoubleArray(rows)
+        for (r in 0 until rows) {
+            // countNonZero works on a row view
+            rowSums[r] = Core.countNonZero(bin.row(r)).toDouble()
+        }
+
+        // 3) Column-wise projection (count of white pixels per column)
+        val colSums = DoubleArray(cols)
+        for (c in 0 until cols) {
+            colSums[c] = Core.countNonZero(bin.col(c)).toDouble()
+        }
+
+        // 4) Thresholds: relative to peak projection so it's adaptive
+        val maxRow = rowSums.maxOrNull() ?: 0.0
+        val maxCol = colSums.maxOrNull() ?: 0.0
+
+        // small fractions — tune if you miss rows/columns
+        val rowThresh = maxRow * 0.05      // keep rows with >= 5% of max row activity
+        val colThresh = maxCol * 0.02      // keep columns with >= 2% of max column activity
+
+        // find first/last row above threshold
+        val top = rowSums.indexOfFirst { it > rowThresh }.let { if (it == -1) 0 else it }
+        val bottom = rowSums.indexOfLast { it > rowThresh }.let { if (it == -1) rows - 1 else it }
+
+        // find first/last column above threshold
+        val left = colSums.indexOfFirst { it > colThresh }.let { if (it == -1) 0 else it }
+        val right = colSums.indexOfLast { it > colThresh }.let { if (it == -1) cols - 1 else it }
+
+        // 5) If detection failed (no region), fallback to whole warped image
+        if (top >= bottom || left >= right) {
+            kernel.release()
+            val result = warped.clone()
+            bin.release()
+            return result
+        }
+
+        // 6) Add small padding (2% of region size) and clamp to image bounds
+        val padY = ((bottom - top) * 0.02).toInt().coerceAtLeast(6)
+        val padX = ((right - left) * 0.02).toInt().coerceAtLeast(6)
+
+        val r0 = (top - padY).coerceAtLeast(0)
+        val r1 = (bottom + padY + 1).coerceAtMost(rows) // +1 because submat end is exclusive
+        val c0 = (left - padX).coerceAtLeast(0)
+        val c1 = (right + padX + 1).coerceAtMost(cols)
+
+        // 7) Return a clone of submat so caller can safely release original mats
+        val cropped = warped.submat(r0, r1, c0, c1).clone()
+
+        // cleanup
+        kernel.release()
+        bin.release()
+
+        return cropped
     }
 
     // Adaptive threshold then a small open to remove speckles and small morphology tweaks
