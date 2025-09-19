@@ -2,12 +2,22 @@ package com.example.ledgerscanner.base.utils
 
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import org.opencv.android.Utils
-import org.opencv.core.*
+import org.opencv.core.Core
+import org.opencv.core.CvType
+import org.opencv.core.Mat
+import org.opencv.core.MatOfPoint
+import org.opencv.core.MatOfPoint2f
+import org.opencv.core.Point
+import org.opencv.core.Rect
+import org.opencv.core.Scalar
+import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
-import java.lang.Exception
-import androidx.core.graphics.createBitmap
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Simple, readable Perplexity-style OMR helper.
@@ -58,7 +68,10 @@ object PerplexityNewUtils {
             debug["bubbles_contours"] = drawContoursOn(binary, bubbleContours)
 
             // 7. extract bubble answers
-            val results = extractBubbleAnswers(binary, bubbleContours)
+            val rows = groupContoursToRowsAndColumns(bubbleContours, expectedOptionsPerRow = 4)
+
+            // extract answers
+            val answers = extractAnswersFromRows(rows, binary, expectedOptionsPerRow = 4)
 
             // cleanup mats we created (release native memory)
             gray.release()
@@ -262,46 +275,255 @@ object PerplexityNewUtils {
     }
 
     // Adaptive threshold then a small open to remove speckles and small morphology tweaks
-    private fun binarizeForBubbles(regionGray: Mat): Mat {
+    fun binarizeForBubbles(gray: Mat): Mat {
         val bin = Mat()
+        // use a reasonably large block size (must be odd). Tweak 41 if needed.
+        val blockSize = 41
+        val c = 10.0 // subtractive constant. increase to make stricter.
         Imgproc.adaptiveThreshold(
-            regionGray,
+            gray,
             bin,
             255.0,
             Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
-            Imgproc.THRESH_BINARY_INV,
-            15,
-            2.0
+            Imgproc.THRESH_BINARY_INV, // bubbles become white
+            blockSize,
+            c
         )
-        val ker = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
-        Imgproc.morphologyEx(bin, bin, Imgproc.MORPH_OPEN, ker)
+
+        // Morphology: remove noise (open), then close to fill bubble interior if ring gaps exist
+        val kernelOpen = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
+        Imgproc.morphologyEx(bin, bin, Imgproc.MORPH_OPEN, kernelOpen, Point(-1.0, -1.0), 1)
+
+        // close with slightly bigger kernel to fill rings so filled area is counted
+        val kernelClose = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(5.0, 5.0))
+        Imgproc.morphologyEx(bin, bin, Imgproc.MORPH_CLOSE, kernelClose, Point(-1.0, -1.0), 1)
+
+        kernelOpen.release()
+        kernelClose.release()
         return bin
     }
 
     // Find contours in binary image and filter by area/aspect/circularity to keep bubble-like shapes.
-    private fun findBubbleContours(bin: Mat): List<MatOfPoint> {
+//    private fun findBubbleContours(bin: Mat): List<MatOfPoint> {
+//        val contours = mutableListOf<MatOfPoint>()
+//        Imgproc.findContours(bin, contours, Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+//        if (contours.isEmpty()) return emptyList()
+//
+//        val imgArea = bin.rows() * bin.cols()
+//        val minA = imgArea * 0.00005 // tune
+//        val maxA = imgArea * 0.01
+//
+//        val keep = mutableListOf<MatOfPoint>()
+//        for (c in contours) {
+//            val area = Imgproc.contourArea(c)
+//            val rect = Imgproc.boundingRect(c)
+//            val aspect = if (rect.height != 0) rect.width.toDouble() / rect.height else 0.0
+//            val peri = Imgproc.arcLength(MatOfPoint2f(*c.toArray()), true)
+//            val circ = if (peri > 1e-6) 4 * Math.PI * area / (peri * peri) else 0.0
+//            if (area in minA..maxA && aspect in 0.6..1.4 && circ > 0.35) {
+//                keep.add(c)
+//            } else {
+//                c.release()
+//            }
+//        }
+//        return keep
+//    }
+
+    fun findBubbleContours(bin: Mat): List<MatOfPoint> {
         val contours = mutableListOf<MatOfPoint>()
-        Imgproc.findContours(bin, contours, Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+        val hierarchy = Mat()
+        Imgproc.findContours(bin.clone(), contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+        hierarchy.release()
+
         if (contours.isEmpty()) return emptyList()
 
         val imgArea = bin.rows() * bin.cols()
-        val minA = imgArea * 0.00005 // tune
-        val maxA = imgArea * 0.01
+        // tune these multipliers to your sheet (these are reasonable starting points)
+        val minA = imgArea * 0.00002  // very small fraction (avoid tiny noise)
+        val maxA = imgArea * 0.005    // avoid huge blobs; adjust up if bubbles are large
 
         val keep = mutableListOf<MatOfPoint>()
         for (c in contours) {
-            val area = Imgproc.contourArea(c)
+            val area = Imgproc.contourArea(c).coerceAtLeast(1.0)
+            if (area < 1.0) {
+                c.release()
+                continue
+            }
             val rect = Imgproc.boundingRect(c)
-            val aspect = if (rect.height != 0) rect.width.toDouble() / rect.height else 0.0
+            val aspect = if (rect.height > 0) rect.width.toDouble() / rect.height.toDouble() else 0.0
+            val rectArea = (rect.width * rect.height).toDouble().coerceAtLeast(1.0)
+            val solidity = area / rectArea // filled fraction relative to bounding rect
             val peri = Imgproc.arcLength(MatOfPoint2f(*c.toArray()), true)
-            val circ = if (peri > 1e-6) 4 * Math.PI * area / (peri * peri) else 0.0
-            if (area in minA..maxA && aspect in 0.6..1.4 && circ > 0.35) {
+            val circularity = if (peri > 1e-6) 4.0 * Math.PI * area / (peri * peri) else 0.0
+
+            // Accept if area in range, aspect near 1, solidity and circularity reasonable
+            if (area in minA..maxA && aspect in 0.6..1.4 && solidity > 0.35 && circularity > 0.2) {
                 keep.add(c)
             } else {
+                // release memory for discarded contour
                 c.release()
             }
         }
+
+        // Sort by Y then X (top->bottom, left->right) for deterministic order
+        keep.sortWith(compareBy({ Imgproc.boundingRect(it).y }, { Imgproc.boundingRect(it).x }))
         return keep
+    }
+
+    fun groupContoursToRowsAndColumns(contours: List<MatOfPoint>, expectedOptionsPerRow: Int = 4): List<List<MatOfPoint>> {
+        if (contours.isEmpty()) return emptyList()
+
+        // get centers and sizes
+        data class CInfo(val contour: MatOfPoint, val cx: Double, val cy: Double, val w: Int, val h: Int)
+        val infos = contours.map {
+            val r = Imgproc.boundingRect(it)
+            CInfo(it, r.x + r.width / 2.0, r.y + r.height / 2.0, r.width, r.height)
+        }
+
+        // median height/width
+        val heights = infos.map { it.h }.sorted()
+        val widths = infos.map { it.w }.sorted()
+        val medianH = heights[heights.size / 2].toDouble().coerceAtLeast(1.0)
+        val medianW = widths[widths.size / 2].toDouble().coerceAtLeast(1.0)
+
+        val rowTolerance = max( (medianH * 0.6), 8.0) // min tolerance 8px
+        val remaining = infos.toMutableList()
+        val rows = mutableListOf<List<MatOfPoint>>()
+
+        // cluster by Y into rows
+        while (remaining.isNotEmpty()) {
+            val seed = remaining.removeAt(0)
+            val rowGroup = mutableListOf<CInfo>()
+            rowGroup.add(seed)
+
+            // find others close in Y
+            val iterator = remaining.iterator()
+            while (iterator.hasNext()) {
+                val r = iterator.next()
+                if (abs(r.cy - seed.cy) <= rowTolerance) {
+                    rowGroup.add(r)
+                    iterator.remove()
+                }
+            }
+            // sort rowGroup by X (left -> right)
+            rowGroup.sortBy { it.cx }
+            rows.add(rowGroup.map { it.contour })
+        }
+
+        // Now we have rows, but each row might contain > expectedOptionsPerRow * columns.
+        // If some rows have many more contours (e.g., noise), we can try to collapse close-by contours horizontally into bins
+        val normalizedRows = rows.map { rowContours ->
+            // if length roughly equals expected -> good
+            if (rowContours.size == expectedOptionsPerRow) return@map rowContours
+
+            // else attempt to cluster by X into `expectedOptionsPerRow` groups
+            val xs = rowContours.map { Imgproc.boundingRect(it).x + Imgproc.boundingRect(it).width / 2.0 }
+            // perform simple greedy binning by nearest neighbor to evenly distribute into expectedOptionsPerRow bins
+            val zipped = rowContours.map { Pair(it, Imgproc.boundingRect(it).x + Imgproc.boundingRect(it).width / 2.0) }.toMutableList()
+            zipped.sortBy { it.second }
+            // if too many items, try to merge adjacent ones whose centers are very close (within medianW * 0.6)
+            val merged = mutableListOf<MatOfPoint>()
+            var i = 0
+            while (i < zipped.size) {
+                var j = i + 1
+                var accum = Imgproc.boundingRect(zipped[i].first)
+                var mergedContour = zipped[i].first
+                while (j < zipped.size) {
+                    val next = Imgproc.boundingRect(zipped[j].first)
+                    if (abs(next.x + next.width/2.0 - accum.x - accum.width/2.0) < medianW * 0.6) {
+                        // merge by taking larger rect as representative (keep both contours — but for grouping we choose representative)
+                        // We'll just pick the one whose area is larger to represent the merged bubble area
+                        val areaCurrent = Imgproc.contourArea(mergedContour)
+                        val areaNext = Imgproc.contourArea(zipped[j].first)
+                        if (areaNext > areaCurrent) mergedContour = zipped[j].first
+                        accum = Rect(min(accum.x, next.x), min(accum.y, next.y), max(accum.x + accum.width, next.x + next.width) - min(accum.x, next.x), max(accum.y + accum.height, next.y + next.height) - min(accum.y, next.y))
+                        j++
+                    } else break
+                }
+                merged.add(mergedContour)
+                i = j
+            }
+            // if merged size still too large, just take nearest `expectedOptionsPerRow` by splitting into equal bins and picking median in each bin
+            if (merged.size > expectedOptionsPerRow) {
+                val bins = expectedOptionsPerRow
+                val perBin = merged.size / bins
+                val selected = mutableListOf<MatOfPoint>()
+                var idx = 0
+                for (b in 0 until bins) {
+                    val start = b * perBin
+                    val end = if (b == bins - 1) merged.size - 1 else (start + perBin - 1)
+                    val sub = merged.subList(start, end + 1)
+                    // pick the median element
+                    selected.add(sub[sub.size / 2])
+                    idx++
+                }
+                return@map selected
+            }
+
+            // otherwise good
+            merged
+        }
+
+        return normalizedRows
+    }
+
+    fun extractAnswersFromRows(rows: List<List<MatOfPoint>>, bin: Mat, expectedOptionsPerRow: Int = 4): List<BubbleResult> {
+        val results = mutableListOf<BubbleResult>()
+        var questionIndex = 1
+        val optionChars = listOf('A', 'B', 'C', 'D')
+
+        for (row in rows) {
+            // if row is empty skip
+            if (row.isEmpty()) continue
+
+            // sort row by X
+            val sortedRow = row.sortedBy { Imgproc.boundingRect(it).x }
+
+            // If row count not exactly equal expectedOptionsPerRow, try to pick nearest expectedOptionsPerRow
+            val chosen = if (sortedRow.size == expectedOptionsPerRow) sortedRow else {
+                // if larger, pick equally spaced entries
+                if (sortedRow.size > expectedOptionsPerRow) {
+                    val step = sortedRow.size.toDouble() / expectedOptionsPerRow
+                    (0 until expectedOptionsPerRow).map { sortedRow[(it * step).toInt().coerceAtMost(sortedRow.size - 1)] }
+                } else {
+                    // if fewer bubbles found, keep as-is and pad with nulls (we mark as BLANK later)
+                    sortedRow
+                }
+            }
+
+            // evaluate each bubble in chosen list
+            for (i in 0 until expectedOptionsPerRow) {
+                val contour = if (i < chosen.size) chosen[i] else null
+                if (contour == null) {
+                    results.add(BubbleResult(questionIndex, optionChars.getOrElse(i) { '?' }, false, 0.0))
+                    continue
+                }
+                val rect = Imgproc.boundingRect(contour)
+                // create mask
+                val mask = Mat.zeros(bin.size(), CvType.CV_8U)
+                Imgproc.drawContours(mask, listOf(contour), -1, Scalar(255.0), -1)
+
+                val bubbleMasked = Mat()
+                Core.bitwise_and(bin, bin, bubbleMasked, mask)
+
+                val nonZero = Core.countNonZero(bubbleMasked).toDouble()
+                val area = max(1.0, (rect.width * rect.height).toDouble())
+                val fillPercent = nonZero / area
+
+                // threshold for deciding filled - tune 0.25..0.45
+                val filled = fillPercent > 0.30
+                val confidence = fillPercent.coerceIn(0.0, 1.0)
+
+                results.add(BubbleResult(questionIndex, optionChars.getOrElse(i) { '?' }, filled, confidence))
+
+                mask.release()
+                bubbleMasked.release()
+            }
+
+            questionIndex++
+        }
+
+        return results
     }
 
     // Very simple extraction: group contours by y (rows), sort each row by x, then compute fill percent.
@@ -387,3 +609,10 @@ object PerplexityNewUtils {
         return arrayOf(tl, tr, br, bl)
     }
 }
+
+data class BubbleResult(
+    val question: Int,
+    val option: Char,
+    val filled: Boolean,
+    val confidence: Double
+)

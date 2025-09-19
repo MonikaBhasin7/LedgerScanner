@@ -227,9 +227,9 @@ fun ImageCarousel(
                                 bitmap = bmp.asImageBitmap(),
                                 contentDescription = key,
                                 contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .width(((300.dp).coerceIn(200.dp, 600.dp)))
-                                    .heightIn(min = itemHeightMin.dp, max = itemHeightMax.dp)
+//                                modifier = Modifier
+//                                    .width(((300.dp).coerceIn(200.dp, 600.dp)))
+//                                    .heightIn(min = itemHeightMin.dp, max = itemHeightMax.dp)
                             )
                         }
                     }
