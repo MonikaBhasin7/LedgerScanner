@@ -2,6 +2,7 @@ package com.example.ledgerscanner.base.utils
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Matrix
 import android.media.ExifInterface
 import java.io.IOException
@@ -16,6 +17,7 @@ import org.opencv.core.MatOfPoint2f
 import org.opencv.core.Point
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import kotlin.math.max
 
 object ImageUtils {
     fun loadCorrectlyOrientedBitmap(
@@ -203,4 +205,113 @@ fun Mat.computeSharpness(): Double {
     val variance = std.get(0, 0)[0] * std.get(0, 0)[0]
     lap.release(); mean.release(); std.release()
     return variance // higher = sharper
+}
+
+private const val TARGET_WIDTH = 800
+
+/**
+ * Convert to a scaled gray 2D array of luminance values (0..255).
+ * We downscale so result is fast and more comparable across cameras.
+ */
+private fun bitmapToGrayArrayScaled(src: Bitmap): Pair<Array<IntArray>, IntArray> {
+    val width = src.width
+    val height = src.height
+
+    // compute scale factor to target width (but keep aspect ratio)
+    val scale = if (width > TARGET_WIDTH) TARGET_WIDTH.toFloat() / width.toFloat() else 1f
+    val newW = max(3, (width * scale).toInt())
+    val newH = max(3, (height * scale).toInt())
+
+    val scaled = Bitmap.createScaledBitmap(src, newW, newH, true)
+    val pixels = IntArray(newW * newH)
+    scaled.getPixels(pixels, 0, newW, 0, 0, newW, newH)
+
+    val gray = Array(newH) { IntArray(newW) }
+    var idx = 0
+    for (y in 0 until newH) {
+        for (x in 0 until newW) {
+            val p = pixels[idx++]
+            val r = (p shr 16) and 0xFF
+            val g = (p shr 8) and 0xFF
+            val b = p and 0xFF
+            // luminance — use standard Rec. 601 weights
+            val lum = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+            gray[y][x] = lum
+        }
+    }
+    // return gray 2D and dims in int array [w, h]
+    return Pair(gray, intArrayOf(newW, newH))
+}
+
+/**
+ * Compute variance of Laplacian.
+ *
+ * Kernel:   [-1 -1 -1
+ *            -1  8 -1
+ *            -1 -1 -1]
+ *
+ * This is a simple 3x3 Laplacian (sensitive to edges). We compute the raw convolution output
+ * (which can be negative), collect them, compute mean and variance.
+ *
+ * Returns variance as Double.
+ */
+fun Bitmap.laplacianVariance(): Double {
+    val (gray, dims) = bitmapToGrayArrayScaled(this)
+    val w = dims[0]
+    val h = dims[1]
+
+    // Laplacian kernel offsets
+    val kernel = arrayOf(
+        intArrayOf(-1, -1, -1),
+        intArrayOf(-1, 8, -1),
+        intArrayOf(-1, -1, -1)
+    )
+
+    val responses = DoubleArray((w - 2) * (h - 2))
+    var rIdx = 0
+    var sum = 0.0
+    var sumSq = 0.0
+
+    // compute responses for interior pixels (skip borders)
+    for (y in 1 until h - 1) {
+        for (x in 1 until w - 1) {
+            var acc = 0
+            // apply kernel
+            for (ky in -1..1) {
+                for (kx in -1..1) {
+                    val v = gray[y + ky][x + kx]
+                    acc += v * kernel[ky + 1][kx + 1]
+                }
+            }
+            val valDouble = acc.toDouble()
+            responses[rIdx++] = valDouble
+            sum += valDouble
+            sumSq += valDouble * valDouble
+        }
+    }
+
+    val n = responses.size
+    if (n == 0) return 0.0
+    val mean = sum / n
+    val variance = (sumSq / n) - (mean * mean)
+    // variance could be tiny negative due to fp rounding; clamp
+    return if (variance < 0.0) 0.0 else variance
+}
+
+/**
+ * Quick boolean helper: returns true if image considered blurry.
+ *
+ * @param bitmap captured image
+ * @param threshold recommended starting threshold: 100.0
+ *        - If variance < threshold => blurry
+ *        - Raise threshold if too many false-positives (blurry passing)
+ *
+ * Recommended: run on sample images and set threshold accordingly.
+ * On mobile photos: typical thresholds often range ~80..200 (device-dependent).
+ */
+fun Bitmap.isImageBlurry(threshold: Double = 120.0): Boolean {
+    val varLap = this.laplacianVariance()
+    // you might want to log for calibration:
+    // Log.d("BlurUtils", "lapVar=$varLap threshold=$threshold")
+    return varLap < threshold
 }
