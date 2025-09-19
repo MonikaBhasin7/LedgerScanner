@@ -7,6 +7,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.core.app.ActivityCompat
@@ -56,6 +57,14 @@ open class BaseActivity : ComponentActivity() {
         ) {
             callback()
         }
+    }
+
+    @Composable
+    fun <I, O> createActivityLauncherComposeSpecific(
+        contract: ActivityResultContract<I, O>,
+        onResult: (O) -> Unit
+    ): ManagedActivityResultLauncher<I, O> {
+        return rememberLauncherForActivityResult(contract = contract, onResult = onResult)
     }
 
 }

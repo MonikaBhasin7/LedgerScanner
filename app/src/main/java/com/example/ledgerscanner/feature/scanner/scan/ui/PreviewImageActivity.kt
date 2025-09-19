@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -59,31 +60,36 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialo
 class PreviewImageActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val path = intent.getStringExtra("image_path") ?: run {
+        val imageUri: Uri? = intent.getParcelableExtra("image_uri") ?: run {
             finish(); return
         }
+
 
         setContent {
             LedgerScannerTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    PreviewImageScreen(imagePath = path, onClose = { finish() })
+                    PreviewImageScreen(imageUri = imageUri!!, onClose = { finish() })
                 }
             }
         }
     }
 
     @Composable
-    fun PreviewImageScreen(imagePath: String, onClose: () -> Unit, onSubmit: (File) -> Unit = {}) {
+    fun PreviewImageScreen(imageUri: Uri, onClose: () -> Unit, onSubmit: (File) -> Unit = {}) {
 
         var showFinalProcessedImageDialog by remember { mutableStateOf(false) }
         var preProcessImage by remember { mutableStateOf<PreprocessResult?>(null) }
 
         val context = LocalContext.current
         // decode once on background thread and remember
-        val bitmap by produceState<Bitmap?>(initialValue = null, imagePath) {
-            // run in background automatically
+        val bitmap by produceState<Bitmap?>(initialValue = null, imageUri) {
             value =
-                ImageUtils.loadCorrectlyOrientedBitmap(imagePath, reqWidth = 1080, reqHeight = 1920)
+                ImageUtils.loadBitmapCorrectOrientation(
+                    context,
+                    imageUri,
+                    reqWidth = 1080,
+                    reqHeight = 1920
+                )
         }
 
         val coroutineScope = rememberCoroutineScope()

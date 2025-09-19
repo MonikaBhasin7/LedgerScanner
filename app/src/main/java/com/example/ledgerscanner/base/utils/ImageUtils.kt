@@ -1,10 +1,18 @@
 package com.example.ledgerscanner.base.utils
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ImageDecoder
 import android.graphics.Matrix
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import androidx.annotation.RequiresApi
+import androidx.annotation.WorkerThread
 import java.io.IOException
 import androidx.core.graphics.scale
 import org.opencv.android.Utils
@@ -18,43 +26,199 @@ import org.opencv.core.Point
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import kotlin.math.max
+import androidx.core.graphics.createBitmap
 
 object ImageUtils {
-    fun loadCorrectlyOrientedBitmap(
-        path: String,
+//    fun loadCorrectlyOrientedBitmap(
+//        context: Context,
+//        uri: Uri,
+//        reqWidth: Int = 1080,
+//        reqHeight: Int = 1920
+//    ): Bitmap? {
+//        // 1) Decode bitmap from URI
+//        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//            val source = ImageDecoder.createSource(context.contentResolver, uri)
+//            ImageDecoder.decodeBitmap(source)
+//        } else {
+//            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+//        } ?: return null
+//
+//        // 2) Read EXIF orientation (only works if URI has a file path)
+//        val orientation = try {
+//            val path = uri.path
+//            if (path != null) {
+//                val exif = ExifInterface(path)
+//                exif.getAttributeInt(
+//                    ExifInterface.TAG_ORIENTATION,
+//                    ExifInterface.ORIENTATION_UNDEFINED
+//                )
+//            } else ExifInterface.ORIENTATION_UNDEFINED
+//        } catch (e: IOException) {
+//            ExifInterface.ORIENTATION_UNDEFINED
+//        }
+//
+//        // 3) Rotate if needed
+//        val rotation = when (orientation) {
+//            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+//            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+//            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+//            else -> 0f
+//        }
+//        if (rotation != 0f) {
+//            val matrix = Matrix().apply { postRotate(rotation) }
+//            return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+//        }
+//
+//        return bitmap
+//    }
+//
+//    fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+//        val (height: Int, width: Int) = options.outHeight to options.outWidth
+//        var inSampleSize = 1
+//        if (height > reqHeight || width > reqWidth) {
+//            val halfHeight = height / 2
+//            val halfWidth = width / 2
+//            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+//                inSampleSize *= 2
+//            }
+//        }
+//        return inSampleSize
+//    }
+
+
+    @WorkerThread
+    fun loadBitmapCorrectOrientation(
+        context: Context,
+        uri: Uri,
         reqWidth: Int = 1080,
         reqHeight: Int = 1920
     ): Bitmap? {
-        // 1) read EXIF orientation
-        val orientation = try {
-            val exif = ExifInterface(path)
-            exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
-        } catch (e: IOException) {
-            ExifInterface.ORIENTATION_UNDEFINED
+        try {
+            // 1) Read EXIF orientation from the URI via InputStream (works with content://)
+            val exifOrientation = try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        // On Android 7.0+ we can read EXIF directly from InputStream
+                        ExifInterface(stream).getAttributeInt(
+                            ExifInterface.TAG_ORIENTATION,
+                            ExifInterface.ORIENTATION_UNDEFINED
+                        )
+                    } else {
+                        // On older Android we need a file path, not stream
+                        val path = uri.path
+                        if (path != null) {
+                            ExifInterface(path).getAttributeInt(
+                                ExifInterface.TAG_ORIENTATION,
+                                ExifInterface.ORIENTATION_UNDEFINED
+                            )
+                        } else {
+                            ExifInterface.ORIENTATION_UNDEFINED
+                        }
+                    }
+                } ?: ExifInterface.ORIENTATION_UNDEFINED
+            } catch (e: Exception) {
+                ExifInterface.ORIENTATION_UNDEFINED
+            }
+
+            val rotationDegrees = when (exifOrientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0
+            }
+
+            // 2) Decode bitmap (sampled down to reqWidth/reqHeight to avoid OOM)
+            val decoded: Bitmap = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    // ImageDecoder automatically honors EXIF orientation (applies rotation)
+                    val source = ImageDecoder.createSource(context.contentResolver, uri)
+                    ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                        val origW = info.size.width
+                        val origH = info.size.height
+                        val scale = maxOf(1f, origW.toFloat() / reqWidth, origH.toFloat() / reqHeight)
+                        val targetW = (origW / scale).toInt().coerceAtLeast(1)
+                        val targetH = (origH / scale).toInt().coerceAtLeast(1)
+                        decoder.setTargetSize(targetW, targetH)
+                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    }
+                } else {
+                    // Decode bounds first then sample
+                    val input1 = context.contentResolver.openInputStream(uri) ?: return null
+                    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeStream(input1, null, opts)
+                    input1.close()
+
+                    val sample = calculateInSampleSize(opts, reqWidth, reqHeight)
+                    val input2 = context.contentResolver.openInputStream(uri) ?: return null
+                    val opts2 = BitmapFactory.Options().apply {
+                        inSampleSize = sample
+                        inJustDecodeBounds = false
+                    }
+                    val bmp = BitmapFactory.decodeStream(input2, null, opts2)
+                    input2.close()
+                    bmp
+                }
+            } catch (e: Exception) {
+                try {
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                } catch (ex: Exception) {
+                    null
+                }
+            } ?: return null
+
+
+            /*
+             Strategy summary:
+             - On API>=28 ImageDecoder SHOULD already apply EXIF rotation.
+               So we generally MUST NOT rotate after decode.
+             - On older APIs we MUST rotate according to EXIF.
+             - But in practice some camera/provider combos may NOT include EXIF or decoders might behave differently.
+             - We'll apply a small heuristic: if API>=28 and EXIF says rotation != 0 but the decoded bitmap
+               already looks rotated (dimensions swapped), we assume ImageDecoder handled it and skip manual rotate.
+             */
+
+            val needsManualRotate = when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> {
+                    // ImageDecoder usually auto-applies rotation. If rotationDegrees != 0, check if decoded looks rotated
+                    // If rotationDegrees is 90/270, then after rotation width/height swap. If decoder already rotated,
+                    // decoded.width < decoded.height for portrait expectation. We'll rotate only if it still matches wrong orientation.
+                    when (rotationDegrees) {
+                        90, 270 -> {
+                            // If decoded width > height and rotationDegrees says 90/270, decoder probably DID NOT rotate -> rotate manually.
+                            decoded.width > decoded.height
+                        }
+                        180 -> {
+                            // For 180, dimension stays same — rely on EXIF value here (rotate if rotationDegrees==180)
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                else -> {
+                    // older devices: ImageDecoder not available -> we must rotate according to EXIF
+                    rotationDegrees != 0
+                }
+            }
+
+
+            if (!needsManualRotate) {
+                // decoded is fine as-is
+                return decoded
+            }
+
+            // perform rotation
+            val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+            val rotated = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
+            // recycle original if distinct to free memory
+            if (rotated !== decoded) decoded.recycle()
+            return rotated
+
+        } catch (e: Exception) {
+            return null
         }
-
-        // 2) decode with sampling to avoid OOM
-        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(path, options)
-
-        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
-        options.inJustDecodeBounds = false
-        val bmp = BitmapFactory.decodeFile(path, options) ?: return null
-
-        // 3) rotate if needed
-        val rotation = when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-            else -> 0f
-        }
-        if (rotation == 0f) return bmp
-
-        val matrix = Matrix().apply { postRotate(rotation) }
-        return Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
     }
 
-    fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
         val (height: Int, width: Int) = options.outHeight to options.outWidth
         var inSampleSize = 1
         if (height > reqHeight || width > reqWidth) {
@@ -66,7 +230,6 @@ object ImageUtils {
         }
         return inSampleSize
     }
-
     fun findDocumentContour(matGray: Mat): MatOfPoint2f? {
         val blurred = Mat()
         Imgproc.GaussianBlur(matGray, blurred, Size(5.0, 5.0), 0.0)
@@ -222,7 +385,9 @@ private fun bitmapToGrayArrayScaled(src: Bitmap): Pair<Array<IntArray>, IntArray
     val newW = max(3, (width * scale).toInt())
     val newH = max(3, (height * scale).toInt())
 
-    val scaled = Bitmap.createScaledBitmap(src, newW, newH, true)
+    val scaledRaw = src.scale(newW, newH)
+    // ensure we have a software-backed ARGB_8888 bitmap to allow getPixels()
+    val scaled = ensureSoftwareBitmap(scaledRaw)
     val pixels = IntArray(newW * newH)
     scaled.getPixels(pixels, 0, newW, 0, 0, newW, newH)
 
@@ -241,6 +406,45 @@ private fun bitmapToGrayArrayScaled(src: Bitmap): Pair<Array<IntArray>, IntArray
     }
     // return gray 2D and dims in int array [w, h]
     return Pair(gray, intArrayOf(newW, newH))
+}
+
+/**
+ * Ensure the bitmap is software-backed and uses ARGB_8888 so we can call getPixels / copy / Utils.bitmapToMat etc.
+ * If the provided bitmap is hardware-backed (API >= O) or has an incompatible config, we create a new ARGB_8888 bitmap
+ * and draw the source into it.
+ */
+private fun ensureSoftwareBitmap(bmp: Bitmap): Bitmap {
+    // On API >= 26 there is Bitmap.Config.HARDWARE which doesn't allow pixel access.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val config = bmp.config
+        // if not hardware and config exists
+        if (config != Bitmap.Config.HARDWARE) {
+            // If already ARGB_8888, return as-is
+            if (config == Bitmap.Config.ARGB_8888) return bmp
+            // Otherwise convert to ARGB_8888
+            val out = createBitmap(bmp.width, bmp.height)
+            val c = Canvas(out)
+            c.drawBitmap(bmp, 0f, 0f, null)
+            return out
+        }
+        // config == HARDWARE -> must convert
+        val out = createBitmap(bmp.width, bmp.height)
+        val c = Canvas(out)
+        c.drawBitmap(bmp, 0f, 0f, null)
+        return out
+    } else {
+        // API < 26: HARDWARE config does not exist.
+        // But bmp.config may still be null or something not ARGB_8888 -> convert if needed.
+        val config = bmp.config
+        if (config == Bitmap.Config.ARGB_8888) {
+            return bmp
+        }
+        // convert to ARGB_8888
+        val out = createBitmap(bmp.width, bmp.height)
+        val c = Canvas(out)
+        c.drawBitmap(bmp, 0f, 0f, null)
+        return out
+    }
 }
 
 /**

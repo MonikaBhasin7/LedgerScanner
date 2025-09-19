@@ -3,12 +3,15 @@ package com.example.ledgerscanner.feature.scanner.scan.ui
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -33,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Crop
@@ -94,7 +98,7 @@ class ScanOmrWithCamera : BaseActivity() {
                     containerColor = White,
                     topBar = {
                         GenericToolbar(title = "Scan OMR with Camera") {
-                           finish()
+                            finish()
                         }
                     },
                     bottomBar = {
@@ -121,6 +125,15 @@ class ScanOmrWithCamera : BaseActivity() {
     private fun CaptureButton(imageCapture: ImageCapture, cameraReady: Boolean) {
         val context = LocalContext.current
 
+        val pickLauncher =
+            createActivityLauncherComposeSpecific(ActivityResultContracts.GetContent()) { uri ->
+                val intent =
+                    Intent(context, PreviewImageActivity::class.java).apply {
+                        putExtra("image_uri", uri)
+                    }
+                context.startActivity(intent)
+            }
+
         Column {
             Divider(
                 color = Grey200,  // or any color you want
@@ -133,47 +146,61 @@ class ScanOmrWithCamera : BaseActivity() {
                     .background(color = Grey100)
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    GenericButton(
+                        text = "Pick Image from Gallery",
+                        icon = Icons.Default.Photo,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            pickLauncher.launch("image/*")
+                        }
+                    )
 
-                GenericButton(
-                    text = "Capture Image",
-                    icon = Icons.Default.PhotoCamera,
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    onClick = {
-                        val photoFile = File(
-                            FileUtils.getOutputDirectory(context),
-                            "${System.currentTimeMillis()}.jpg"
-                        )
-                        val outputOptions =
-                            ImageCapture.OutputFileOptions.Builder(photoFile).build()
+                    GenericButton(
+                        text = "Capture Image",
+                        icon = Icons.Default.PhotoCamera,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val photoFile = File(
+                                FileUtils.getOutputDirectory(context),
+                                "${System.currentTimeMillis()}.jpg"
+                            )
+                            val outputOptions =
+                                ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
-                        imageCapture.takePicture(
-                            outputOptions,
-                            ContextCompat.getMainExecutor(context),
-                            object : ImageCapture.OnImageSavedCallback {
+                            imageCapture.takePicture(
+                                outputOptions,
+                                ContextCompat.getMainExecutor(context),
+                                object : ImageCapture.OnImageSavedCallback {
 
-                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                    onImageCaptured(Uri.fromFile(photoFile))
+                                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                        onImageCaptured(Uri.fromFile(photoFile))
+                                    }
+
+                                    private fun onImageCaptured(fromFile: Uri) {
+                                        val intent =
+                                            Intent(
+                                                context,
+                                                PreviewImageActivity::class.java
+                                            ).apply {
+                                                putExtra("image_uri", fromFile)
+                                            }
+                                        context.startActivity(intent)
+                                    }
+
+                                    override fun onError(exception: ImageCaptureException) {
+                                        Toast.makeText(
+                                            context, "Exception while capturing image",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
-
-                                private fun onImageCaptured(fromFile: Uri) {
-                                    val intent =
-                                        Intent(context, PreviewImageActivity::class.java).apply {
-                                            putExtra("image_path", fromFile.path)
-                                        }
-                                    context.startActivity(intent)
-                                }
-
-                                override fun onError(exception: ImageCaptureException) {
-                                    Toast.makeText(
-                                        context, "Exception while capturing image",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        )
-                    }
-                )
+                            )
+                        }
+                    )
+                }
             }
         }
     }
