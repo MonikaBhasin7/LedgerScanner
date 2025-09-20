@@ -18,6 +18,7 @@ import org.opencv.imgproc.Imgproc
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 
 /**
  * Simple, readable Perplexity-style OMR helper.
@@ -277,109 +278,30 @@ object PerplexityNewUtils {
 
     // Adaptive threshold then a small open to remove speckles and small morphology tweaks
     fun binarizeForBubbles(gray: Mat): Mat {
-        val blurred = Mat()
-        Imgproc.GaussianBlur(gray, blurred, Size(3.0, 3.0), 0.0)
-
-        // 2) Adaptive threshold (inverted). This usually makes dark marks -> white.
-        val adaptive = Mat()
-        val blockSize = 41   // must be odd. Increase if illumination varies slowly.
-        val c = 8.0          // subtractive constant; increase to make it stricter
+        val bin = Mat()
         Imgproc.adaptiveThreshold(
-            blurred,
-            adaptive,
+            gray,
+            bin,
             255.0,
-            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
-            Imgproc.THRESH_BINARY_INV, // IMPORTANT: invert so marks become white
-            blockSize,
-            c
+            Imgproc.ADAPTIVE_THRESH_MEAN_C,
+            Imgproc.THRESH_BINARY_INV,
+            21,
+            2.0
         )
-
-        // 3) Morphology: close to fill donut holes, then open to remove small noise.
-        val kernelClose = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(5.0, 5.0))
-        val closed = Mat()
-        Imgproc.morphologyEx(
-            adaptive,
-            closed,
-            Imgproc.MORPH_CLOSE,
-            kernelClose,
-            Point(-1.0, -1.0),
-            1
-        )
-
-        // Sometimes closing alone is enough; open removes speckles
-        val kernelOpen = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
-        val opened = Mat()
-        Imgproc.morphologyEx(closed, opened, Imgproc.MORPH_OPEN, kernelOpen, Point(-1.0, -1.0), 1)
-
-        // 4) Heuristic polarity check: ensure bubbles are white blobs
-        // If more than half the image is white, invert (means background is white)
-        val whiteCount = Core.countNonZero(opened)
-        val total = opened.rows() * opened.cols()
-        val out = Mat()
-        if (whiteCount > total / 2) {
-            // background too white -> invert to make background black and features white
-            Core.bitwise_not(opened, out)
-        } else {
-            opened.copyTo(out)
-        }
-
-        // cleanup intermediate mats
-        blurred.release()
-        adaptive.release()
-        closed.release()
-        opened.release()
-        kernelClose.release()
-        kernelOpen.release()
-
-        return out // CV_8U binary: white = 255, black = 0
+        return bin
     }
 
     fun findBubbleContours(bin: Mat): List<MatOfPoint> {
         val contours = mutableListOf<MatOfPoint>()
-        val hierarchy = Mat()
-        Imgproc.findContours(
-            bin.clone(),
-            contours,
-            hierarchy,
-            Imgproc.RETR_EXTERNAL,
-            Imgproc.CHAIN_APPROX_SIMPLE
-        )
-        hierarchy.release()
-
-        if (contours.isEmpty()) return emptyList()
-
-        val imgArea = bin.rows() * bin.cols()
-        // tune these multipliers to your sheet (these are reasonable starting points)
-        val minA = imgArea * 0.00002  // very small fraction (avoid tiny noise)
-        val maxA = imgArea * 0.005    // avoid huge blobs; adjust up if bubbles are large
-
-        val keep = mutableListOf<MatOfPoint>()
-        for (c in contours) {
-            val area = Imgproc.contourArea(c).coerceAtLeast(1.0)
-            if (area < 1.0) {
-                c.release()
-                continue
-            }
-            val rect = Imgproc.boundingRect(c)
-            val aspect =
-                if (rect.height > 0) rect.width.toDouble() / rect.height.toDouble() else 0.0
-            val rectArea = (rect.width * rect.height).toDouble().coerceAtLeast(1.0)
-            val solidity = area / rectArea // filled fraction relative to bounding rect
-            val peri = Imgproc.arcLength(MatOfPoint2f(*c.toArray()), true)
-            val circularity = if (peri > 1e-6) 4.0 * Math.PI * area / (peri * peri) else 0.0
-
-            // Accept if area in range, aspect near 1, solidity and circularity reasonable
-            if (area in minA..maxA && aspect in 0.6..1.4 && solidity > 0.35 && circularity > 0.2) {
-                keep.add(c)
-            } else {
-                // release memory for discarded contour
-                c.release()
-            }
+        Imgproc.findContours(bin, contours, Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+        // Filter contours: circularity, area, aspect ratio
+        return contours.filter {
+            val area = Imgproc.contourArea(it)
+            val rect = Imgproc.boundingRect(it)
+            val aspect = rect.width.toDouble() / rect.height
+            val circularity = 4 * Math.PI * area / (Imgproc.arcLength(MatOfPoint2f(*it.toArray()), true)).pow(2)
+            area > 100 && area < 1500 && aspect > 0.8 && aspect < 1.2 && circularity > 0.5
         }
-
-        // Sort by Y then X (top->bottom, left->right) for deterministic order
-        keep.sortWith(compareBy({ Imgproc.boundingRect(it).y }, { Imgproc.boundingRect(it).x }))
-        return keep
     }
 
     fun groupContoursToRowsAndColumns(
