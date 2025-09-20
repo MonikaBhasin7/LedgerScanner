@@ -63,9 +63,6 @@ object PerplexityNewUtils {
             val binary = binarizeForBubbles(warped)
             debug["binary"] = matToBitmapSafe(binary)
 
-//            val filledBlobs = fillHolesByContours(binary)
-//            debug["fillHolesByFloodFill"] = matToBitmapSafe(filledBlobs)
-
             // 6. find bubble contours
             val bubbleContours = findBubbleContours(binary)
             debug["bubbles_contours"] = drawContoursOn(binary, bubbleContours)
@@ -132,7 +129,11 @@ object PerplexityNewUtils {
         Imgproc.Canny(gray, edges, 50.0, 150.0)
 
         // Make edges thicker so contour is continuous
-        Imgproc.dilate(edges, edges, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(3.0, 3.0)))
+        Imgproc.dilate(
+            edges,
+            edges,
+            Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(3.0, 3.0))
+        )
 
         val contours = mutableListOf<MatOfPoint>()
         Imgproc.findContours(edges, contours, Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE)
@@ -194,15 +195,6 @@ object PerplexityNewUtils {
         Imgproc.warpPerspective(srcGray, warped, M, Size(maxWidth.toDouble(), maxHeight.toDouble()))
         return warped
     }
-
-    // Crop the region where bubbles typically live (heuristic fraction of page).
-//    private fun cropBubbleArea(warped: Mat): Mat {
-//        val r0 = (warped.rows() * 0.10).toInt()
-//        val r1 = (warped.rows() * 0.90).toInt()
-//        val c0 = (warped.cols() * 0.05).toInt()
-//        val c1 = (warped.cols() * 0.85).toInt()
-//        return warped.submat(r0, r1, c0, c1).clone() // clone so parent can be released
-//    }
 
     // Replace the old cropBubbleArea() with this function
     private fun cropBubbleArea(warped: Mat): Mat {
@@ -305,7 +297,14 @@ object PerplexityNewUtils {
         // 3) Morphology: close to fill donut holes, then open to remove small noise.
         val kernelClose = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(5.0, 5.0))
         val closed = Mat()
-        Imgproc.morphologyEx(adaptive, closed, Imgproc.MORPH_CLOSE, kernelClose, Point(-1.0, -1.0), 1)
+        Imgproc.morphologyEx(
+            adaptive,
+            closed,
+            Imgproc.MORPH_CLOSE,
+            kernelClose,
+            Point(-1.0, -1.0),
+            1
+        )
 
         // Sometimes closing alone is enough; open removes speckles
         val kernelOpen = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
@@ -335,59 +334,16 @@ object PerplexityNewUtils {
         return out // CV_8U binary: white = 255, black = 0
     }
 
-    fun fillHolesByContours(bin: Mat): Mat {
-        // find contours (we clone bin because findContours modifies the source)
-        val contours = mutableListOf<MatOfPoint>()
-        val hierarchy = Mat()
-        Imgproc.findContours(bin.clone(), contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
-        hierarchy.release()
-
-        // create a black mask and draw each contour filled
-        val filled = Mat.zeros(bin.size(), CvType.CV_8U)
-        for (c in contours) {
-            // Optional: filter tiny contours here to avoid drawing noise:
-            val area = Imgproc.contourArea(c)
-            if (area < 4.0) { // tune threshold
-                c.release()
-                continue
-            }
-            Imgproc.drawContours(filled, listOf(c), -1, Scalar(255.0), -1) // -1 = fill
-            c.release()
-        }
-        return filled
-    }
-
-    fun fillHolesByFloodFill(bin: Mat): Mat {
-        // bin: foreground white (255), background black (0)
-        val inv = Mat()
-        Core.bitwise_not(bin, inv) // invert: background=255
-
-        // floodfill background from point (0,0). Need a mask two pixels larger than image.
-        val mask = Mat.zeros(inv.rows() + 2, inv.cols() + 2, CvType.CV_8U)
-        val flooded = inv.clone()
-        Imgproc.floodFill(flooded, mask, Point(0.0, 0.0), Scalar(0.0)) // fill border with black
-
-        // invert flooded to get holes mask
-        val invFlooded = Mat()
-        Core.bitwise_not(flooded, invFlooded)
-
-        // combine original binary and invFlooded (holes filled)
-        val filled = Mat()
-        Core.bitwise_or(bin, invFlooded, filled)
-
-        // cleanup
-        inv.release()
-        mask.release()
-        flooded.release()
-        invFlooded.release()
-
-        return filled
-    }
-
     fun findBubbleContours(bin: Mat): List<MatOfPoint> {
         val contours = mutableListOf<MatOfPoint>()
         val hierarchy = Mat()
-        Imgproc.findContours(bin.clone(), contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+        Imgproc.findContours(
+            bin.clone(),
+            contours,
+            hierarchy,
+            Imgproc.RETR_EXTERNAL,
+            Imgproc.CHAIN_APPROX_SIMPLE
+        )
         hierarchy.release()
 
         if (contours.isEmpty()) return emptyList()
@@ -405,7 +361,8 @@ object PerplexityNewUtils {
                 continue
             }
             val rect = Imgproc.boundingRect(c)
-            val aspect = if (rect.height > 0) rect.width.toDouble() / rect.height.toDouble() else 0.0
+            val aspect =
+                if (rect.height > 0) rect.width.toDouble() / rect.height.toDouble() else 0.0
             val rectArea = (rect.width * rect.height).toDouble().coerceAtLeast(1.0)
             val solidity = area / rectArea // filled fraction relative to bounding rect
             val peri = Imgproc.arcLength(MatOfPoint2f(*c.toArray()), true)
@@ -425,11 +382,21 @@ object PerplexityNewUtils {
         return keep
     }
 
-    fun groupContoursToRowsAndColumns(contours: List<MatOfPoint>, expectedOptionsPerRow: Int = 4): List<List<MatOfPoint>> {
+    fun groupContoursToRowsAndColumns(
+        contours: List<MatOfPoint>,
+        expectedOptionsPerRow: Int = 4
+    ): List<List<MatOfPoint>> {
         if (contours.isEmpty()) return emptyList()
 
         // get centers and sizes
-        data class CInfo(val contour: MatOfPoint, val cx: Double, val cy: Double, val w: Int, val h: Int)
+        data class CInfo(
+            val contour: MatOfPoint,
+            val cx: Double,
+            val cy: Double,
+            val w: Int,
+            val h: Int
+        )
+
         val infos = contours.map {
             val r = Imgproc.boundingRect(it)
             CInfo(it, r.x + r.width / 2.0, r.y + r.height / 2.0, r.width, r.height)
@@ -441,7 +408,7 @@ object PerplexityNewUtils {
         val medianH = heights[heights.size / 2].toDouble().coerceAtLeast(1.0)
         val medianW = widths[widths.size / 2].toDouble().coerceAtLeast(1.0)
 
-        val rowTolerance = max( (medianH * 0.6), 8.0) // min tolerance 8px
+        val rowTolerance = max((medianH * 0.6), 8.0) // min tolerance 8px
         val remaining = infos.toMutableList()
         val rows = mutableListOf<List<MatOfPoint>>()
 
@@ -472,9 +439,15 @@ object PerplexityNewUtils {
             if (rowContours.size == expectedOptionsPerRow) return@map rowContours
 
             // else attempt to cluster by X into `expectedOptionsPerRow` groups
-            val xs = rowContours.map { Imgproc.boundingRect(it).x + Imgproc.boundingRect(it).width / 2.0 }
+            val xs =
+                rowContours.map { Imgproc.boundingRect(it).x + Imgproc.boundingRect(it).width / 2.0 }
             // perform simple greedy binning by nearest neighbor to evenly distribute into expectedOptionsPerRow bins
-            val zipped = rowContours.map { Pair(it, Imgproc.boundingRect(it).x + Imgproc.boundingRect(it).width / 2.0) }.toMutableList()
+            val zipped = rowContours.map {
+                Pair(
+                    it,
+                    Imgproc.boundingRect(it).x + Imgproc.boundingRect(it).width / 2.0
+                )
+            }.toMutableList()
             zipped.sortBy { it.second }
             // if too many items, try to merge adjacent ones whose centers are very close (within medianW * 0.6)
             val merged = mutableListOf<MatOfPoint>()
@@ -485,13 +458,18 @@ object PerplexityNewUtils {
                 var mergedContour = zipped[i].first
                 while (j < zipped.size) {
                     val next = Imgproc.boundingRect(zipped[j].first)
-                    if (abs(next.x + next.width/2.0 - accum.x - accum.width/2.0) < medianW * 0.6) {
+                    if (abs(next.x + next.width / 2.0 - accum.x - accum.width / 2.0) < medianW * 0.6) {
                         // merge by taking larger rect as representative (keep both contours — but for grouping we choose representative)
                         // We'll just pick the one whose area is larger to represent the merged bubble area
                         val areaCurrent = Imgproc.contourArea(mergedContour)
                         val areaNext = Imgproc.contourArea(zipped[j].first)
                         if (areaNext > areaCurrent) mergedContour = zipped[j].first
-                        accum = Rect(min(accum.x, next.x), min(accum.y, next.y), max(accum.x + accum.width, next.x + next.width) - min(accum.x, next.x), max(accum.y + accum.height, next.y + next.height) - min(accum.y, next.y))
+                        accum = Rect(
+                            min(accum.x, next.x),
+                            min(accum.y, next.y),
+                            max(accum.x + accum.width, next.x + next.width) - min(accum.x, next.x),
+                            max(accum.y + accum.height, next.y + next.height) - min(accum.y, next.y)
+                        )
                         j++
                     } else break
                 }
@@ -522,7 +500,11 @@ object PerplexityNewUtils {
         return normalizedRows
     }
 
-    fun extractAnswersFromRows(rows: List<List<MatOfPoint>>, bin: Mat, expectedOptionsPerRow: Int = 4): List<BubbleResult> {
+    fun extractAnswersFromRows(
+        rows: List<List<MatOfPoint>>,
+        bin: Mat,
+        expectedOptionsPerRow: Int = 4
+    ): List<BubbleResult> {
         val results = mutableListOf<BubbleResult>()
         var questionIndex = 1
         val optionChars = listOf('A', 'B', 'C', 'D')
@@ -539,7 +521,9 @@ object PerplexityNewUtils {
                 // if larger, pick equally spaced entries
                 if (sortedRow.size > expectedOptionsPerRow) {
                     val step = sortedRow.size.toDouble() / expectedOptionsPerRow
-                    (0 until expectedOptionsPerRow).map { sortedRow[(it * step).toInt().coerceAtMost(sortedRow.size - 1)] }
+                    (0 until expectedOptionsPerRow).map {
+                        sortedRow[(it * step).toInt().coerceAtMost(sortedRow.size - 1)]
+                    }
                 } else {
                     // if fewer bubbles found, keep as-is and pad with nulls (we mark as BLANK later)
                     sortedRow
@@ -550,7 +534,14 @@ object PerplexityNewUtils {
             for (i in 0 until expectedOptionsPerRow) {
                 val contour = if (i < chosen.size) chosen[i] else null
                 if (contour == null) {
-                    results.add(BubbleResult(questionIndex, optionChars.getOrElse(i) { '?' }, false, 0.0))
+                    results.add(
+                        BubbleResult(
+                            questionIndex,
+                            optionChars.getOrElse(i) { '?' },
+                            false,
+                            0.0
+                        )
+                    )
                     continue
                 }
                 val rect = Imgproc.boundingRect(contour)
@@ -569,7 +560,14 @@ object PerplexityNewUtils {
                 val filled = fillPercent > 0.30
                 val confidence = fillPercent.coerceIn(0.0, 1.0)
 
-                results.add(BubbleResult(questionIndex, optionChars.getOrElse(i) { '?' }, filled, confidence))
+                results.add(
+                    BubbleResult(
+                        questionIndex,
+                        optionChars.getOrElse(i) { '?' },
+                        filled,
+                        confidence
+                    )
+                )
 
                 mask.release()
                 bubbleMasked.release()
@@ -579,39 +577,6 @@ object PerplexityNewUtils {
         }
 
         return results
-    }
-
-    // Very simple extraction: group contours by y (rows), sort each row by x, then compute fill percent.
-    private fun extractBubbleAnswers(binImg: Mat, contours: List<MatOfPoint>): List<Triple<Int, Char, Double>> {
-        // result entries: (questionNumber, optionChar, fillConfidence)
-        if (contours.isEmpty()) return emptyList()
-
-        // Sort contours by Y (top->bottom)
-        val sorted = contours.sortedBy { Imgproc.boundingRect(it).y }
-        // Group by approximate row (use rect.y / approx rowHeight)
-        val rows = sorted.groupBy { Math.round(Imgproc.boundingRect(it).y / 40.0).toInt() }
-
-        val out = mutableListOf<Triple<Int, Char, Double>>()
-        var qIndex = 1
-        val options = listOf('A', 'B', 'C', 'D')
-        for ((_, group) in rows) {
-            val rowSorted = group.sortedBy { Imgproc.boundingRect(it).x }
-            rowSorted.forEachIndexed { idx, c ->
-                // mask the bubble and count white pixels inside (binary is inverted -> filled=white)
-                val mask = Mat.zeros(binImg.size(), CvType.CV_8U)
-                Imgproc.drawContours(mask, listOf(c), -1, Scalar(255.0), -1)
-                val tmp = Mat()
-                Core.bitwise_and(binImg, binImg, tmp, mask)
-                val nonZero = Core.countNonZero(tmp).toDouble()
-                val rect = Imgproc.boundingRect(c)
-                val area = (rect.width * rect.height).toDouble().coerceAtLeast(1.0)
-                val fill = nonZero / area
-                out.add(Triple(qIndex, options.getOrElse(idx) { '?' }, fill))
-                mask.release(); tmp.release()
-            }
-            qIndex++
-        }
-        return out
     }
 
     // ---------- Small utilities for debug/bitmap conversions ----------
@@ -647,7 +612,11 @@ object PerplexityNewUtils {
 
     private fun drawContoursOn(src: Mat, contours: List<MatOfPoint>): Bitmap {
         val rgba = Mat()
-        if (src.channels() == 1) Imgproc.cvtColor(src, rgba, Imgproc.COLOR_GRAY2RGBA) else src.copyTo(rgba)
+        if (src.channels() == 1) Imgproc.cvtColor(
+            src,
+            rgba,
+            Imgproc.COLOR_GRAY2RGBA
+        ) else src.copyTo(rgba)
         Imgproc.drawContours(rgba, contours, -1, Scalar(255.0, 0.0, 0.0, 255.0), 2)
         val b = matToBitmapSafe(rgba)
         rgba.release()
