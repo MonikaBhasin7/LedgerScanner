@@ -3,7 +3,6 @@ package com.example.ledgerscanner.feature.scanner.scan.ui
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,8 +35,6 @@ import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.utils.ImageUtils
 import com.example.ledgerscanner.base.utils.PerplexityNewUtils
-import com.example.ledgerscanner.base.utils.PerplexityUtils
-import com.example.ledgerscanner.base.utils.debugPreprocessFile
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import kotlinx.coroutines.launch
@@ -143,6 +140,10 @@ class PreviewImageActivity : BaseActivity() {
                                         coroutineScope.launch {
                                             preProcessImage = PerplexityNewUtils.processOMR(bm, "1")
                                             showFinalProcessedImageDialog = true
+
+//                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)
+//                                            showFinalProcessedImageDialog = true
+
 //                                            val result = debugPreprocessFile(bm, context, true)
 //                                            preProcessImage = result
 //                                            showFinalProcessedImageDialog = true

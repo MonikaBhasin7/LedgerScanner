@@ -81,4 +81,5 @@ dependencies {
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)   //
     implementation("androidx.compose.material:material-icons-extended:1.7.2")
+    implementation("com.google.code.gson:gson:2.11.0")
 }

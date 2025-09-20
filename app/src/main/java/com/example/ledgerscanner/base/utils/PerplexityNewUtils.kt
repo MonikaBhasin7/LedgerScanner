@@ -56,11 +56,11 @@ object PerplexityNewUtils {
             debug["warped_full"] = matToBitmapSafe(warped)
 
             // 4. crop bubble region (heuristic fraction)
-            val bubbleRegion = cropBubbleArea(warped)
-            debug["bubble_region"] = matToBitmapSafe(bubbleRegion)
+//            val bubbleRegion = cropBubbleArea(warped)
+//            debug["bubble_region"] = matToBitmapSafe(bubbleRegion)
 
             // 5. binarize for bubble detection
-            val binary = binarizeForBubbles(bubbleRegion)
+            val binary = binarizeForBubbles(warped)
             debug["binary"] = matToBitmapSafe(binary)
 
             // 6. find bubble contours
@@ -77,7 +77,7 @@ object PerplexityNewUtils {
             gray.release()
             if (sheetQuad != null) sheetQuad.release()
             warped.release()
-            bubbleRegion.release()
+//            bubbleRegion.release()
             binary.release()
             bubbleContours.forEach { it.release() }
 
@@ -276,31 +276,54 @@ object PerplexityNewUtils {
 
     // Adaptive threshold then a small open to remove speckles and small morphology tweaks
     fun binarizeForBubbles(gray: Mat): Mat {
-        val bin = Mat()
-        // use a reasonably large block size (must be odd). Tweak 41 if needed.
-        val blockSize = 41
-        val c = 10.0 // subtractive constant. increase to make stricter.
+        val blurred = Mat()
+        Imgproc.GaussianBlur(gray, blurred, Size(3.0, 3.0), 0.0)
+
+        // 2) Adaptive threshold (inverted). This usually makes dark marks -> white.
+        val adaptive = Mat()
+        val blockSize = 41   // must be odd. Increase if illumination varies slowly.
+        val c = 8.0          // subtractive constant; increase to make it stricter
         Imgproc.adaptiveThreshold(
-            gray,
-            bin,
+            blurred,
+            adaptive,
             255.0,
-            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
-            Imgproc.THRESH_BINARY_INV, // bubbles become white
+            Imgproc.ADAPTIVE_THRESH_MEAN_C,
+            Imgproc.THRESH_BINARY_INV, // IMPORTANT: invert so marks become white
             blockSize,
             c
         )
 
-        // Morphology: remove noise (open), then close to fill bubble interior if ring gaps exist
-        val kernelOpen = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
-        Imgproc.morphologyEx(bin, bin, Imgproc.MORPH_OPEN, kernelOpen, Point(-1.0, -1.0), 1)
-
-        // close with slightly bigger kernel to fill rings so filled area is counted
+        // 3) Morphology: close to fill donut holes, then open to remove small noise.
         val kernelClose = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(5.0, 5.0))
-        Imgproc.morphologyEx(bin, bin, Imgproc.MORPH_CLOSE, kernelClose, Point(-1.0, -1.0), 1)
+        val closed = Mat()
+        Imgproc.morphologyEx(adaptive, closed, Imgproc.MORPH_CLOSE, kernelClose, Point(-1.0, -1.0), 1)
 
-        kernelOpen.release()
+        // Sometimes closing alone is enough; open removes speckles
+        val kernelOpen = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
+        val opened = Mat()
+        Imgproc.morphologyEx(closed, opened, Imgproc.MORPH_OPEN, kernelOpen, Point(-1.0, -1.0), 1)
+
+        // 4) Heuristic polarity check: ensure bubbles are white blobs
+        // If more than half the image is white, invert (means background is white)
+        val whiteCount = Core.countNonZero(opened)
+        val total = opened.rows() * opened.cols()
+        val out = Mat()
+        if (whiteCount > total / 2) {
+            // background too white -> invert to make background black and features white
+            Core.bitwise_not(opened, out)
+        } else {
+            opened.copyTo(out)
+        }
+
+        // cleanup intermediate mats
+        blurred.release()
+        adaptive.release()
+        closed.release()
+        opened.release()
         kernelClose.release()
-        return bin
+        kernelOpen.release()
+
+        return out // CV_8U binary: white = 255, black = 0
     }
 
     // Find contours in binary image and filter by area/aspect/circularity to keep bubble-like shapes.
