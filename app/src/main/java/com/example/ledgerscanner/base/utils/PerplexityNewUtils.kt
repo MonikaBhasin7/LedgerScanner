@@ -63,6 +63,9 @@ object PerplexityNewUtils {
             val binary = binarizeForBubbles(warped)
             debug["binary"] = matToBitmapSafe(binary)
 
+//            val filledBlobs = fillHolesByContours(binary)
+//            debug["fillHolesByFloodFill"] = matToBitmapSafe(filledBlobs)
+
             // 6. find bubble contours
             val bubbleContours = findBubbleContours(binary)
             debug["bubbles_contours"] = drawContoursOn(binary, bubbleContours)
@@ -170,19 +173,25 @@ object PerplexityNewUtils {
 
     // Warp the found quad to a fixed rectangle (A4-like). Returns single-channel Mat
     private fun warpToA4(srcGray: Mat, quad: MatOfPoint2f): Mat {
-        val targetW = 1654
-        val targetH = 2339
+        val pts = quad.toArray()
+        val widthTop = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+        val widthBottom = Math.hypot(pts[2].x - pts[3].x, pts[2].y - pts[3].y)
+        val maxWidth = max(widthTop, widthBottom).toInt()
+
+        val heightLeft = Math.hypot(pts[3].x - pts[0].x, pts[3].y - pts[0].y)
+        val heightRight = Math.hypot(pts[2].x - pts[1].x, pts[2].y - pts[1].y)
+        val maxHeight = max(heightLeft, heightRight).toInt()
+
         val dst = MatOfPoint2f(
             Point(0.0, 0.0),
-            Point(targetW.toDouble(), 0.0),
-            Point(targetW.toDouble(), targetH.toDouble()),
-            Point(0.0, targetH.toDouble())
+            Point(maxWidth - 1.0, 0.0),
+            Point(maxWidth - 1.0, maxHeight - 1.0),
+            Point(0.0, maxHeight - 1.0)
         )
+
         val M = Imgproc.getPerspectiveTransform(quad, dst)
         val warped = Mat()
-        Imgproc.warpPerspective(srcGray, warped, M, Size(targetW.toDouble(), targetH.toDouble()))
-        M.release()
-        dst.release()
+        Imgproc.warpPerspective(srcGray, warped, M, Size(maxWidth.toDouble(), maxHeight.toDouble()))
         return warped
     }
 
@@ -287,7 +296,7 @@ object PerplexityNewUtils {
             blurred,
             adaptive,
             255.0,
-            Imgproc.ADAPTIVE_THRESH_MEAN_C,
+            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
             Imgproc.THRESH_BINARY_INV, // IMPORTANT: invert so marks become white
             blockSize,
             c
@@ -326,31 +335,54 @@ object PerplexityNewUtils {
         return out // CV_8U binary: white = 255, black = 0
     }
 
-    // Find contours in binary image and filter by area/aspect/circularity to keep bubble-like shapes.
-//    private fun findBubbleContours(bin: Mat): List<MatOfPoint> {
-//        val contours = mutableListOf<MatOfPoint>()
-//        Imgproc.findContours(bin, contours, Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
-//        if (contours.isEmpty()) return emptyList()
-//
-//        val imgArea = bin.rows() * bin.cols()
-//        val minA = imgArea * 0.00005 // tune
-//        val maxA = imgArea * 0.01
-//
-//        val keep = mutableListOf<MatOfPoint>()
-//        for (c in contours) {
-//            val area = Imgproc.contourArea(c)
-//            val rect = Imgproc.boundingRect(c)
-//            val aspect = if (rect.height != 0) rect.width.toDouble() / rect.height else 0.0
-//            val peri = Imgproc.arcLength(MatOfPoint2f(*c.toArray()), true)
-//            val circ = if (peri > 1e-6) 4 * Math.PI * area / (peri * peri) else 0.0
-//            if (area in minA..maxA && aspect in 0.6..1.4 && circ > 0.35) {
-//                keep.add(c)
-//            } else {
-//                c.release()
-//            }
-//        }
-//        return keep
-//    }
+    fun fillHolesByContours(bin: Mat): Mat {
+        // find contours (we clone bin because findContours modifies the source)
+        val contours = mutableListOf<MatOfPoint>()
+        val hierarchy = Mat()
+        Imgproc.findContours(bin.clone(), contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+        hierarchy.release()
+
+        // create a black mask and draw each contour filled
+        val filled = Mat.zeros(bin.size(), CvType.CV_8U)
+        for (c in contours) {
+            // Optional: filter tiny contours here to avoid drawing noise:
+            val area = Imgproc.contourArea(c)
+            if (area < 4.0) { // tune threshold
+                c.release()
+                continue
+            }
+            Imgproc.drawContours(filled, listOf(c), -1, Scalar(255.0), -1) // -1 = fill
+            c.release()
+        }
+        return filled
+    }
+
+    fun fillHolesByFloodFill(bin: Mat): Mat {
+        // bin: foreground white (255), background black (0)
+        val inv = Mat()
+        Core.bitwise_not(bin, inv) // invert: background=255
+
+        // floodfill background from point (0,0). Need a mask two pixels larger than image.
+        val mask = Mat.zeros(inv.rows() + 2, inv.cols() + 2, CvType.CV_8U)
+        val flooded = inv.clone()
+        Imgproc.floodFill(flooded, mask, Point(0.0, 0.0), Scalar(0.0)) // fill border with black
+
+        // invert flooded to get holes mask
+        val invFlooded = Mat()
+        Core.bitwise_not(flooded, invFlooded)
+
+        // combine original binary and invFlooded (holes filled)
+        val filled = Mat()
+        Core.bitwise_or(bin, invFlooded, filled)
+
+        // cleanup
+        inv.release()
+        mask.release()
+        flooded.release()
+        invFlooded.release()
+
+        return filled
+    }
 
     fun findBubbleContours(bin: Mat): List<MatOfPoint> {
         val contours = mutableListOf<MatOfPoint>()
