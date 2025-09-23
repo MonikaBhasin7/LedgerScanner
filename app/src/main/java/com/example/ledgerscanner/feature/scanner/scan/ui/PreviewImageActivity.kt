@@ -1,8 +1,10 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,14 +30,18 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.ledgerscanner.base.extensions.loadJsonFromAssets
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.utils.ImageUtils
+import com.example.ledgerscanner.base.utils.TemplateProcessor
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -137,6 +143,20 @@ class PreviewImageActivity : BaseActivity() {
                                     modifier = Modifier.weight(1f),
                                     onClick = {
                                         coroutineScope.launch {
+                                            val omrTemplate =
+                                                context.loadJsonFromAssets<Template>("omr_template_1.json")
+                                            if (omrTemplate == null) {
+                                                Toast.makeText(context, "", Toast.LENGTH_SHORT)
+                                                    .show()
+                                            } else {
+                                                preProcessImage = TemplateProcessor.processWithTemplate(
+                                                    context,
+                                                    bm,
+                                                    omrTemplate,
+                                                    bm
+                                                )
+                                                showFinalProcessedImageDialog = true
+                                            }
 //                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)
 //                                            showFinalProcessedImageDialog = true
 
