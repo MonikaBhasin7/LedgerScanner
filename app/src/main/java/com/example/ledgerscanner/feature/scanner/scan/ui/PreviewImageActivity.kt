@@ -34,7 +34,6 @@ import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.utils.ImageUtils
-import com.example.ledgerscanner.base.utils.PerplexityNewUtils
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import kotlinx.coroutines.launch
@@ -138,9 +137,6 @@ class PreviewImageActivity : BaseActivity() {
                                     modifier = Modifier.weight(1f),
                                     onClick = {
                                         coroutineScope.launch {
-                                            preProcessImage = PerplexityNewUtils.processOMR(bm, "1")
-                                            showFinalProcessedImageDialog = true
-
 //                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)
 //                                            showFinalProcessedImageDialog = true
 
