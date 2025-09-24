@@ -181,6 +181,7 @@ class TemplateProcessor {
         return bubbleGrid
     }
 
+
     private fun detectBubbleCenters(gray: Mat): List<Bubble> {
         val blurred = Mat()
         Imgproc.GaussianBlur(gray, blurred, Size(9.0, 9.0), 2.0)
@@ -194,8 +195,8 @@ class TemplateProcessor {
             20.0,                // minDist between centers
             100.0,               // param1: higher Canny threshold
             30.0,                // param2: smaller = more circles, larger = fewer
-            10,                  // minRadius
-            30                   // maxRadius
+            8,                  // minRadius
+            20                   // maxRadius
         )
 
         val centers = mutableListOf<Bubble>()

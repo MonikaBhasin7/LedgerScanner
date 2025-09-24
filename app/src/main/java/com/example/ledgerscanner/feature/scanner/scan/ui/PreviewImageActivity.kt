@@ -143,16 +143,16 @@ class PreviewImageActivity : BaseActivity() {
                                     onClick = {
                                         coroutineScope.launch {
                                             val omrTemplate =
-                                                context.loadJsonFromAssets<Template>("template_5_ques.json")
+                                                context.loadJsonFromAssets<Template>("template_16_ques.json")
                                             if (omrTemplate == null) {
                                                 Toast.makeText(context, "", Toast.LENGTH_SHORT)
                                                     .show()
                                             } else {
 
-//                                                preProcessImage =
-//                                                    TemplateProcessor().generateTemplateJson(bm)
                                                 preProcessImage =
-                                                    OmrProcessor().processOmrSheet(omrTemplate, bm)
+                                                    TemplateProcessor().generateTemplateJson(bm)
+//                                                preProcessImage =
+//                                                    OmrProcessor().processOmrSheet(omrTemplate, bm)
                                                 showFinalProcessedImageDialog = true
 
                                             }
