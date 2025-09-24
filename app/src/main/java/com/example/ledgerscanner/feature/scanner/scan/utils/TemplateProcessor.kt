@@ -64,7 +64,7 @@ object TemplateProcessor {
 //                bubbles2DArray
 //            )
         val templateJson = generateTemplateJsonSimple(
-            anchorPoints[0],
+            anchorPoints,
             bubbles2DArray
         )
         println("templateJson - $templateJson")
@@ -92,20 +92,21 @@ object TemplateProcessor {
     }
 
     fun generateTemplateJsonSimple(
-        anchorTL: Point,
+        anchors: List<Point>,
         bubbleGrid: List<List<Bubble>>,
     ): String {
         val gson = Gson()
         val questions = mutableListOf<Question>()
 
         var qNo = 1
+        var topLeftAnchor = anchors[0]
         for (row in bubbleGrid) {
             val options = mutableListOf<OptionBox>()
             val optionNames = listOf("A", "B", "C", "D")
 
             for ((idx, pt) in row.withIndex()) {
-                val relX = (pt.x - anchorTL.x)
-                val relY = (pt.y - anchorTL.y)
+                val relX = (pt.x - topLeftAnchor.x)
+                val relY = (pt.y - topLeftAnchor.y)
                 options.add(
                     OptionBox(
                         option = optionNames.getOrElse(idx) { "?" },
@@ -126,7 +127,11 @@ object TemplateProcessor {
             sheet_height = 0,
             options_per_question = 4,
             grid = null,       // skip if not using grid
-            questions = questions
+            questions = questions,
+            anchor_top_left = anchors[0],
+            anchor_top_right = anchors[1],
+            anchor_bottom_right = anchors[2],
+            anchor_bottom_left = anchors[3]
         )
 
         return gson.toJson(template)

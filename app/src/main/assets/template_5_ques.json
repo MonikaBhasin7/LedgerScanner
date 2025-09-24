@@ -1,4 +1,20 @@
 {
+  "anchor_bottom_left": {
+    "x": 54.5,
+    "y": 1346.5
+  },
+  "anchor_bottom_right": {
+    "x": 746.5,
+    "y": 1346.5
+  },
+  "anchor_top_left": {
+    "x": 54.5,
+    "y": 54.5
+  },
+  "anchor_top_right": {
+    "x": 746.5,
+    "y": 54.5
+  },
   "options_per_question": 4,
   "questions": [
     {

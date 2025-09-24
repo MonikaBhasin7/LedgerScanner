@@ -1,5 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.scan.model
 
+import android.graphics.Point
+
 // Reuse your data classes
 data class Template(
     val version: String? = "1.0",
@@ -8,7 +10,11 @@ data class Template(
     val sheet_height: Int = 0,
     val options_per_question: Int,
     val grid: Grid?,
-    val questions: List<Question>
+    val questions: List<Question>,
+    val anchor_top_left: org.opencv.core.Point,
+    val anchor_top_right: org.opencv.core.Point,
+    val anchor_bottom_right: org.opencv.core.Point,
+    val anchor_bottom_left: org.opencv.core.Point,
 )
 
 data class Grid(
