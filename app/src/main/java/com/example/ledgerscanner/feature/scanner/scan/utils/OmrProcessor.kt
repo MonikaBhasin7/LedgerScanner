@@ -61,26 +61,20 @@ class OmrProcessor {
         debugMap["warped"] = warped.toBitmapSafe()
 
 
+        val debugPoints = mutableListOf<Point>()
+        for (q in template.questions) {
+            for (o in q.options) {
+                debugPoints.add(
+                    Point(
+                        o.x + template.anchor_top_left.x,
+                        o.y + template.anchor_top_left.y
+                    )
+                )
+            }
+        }
         debugMap["first-highlight"] = OmrUtils.drawPoints(
             warped,
-            listOf(
-                Point(
-                    template.questions.first().options.first().x + template.anchor_top_left.x,
-                    template.questions.first().options.first().y + template.anchor_top_left.y
-                ),
-                Point(
-                    template.questions.first().options[1].x + template.anchor_top_left.x,
-                    template.questions.first().options[1].y + template.anchor_top_left.y
-                ),
-                Point(
-                    template.questions.first().options[2].x + template.anchor_top_left.x,
-                    template.questions.first().options[2].y + template.anchor_top_left.y
-                ),
-                Point(
-                    template.questions.first().options[3].x + template.anchor_top_left.x,
-                    template.questions.first().options[3].y + template.anchor_top_left.y
-                ),
-            )
+            debugPoints
         ).toBitmapSafe()
 
 
