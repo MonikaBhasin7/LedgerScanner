@@ -50,7 +50,14 @@ object Try {
 
         // 4. Detect bubble centers
         val bubbleCenters = detectBubbleCenters(grayMat)
-        generate2DArrayOfBubbles(bubbleCenters)
+        val bubbles2DArray = generate2DArrayOfBubbles(bubbleCenters)
+        val relativeDistanceBubbles2DArray =
+            findDistanceBwAnchorAndBubbles(
+                anchorPoints[0],
+                bubbles2DArray
+            )
+        println("bubbles2DArray - $bubbles2DArray")
+        println("relativeDistanceBubbles2DArray - $relativeDistanceBubbles2DArray")
         // 5. Debug visualization: draw bubble centers
         val bubbleOverlay = drawPoints(srcMat, bubbleCenters, Scalar(0.0, 0.0, 0.0))
         if (debug) debugMap["bubbles"] = matToBitmapSafe(bubbleOverlay)
@@ -67,19 +74,35 @@ object Try {
         )
     }
 
-    private fun generate2DArrayOfBubbles(bubbleCenters: List<Point>) : MutableList<MutableList<Point>> {
+    private fun findDistanceBwAnchorAndBubbles(
+        topLeftAnchorPoint: Point,
+        bubbles2DArray: MutableList<MutableList<Point>>
+    ): MutableList<MutableList<Point>> {
+        val relativeDistanceBubbles2DArray = bubbles2DArray.map { it.toMutableList() }.toMutableList()
+        for (row in 0 until bubbles2DArray.size) {
+            for (col in 0 until bubbles2DArray[row].size) {
+                val point = bubbles2DArray[row][col]
+                val x = point.x - topLeftAnchorPoint.x
+                val y = point.y - topLeftAnchorPoint.y
+                relativeDistanceBubbles2DArray[row][col] = Point(x, y)
+            }
+        }
+        return relativeDistanceBubbles2DArray
+    }
+
+    private fun generate2DArrayOfBubbles(bubbleCenters: List<Point>): MutableList<MutableList<Point>> {
         var ptr = 0
         val bubbleGrid = mutableListOf<MutableList<Point>>()
         if (bubbleCenters.isEmpty()) return bubbleGrid
 
         var rowPointer = 0
         bubbleGrid.add(mutableListOf())
-        while(ptr < bubbleCenters.size) {
-            if((ptr + 1) >= bubbleCenters.size) {
+        while (ptr < bubbleCenters.size) {
+            if ((ptr + 1) >= bubbleCenters.size) {
                 bubbleGrid[rowPointer].add(bubbleCenters[ptr])
                 break
             }
-            if(bubbleCenters[ptr].y == bubbleCenters[ptr + 1].y) {
+            if (bubbleCenters[ptr].y == bubbleCenters[ptr + 1].y) {
                 bubbleGrid[rowPointer].add(bubbleCenters[ptr])
             } else {
                 bubbleGrid[rowPointer].add(bubbleCenters[ptr])
@@ -88,7 +111,7 @@ object Try {
             }
             ptr++
         }
-        return  bubbleGrid
+        return bubbleGrid
     }
 
     fun detectBubbleCenters(gray: Mat): List<Point> {
@@ -135,7 +158,13 @@ object Try {
         // 2. Find contours
         val contours = mutableListOf<MatOfPoint>()
         val hierarchy = Mat()
-        Imgproc.findContours(bin, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+        Imgproc.findContours(
+            bin,
+            contours,
+            hierarchy,
+            Imgproc.RETR_EXTERNAL,
+            Imgproc.CHAIN_APPROX_SIMPLE
+        )
 
         // 3. Filter contours that look like squares
         for (contour in contours) {
@@ -179,7 +208,15 @@ object Try {
             Imgproc.cvtColor(gray, debugMat, Imgproc.COLOR_GRAY2BGR)
             anchors.forEachIndexed { i, pt ->
                 Imgproc.circle(debugMat, pt, 10, Scalar(0.0, 0.0, 255.0), 2)
-                Imgproc.putText(debugMat, "$i", Point(pt.x + 15, pt.y), Imgproc.FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255.0, 0.0, 0.0), 2)
+                Imgproc.putText(
+                    debugMat,
+                    "$i",
+                    Point(pt.x + 15, pt.y),
+                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    Scalar(255.0, 0.0, 0.0),
+                    2
+                )
             }
             // save/show debugMat if needed
             debugMat.release()
