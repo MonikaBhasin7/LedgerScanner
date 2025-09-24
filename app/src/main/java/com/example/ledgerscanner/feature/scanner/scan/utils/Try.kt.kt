@@ -50,10 +50,12 @@ object Try {
 
         // 4. Detect bubble centers
         val bubbleCenters = detectBubbleCenters(grayMat)
-
+        generate2DArrayOfBubbles(bubbleCenters)
         // 5. Debug visualization: draw bubble centers
-        val bubbleOverlay = drawPoints(srcMat, bubbleCenters, Scalar(0.0, 255.0, 0.0))
+        val bubbleOverlay = drawPoints(srcMat, bubbleCenters, Scalar(0.0, 0.0, 0.0))
         if (debug) debugMap["bubbles"] = matToBitmapSafe(bubbleOverlay)
+
+
 
         return PreprocessResult(
             ok = true,
@@ -63,6 +65,30 @@ object Try {
             confidence = 0.0,
             intermediate = debugMap
         )
+    }
+
+    private fun generate2DArrayOfBubbles(bubbleCenters: List<Point>) : MutableList<MutableList<Point>> {
+        var ptr = 0
+        val bubbleGrid = mutableListOf<MutableList<Point>>()
+        if (bubbleCenters.isEmpty()) return bubbleGrid
+
+        var rowPointer = 0
+        bubbleGrid.add(mutableListOf())
+        while(ptr < bubbleCenters.size) {
+            if((ptr + 1) >= bubbleCenters.size) {
+                bubbleGrid[rowPointer].add(bubbleCenters[ptr])
+                break
+            }
+            if(bubbleCenters[ptr].y == bubbleCenters[ptr + 1].y) {
+                bubbleGrid[rowPointer].add(bubbleCenters[ptr])
+            } else {
+                bubbleGrid[rowPointer].add(bubbleCenters[ptr])
+                bubbleGrid.add(mutableListOf())
+                rowPointer++
+            }
+            ptr++
+        }
+        return  bubbleGrid
     }
 
     fun detectBubbleCenters(gray: Mat): List<Point> {
@@ -91,6 +117,8 @@ object Try {
             centers.add(Point(x, y))
             // you can draw circle here if you want
         }
+
+        centers.sortWith(compareBy<Point> { it.y }.thenBy { it.x })
 
         blurred.release()
         circles.release()
