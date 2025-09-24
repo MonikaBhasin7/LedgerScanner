@@ -143,13 +143,12 @@ object Try {
             val approx = MatOfPoint2f()
             Imgproc.approxPolyDP(MatOfPoint2f(*contour.toArray()), approx, 0.04 * peri, true)
 
-            // Keep only quadrilaterals
             if (approx.total() == 4L) {
                 val rect = Imgproc.boundingRect(MatOfPoint(*approx.toArray()))
                 val aspect = rect.width.toDouble() / rect.height.toDouble()
-                if (aspect > 0.8 && aspect < 1.2) { // close to square
+                if (aspect in 0.8..1.2) { // close to square
                     val area = rect.width * rect.height
-                    if (area > 200 && area < 5000) { // filter by size
+                    if (area in 200..5000) { // filter by size
                         val center = Point(
                             rect.x + rect.width / 2.0,
                             rect.y + rect.height / 2.0
@@ -160,14 +159,30 @@ object Try {
             }
         }
 
-        // 4. Optional debug image
+        // 4. Sort anchors into LT, RT, RB, LB
+        if (anchors.size == 4) {
+            // sort top vs bottom by y
+            val sorted = anchors.sortedBy { it.y }
+            val top = sorted.take(2).sortedBy { it.x }   // left, right
+            val bottom = sorted.takeLast(2).sortedBy { it.x } // left, right
+
+            anchors.clear()
+            anchors.add(top[0])     // LT
+            anchors.add(top[1])     // RT
+            anchors.add(bottom[1])  // RB
+            anchors.add(bottom[0])  // LB
+        }
+
+        // 5. Optional debug
         if (debug) {
             val debugMat = Mat()
             Imgproc.cvtColor(gray, debugMat, Imgproc.COLOR_GRAY2BGR)
-            for (pt in anchors) {
+            anchors.forEachIndexed { i, pt ->
                 Imgproc.circle(debugMat, pt, 10, Scalar(0.0, 0.0, 255.0), 2)
+                Imgproc.putText(debugMat, "$i", Point(pt.x + 15, pt.y), Imgproc.FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255.0, 0.0, 0.0), 2)
             }
-            // Save or show debug image
+            // save/show debugMat if needed
+            debugMat.release()
         }
 
         bin.release()
