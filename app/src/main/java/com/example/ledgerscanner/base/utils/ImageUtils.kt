@@ -519,3 +519,17 @@ fun Bitmap.isImageBlurry(threshold: Double = 120.0): Boolean {
     // Log.d("BlurUtils", "lapVar=$varLap threshold=$threshold")
     return varLap < threshold
 }
+
+fun Mat.toBitmapSafe(): Bitmap {
+    val tmp = Mat()
+    when (this.channels()) {
+        1 -> Imgproc.cvtColor(this, tmp, Imgproc.COLOR_GRAY2RGBA)
+        3 -> Imgproc.cvtColor(this, tmp, Imgproc.COLOR_BGR2RGBA)
+        4 -> this.copyTo(tmp)
+        else -> this.copyTo(tmp)
+    }
+    val bmp = createBitmap(tmp.cols(), tmp.rows())
+    Utils.matToBitmap(tmp, bmp)
+    tmp.release()
+    return bmp
+}

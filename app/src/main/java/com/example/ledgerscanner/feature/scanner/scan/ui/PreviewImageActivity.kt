@@ -39,6 +39,7 @@ import com.example.ledgerscanner.base.utils.ImageUtils
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
+import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import kotlinx.coroutines.launch
 import java.io.File
@@ -142,21 +143,18 @@ class PreviewImageActivity : BaseActivity() {
                                     onClick = {
                                         coroutineScope.launch {
                                             val omrTemplate =
-                                                context.loadJsonFromAssets<Template>("omr_template_1.json")
+                                                context.loadJsonFromAssets<Template>("template_5_ques.json")
                                             if (omrTemplate == null) {
                                                 Toast.makeText(context, "", Toast.LENGTH_SHORT)
                                                     .show()
                                             } else {
-//                                                preProcessImage = TemplateProcessor.processWithTemplate(
-//                                                    context,
-//                                                    bm,
-//                                                    omrTemplate,
-//                                                    bm
-//                                                )
-//                                                showFinalProcessedImageDialog = true
+
+//                                                preProcessImage =
+//                                                    TemplateProcessor().generateTemplateJson(bm)
                                                 preProcessImage =
-                                                    TemplateProcessor.generateTemplateJson(bm)
+                                                    OmrProcessor().processOmrSheet(omrTemplate, bm)
                                                 showFinalProcessedImageDialog = true
+
                                             }
 //                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)
 //                                            showFinalProcessedImageDialog = true

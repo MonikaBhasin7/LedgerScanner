@@ -2,7 +2,8 @@ package com.example.ledgerscanner.feature.scanner.scan.utils
 
 import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
-import androidx.core.graphics.createBitmap
+import com.example.ledgerscanner.base.utils.OmrUtils
+import com.example.ledgerscanner.base.utils.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
@@ -18,7 +19,7 @@ import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 
-object TemplateProcessor {
+class TemplateProcessor {
 
     @WorkerThread
     fun generateTemplateJson(
@@ -32,7 +33,7 @@ object TemplateProcessor {
         Utils.bitmapToMat(inputBitmap, srcMat)
         val grayMat = Mat()
         Imgproc.cvtColor(srcMat, grayMat, Imgproc.COLOR_BGR2GRAY)
-        if (debug) debugMap["gray"] = matToBitmapSafe(grayMat)
+        if (debug) debugMap["gray"] = grayMat.toBitmapSafe()
 
         // 2. Detect 4 anchor squares
         val anchorPoints = detectAnchorSquares(grayMat)
@@ -48,12 +49,12 @@ object TemplateProcessor {
         }
 
         // 3. Debug visualization: draw anchor points
-        val anchorOverlay = drawPoints(
+        val anchorOverlay = OmrUtils.drawPoints(
             srcMat,
             points = anchorPoints,
             color = Scalar(0.0, 0.0, 255.0)
         )
-        if (debug) debugMap["anchors"] = matToBitmapSafe(anchorOverlay)
+        if (debug) debugMap["anchors"] = anchorOverlay.toBitmapSafe()
 
         // 4. Detect bubble centers
         val bubbleCenters = detectBubbleCenters(grayMat)
@@ -71,12 +72,12 @@ object TemplateProcessor {
 //        println("relativeDistanceBubbles2DArray - $relativeDistanceBubbles2DArray")
         // 5. Debug visualization: draw bubble centers
         val bubbleOverlay =
-            drawPoints(
+            OmrUtils.drawPoints(
                 srcMat,
                 bubbles = bubbleCenters,
                 color = Scalar(0.0, 0.0, 0.0)
             )
-        if (debug) debugMap["bubbles"] = matToBitmapSafe(bubbleOverlay)
+        if (debug) debugMap["bubbles"] = bubbleOverlay.toBitmapSafe()
 
 
 
@@ -212,7 +213,7 @@ object TemplateProcessor {
         return centers
     }
 
-    private fun detectAnchorSquares(gray: Mat, debug: Boolean = false): List<Point> {
+    fun detectAnchorSquares(gray: Mat, debug: Boolean = false): List<Point> {
         val anchors = mutableListOf<Point>()
 
         // 1. Threshold (since anchors are black)
@@ -290,64 +291,5 @@ object TemplateProcessor {
         hierarchy.release()
 
         return anchors
-    }
-
-    private fun drawPoints(
-        src: Mat,
-        points: List<Point>? = null,
-        bubbles: List<Bubble>? = null,
-        color: Scalar = Scalar(0.0, 0.0, 255.0)
-    ): Mat {
-        val out = src.clone()
-
-        points?.let {
-            for ((i, p) in it.withIndex()) {
-                // Draw small circle
-                Imgproc.circle(out, p, 10, color, -1)
-
-                // Label point index (TL=0, TR=1, BR=2, BL=3)
-                Imgproc.putText(
-                    out,
-                    "$i",
-                    Point(p.x + 15, p.y),
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    color,
-                    2
-                )
-            }
-        }
-        bubbles?.let {
-            for ((i, p) in it.withIndex()) {
-                // Draw small circle
-                Imgproc.circle(out, Point(p.x, p.y), 10, color, -1)
-
-                // Label point index (TL=0, TR=1, BR=2, BL=3)
-                Imgproc.putText(
-                    out,
-                    "$i",
-                    Point(p.x + 15, p.y),
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    color,
-                    2
-                )
-            }
-        }
-        return out
-    }
-
-    private fun matToBitmapSafe(mat: Mat): Bitmap {
-        val tmp = Mat()
-        when (mat.channels()) {
-            1 -> Imgproc.cvtColor(mat, tmp, Imgproc.COLOR_GRAY2RGBA)
-            3 -> Imgproc.cvtColor(mat, tmp, Imgproc.COLOR_BGR2RGBA)
-            4 -> mat.copyTo(tmp)
-            else -> mat.copyTo(tmp)
-        }
-        val bmp = createBitmap(tmp.cols(), tmp.rows())
-        Utils.matToBitmap(tmp, bmp)
-        tmp.release()
-        return bmp
     }
 }
