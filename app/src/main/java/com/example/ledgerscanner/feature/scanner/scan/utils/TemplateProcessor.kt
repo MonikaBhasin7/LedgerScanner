@@ -14,10 +14,10 @@ import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 
-object Try {
+object TemplateProcessor {
 
     @WorkerThread
-    fun processOMRWithTemplate(
+    fun generateTemplateJson(
         inputBitmap: Bitmap,
         template: Template,
         debug: Boolean = true
@@ -78,7 +78,8 @@ object Try {
         topLeftAnchorPoint: Point,
         bubbles2DArray: MutableList<MutableList<Point>>
     ): MutableList<MutableList<Point>> {
-        val relativeDistanceBubbles2DArray = bubbles2DArray.map { it.toMutableList() }.toMutableList()
+        val relativeDistanceBubbles2DArray =
+            bubbles2DArray.map { it.toMutableList() }.toMutableList()
         for (row in 0 until bubbles2DArray.size) {
             for (col in 0 until bubbles2DArray[row].size) {
                 val point = bubbles2DArray[row][col]
@@ -114,7 +115,7 @@ object Try {
         return bubbleGrid
     }
 
-    fun detectBubbleCenters(gray: Mat): List<Point> {
+    private fun detectBubbleCenters(gray: Mat): List<Point> {
         val blurred = Mat()
         Imgproc.GaussianBlur(gray, blurred, Size(9.0, 9.0), 2.0)
 
@@ -148,7 +149,7 @@ object Try {
         return centers
     }
 
-    fun detectAnchorSquares(gray: Mat, debug: Boolean = false): List<Point> {
+    private fun detectAnchorSquares(gray: Mat, debug: Boolean = false): List<Point> {
         val anchors = mutableListOf<Point>()
 
         // 1. Threshold (since anchors are black)
@@ -228,7 +229,11 @@ object Try {
         return anchors
     }
 
-    fun drawPoints(src: Mat, points: List<Point>, color: Scalar = Scalar(0.0, 0.0, 255.0)): Mat {
+    private fun drawPoints(
+        src: Mat,
+        points: List<Point>,
+        color: Scalar = Scalar(0.0, 0.0, 255.0)
+    ): Mat {
         val out = src.clone()
 
         for ((i, p) in points.withIndex()) {

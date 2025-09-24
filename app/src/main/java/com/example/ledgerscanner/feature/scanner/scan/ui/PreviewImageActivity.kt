@@ -1,6 +1,5 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -41,8 +40,7 @@ import com.example.ledgerscanner.base.utils.TemplateProcessor
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
-import com.example.ledgerscanner.feature.scanner.scan.utils.Try
-import com.google.gson.Gson
+import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -157,7 +155,7 @@ class PreviewImageActivity : BaseActivity() {
 //                                                    bm
 //                                                )
 //                                                showFinalProcessedImageDialog = true
-                                                preProcessImage = Try.processOMRWithTemplate(bm, omrTemplate)
+                                                preProcessImage = TemplateProcessor.generateTemplateJson(bm, omrTemplate)
                                                 showFinalProcessedImageDialog = true
                                             }
 //                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)
