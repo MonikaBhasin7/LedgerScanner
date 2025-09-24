@@ -11,6 +11,8 @@ import com.example.ledgerscanner.feature.scanner.scan.model.Question
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.google.gson.Gson
 import org.opencv.android.Utils
+import org.opencv.core.Core
+import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.MatOfPoint2f
@@ -47,7 +49,6 @@ class TemplateProcessor {
                 intermediate = debugMap
             )
         }
-
         // 3. Debug visualization: draw anchor points
         val anchorOverlay = OmrUtils.drawPoints(
             srcMat,
@@ -57,21 +58,16 @@ class TemplateProcessor {
         if (debug) debugMap["anchors"] = anchorOverlay.toBitmapSafe()
 
         // 4. Detect bubble centers
-        val bubbleCenters = detectBubbleCenters(grayMat)
+        val bubbleCenters = detectBubbleCenters(grayMat, anchorPoints) { mat, debugLabel ->
+            if (debug) debugMap["debugLabel"] = mat.toBitmapSafe()
+        }
         val bubbles2DArray = generate2DArrayOfBubbles(bubbleCenters)
-//        val relativeDistanceBubbles2DArray =
-//            findDistanceBwAnchorAndBubbles(
-//                anchorPoints[0],
-//                bubbles2DArray
-//            )
         val templateJson = generateTemplateJsonSimple(
             anchorPoints,
             bubbles2DArray,
             srcMat.size()
         )
         println("templateJson - $templateJson")
-//        println("relativeDistanceBubbles2DArray - $relativeDistanceBubbles2DArray")
-        // 5. Debug visualization: draw bubble centers
         val bubbleOverlay =
             OmrUtils.drawPoints(
                 srcMat,
@@ -182,21 +178,36 @@ class TemplateProcessor {
     }
 
 
-    private fun detectBubbleCenters(gray: Mat): List<Bubble> {
-        val blurred = Mat()
-        Imgproc.GaussianBlur(gray, blurred, Size(9.0, 9.0), 2.0)
+    private fun detectBubbleCenters(gray: Mat, anchors: List<Point>, debugCallback: (Mat,String) -> Unit): List<Bubble> {
+        // 1. Make a mask same size as gray
+        val mask = Mat.zeros(gray.size(), CvType.CV_8UC1)
 
+        // 2. Define polygon (anchors are LT, RT, RB, LB)
+        val anchorMat = MatOfPoint(*anchors.toTypedArray())
+        Imgproc.fillConvexPoly(mask, anchorMat, Scalar(255.0))
+
+        // 3. Apply mask
+        val masked = Mat()
+        Core.bitwise_and(gray, mask, masked)
+        debugCallback(masked, "masked before detecting bubbles")
+
+
+        // 4. Blur
+        val blurred = Mat()
+        Imgproc.GaussianBlur(masked, blurred, Size(9.0, 9.0), 2.0)
+
+        // 5. Detect circles
         val circles = Mat()
         Imgproc.HoughCircles(
             blurred,
             circles,
             Imgproc.HOUGH_GRADIENT,
-            1.0,                 // dp: inverse ratio of resolution
-            20.0,                // minDist between centers
-            100.0,               // param1: higher Canny threshold
-            30.0,                // param2: smaller = more circles, larger = fewer
-            8,                  // minRadius
-            20                   // maxRadius
+            1.0,
+            20.0,
+            100.0,
+            30.0,
+            8,
+            20
         )
 
         val centers = mutableListOf<Bubble>()
@@ -206,11 +217,12 @@ class TemplateProcessor {
             val y = data[1]
             val r = data[2]
             centers.add(Bubble(x, y, r))
-            // you can draw circle here if you want
         }
 
         centers.sortWith(compareBy<Bubble> { it.y }.thenBy { it.x })
 
+        mask.release()
+        masked.release()
         blurred.release()
         circles.release()
         return centers
