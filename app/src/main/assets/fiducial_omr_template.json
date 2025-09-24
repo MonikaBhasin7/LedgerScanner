@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "notes": "Template for OMR sheet with 5 questions × 4 options, coordinates relative to top-left fiducial center.",
+  "sheet_width": 800,
+  "sheet_height": 1400,
+  "options_per_question": 4,
+  "bubble_diameter": 40,
+  "anchor_reference": "top_left_fiducial_center",
+  "anchor_center": { "x": 100, "y": 100 },
+  "grid": {
+    "start_x": 200,
+    "start_y": 200,
+    "col_spacing": 100,
+    "row_spacing": 120,
+    "bubble_w": 40,
+    "bubble_h": 40,
+    "padding": 0
+  },
+  "questions": [
+    {
+      "q_no": 1,
+      "options": [
+        { "option": "A", "x": 200, "y": 200, "w": 40, "h": 40 },
+        { "option": "B", "x": 300, "y": 200, "w": 40, "h": 40 },
+        { "option": "C", "x": 400, "y": 200, "w": 40, "h": 40 },
+        { "option": "D", "x": 500, "y": 200, "w": 40, "h": 40 }
+      ]
+    },
+    {
+      "q_no": 2,
+      "options": [
+        { "option": "A", "x": 200, "y": 320, "w": 40, "h": 40 },
+        { "option": "B", "x": 300, "y": 320, "w": 40, "h": 40 },
+        { "option": "C", "x": 400, "y": 320, "w": 40, "h": 40 },
+        { "option": "D", "x": 500, "y": 320, "w": 40, "h": 40 }
+      ]
+    },
+    {
+      "q_no": 3,
+      "options": [
+        { "option": "A", "x": 200, "y": 440, "w": 40, "h": 40 },
+        { "option": "B", "x": 300, "y": 440, "w": 40, "h": 40 },
+        { "option": "C", "x": 400, "y": 440, "w": 40, "h": 40 },
+        { "option": "D", "x": 500, "y": 440, "w": 40, "h": 40 }
+      ]
+    },
+    {
+      "q_no": 4,
+      "options": [
+        { "option": "A", "x": 200, "y": 560, "w": 40, "h": 40 },
+        { "option": "B", "x": 300, "y": 560, "w": 40, "h": 40 },
+        { "option": "C", "x": 400, "y": 560, "w": 40, "h": 40 },
+        { "option": "D", "x": 500, "y": 560, "w": 40, "h": 40 }
+      ]
+    },
+    {
+      "q_no": 5,
+      "options": [
+        { "option": "A", "x": 200, "y": 680, "w": 40, "h": 40 },
+        { "option": "B", "x": 300, "y": 680, "w": 40, "h": 40 },
+        { "option": "C", "x": 400, "y": 680, "w": 40, "h": 40 },
+        { "option": "D", "x": 500, "y": 680, "w": 40, "h": 40 }
+      ]
+    }
+  ]
+}

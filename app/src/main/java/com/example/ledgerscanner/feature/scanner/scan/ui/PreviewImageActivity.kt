@@ -41,6 +41,7 @@ import com.example.ledgerscanner.base.utils.TemplateProcessor
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
+import com.example.ledgerscanner.feature.scanner.scan.utils.Try
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.File
@@ -149,12 +150,14 @@ class PreviewImageActivity : BaseActivity() {
                                                 Toast.makeText(context, "", Toast.LENGTH_SHORT)
                                                     .show()
                                             } else {
-                                                preProcessImage = TemplateProcessor.processWithTemplate(
-                                                    context,
-                                                    bm,
-                                                    omrTemplate,
-                                                    bm
-                                                )
+//                                                preProcessImage = TemplateProcessor.processWithTemplate(
+//                                                    context,
+//                                                    bm,
+//                                                    omrTemplate,
+//                                                    bm
+//                                                )
+//                                                showFinalProcessedImageDialog = true
+                                                preProcessImage = Try.processOMRWithTemplate(bm, omrTemplate)
                                                 showFinalProcessedImageDialog = true
                                             }
 //                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)
