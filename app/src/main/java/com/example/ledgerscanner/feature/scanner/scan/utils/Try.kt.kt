@@ -6,7 +6,6 @@ import androidx.core.graphics.createBitmap
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.android.Utils
-import org.opencv.android.Utils.bitmapToMat
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.MatOfPoint2f
@@ -24,19 +23,20 @@ object Try {
         debug: Boolean = true
     ): PreprocessResult {
         val debugMap = mutableMapOf<String, Bitmap>()
-        // 1. Convert to grayscale
-        val tplMatBgr = Mat()
-        Utils.bitmapToMat(inputBitmap, tplMatBgr)
-        val gray = Mat()
-        Imgproc.cvtColor(tplMatBgr, gray, Imgproc.COLOR_BGR2GRAY)
-        if (debug) debugMap["gray"] = matToBitmapSafe(gray)
 
-        // 2. Detect 4 fiducial dots
-        val fiducials = detectAnchorSquares(gray)
-        if (fiducials.size != 4) {
+        // 1. Convert bitmap to grayscale
+        val srcMat = Mat()
+        Utils.bitmapToMat(inputBitmap, srcMat)
+        val grayMat = Mat()
+        Imgproc.cvtColor(srcMat, grayMat, Imgproc.COLOR_BGR2GRAY)
+        if (debug) debugMap["gray"] = matToBitmapSafe(grayMat)
+
+        // 2. Detect 4 anchor squares
+        val anchorPoints = detectAnchorSquares(grayMat)
+        if (anchorPoints.size != 4) {
             return PreprocessResult(
                 ok = false,
-                reason = "Could not detect 4 fiducial dots",
+                reason = "Could not detect 4 anchor points",
                 warpedBitmap = null,
                 transformMatrix = null,
                 confidence = 0.0,
@@ -44,15 +44,20 @@ object Try {
             )
         }
 
-        // 4. Draw the fiducial dots for debug
-        val squareAnchorPoints = drawPoints(tplMatBgr, fiducials, Scalar(0.0, 0.0, 255.0))
-        if (debug) debugMap["fiducials"] = matToBitmapSafe(squareAnchorPoints)
+        // 3. Debug visualization: draw anchor points
+        val anchorOverlay = drawPoints(srcMat, anchorPoints, Scalar(0.0, 0.0, 255.0))
+        if (debug) debugMap["anchors"] = matToBitmapSafe(anchorOverlay)
 
-        detectBubbleCenters(tplMatBgr)
+        // 4. Detect bubble centers
+        val bubbleCenters = detectBubbleCenters(grayMat)
+
+        // 5. Debug visualization: draw bubble centers
+        val bubbleOverlay = drawPoints(srcMat, bubbleCenters, Scalar(0.0, 255.0, 0.0))
+        if (debug) debugMap["bubbles"] = matToBitmapSafe(bubbleOverlay)
 
         return PreprocessResult(
             ok = true,
-            reason = "Could not detect 4 fiducial dots",
+            reason = null,
             warpedBitmap = null,
             transformMatrix = null,
             confidence = 0.0,
