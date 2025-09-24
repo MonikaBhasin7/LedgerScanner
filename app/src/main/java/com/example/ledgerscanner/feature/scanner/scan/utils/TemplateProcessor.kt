@@ -3,8 +3,12 @@ package com.example.ledgerscanner.feature.scanner.scan.utils
 import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
 import androidx.core.graphics.createBitmap
+import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
+import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
 import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.Question
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.google.gson.Gson
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
@@ -19,7 +23,6 @@ object TemplateProcessor {
     @WorkerThread
     fun generateTemplateJson(
         inputBitmap: Bitmap,
-        template: Template,
         debug: Boolean = true
     ): PreprocessResult {
         val debugMap = mutableMapOf<String, Bitmap>()
@@ -45,22 +48,36 @@ object TemplateProcessor {
         }
 
         // 3. Debug visualization: draw anchor points
-        val anchorOverlay = drawPoints(srcMat, anchorPoints, Scalar(0.0, 0.0, 255.0))
+        val anchorOverlay = drawPoints(
+            srcMat,
+            points = anchorPoints,
+            color = Scalar(0.0, 0.0, 255.0)
+        )
         if (debug) debugMap["anchors"] = matToBitmapSafe(anchorOverlay)
 
         // 4. Detect bubble centers
         val bubbleCenters = detectBubbleCenters(grayMat)
         val bubbles2DArray = generate2DArrayOfBubbles(bubbleCenters)
-        val relativeDistanceBubbles2DArray =
-            findDistanceBwAnchorAndBubbles(
-                anchorPoints[0],
-                bubbles2DArray
-            )
-        println("bubbles2DArray - $bubbles2DArray")
-        println("relativeDistanceBubbles2DArray - $relativeDistanceBubbles2DArray")
+//        val relativeDistanceBubbles2DArray =
+//            findDistanceBwAnchorAndBubbles(
+//                anchorPoints[0],
+//                bubbles2DArray
+//            )
+        val templateJson = generateTemplateJsonSimple(
+            anchorPoints[0],
+            bubbles2DArray
+        )
+        println("templateJson - $templateJson")
+//        println("relativeDistanceBubbles2DArray - $relativeDistanceBubbles2DArray")
         // 5. Debug visualization: draw bubble centers
-        val bubbleOverlay = drawPoints(srcMat, bubbleCenters, Scalar(0.0, 0.0, 0.0))
+        val bubbleOverlay =
+            drawPoints(
+                srcMat,
+                bubbles = bubbleCenters,
+                color = Scalar(0.0, 0.0, 0.0)
+            )
         if (debug) debugMap["bubbles"] = matToBitmapSafe(bubbleOverlay)
+
 
 
 
@@ -72,6 +89,47 @@ object TemplateProcessor {
             confidence = 0.0,
             intermediate = debugMap
         )
+    }
+
+    fun generateTemplateJsonSimple(
+        anchorTL: Point,
+        bubbleGrid: List<List<Bubble>>,
+    ): String {
+        val gson = Gson()
+        val questions = mutableListOf<Question>()
+
+        var qNo = 1
+        for (row in bubbleGrid) {
+            val options = mutableListOf<OptionBox>()
+            val optionNames = listOf("A", "B", "C", "D")
+
+            for ((idx, pt) in row.withIndex()) {
+                val relX = (pt.x - anchorTL.x)
+                val relY = (pt.y - anchorTL.y)
+                options.add(
+                    OptionBox(
+                        option = optionNames.getOrElse(idx) { "?" },
+                        x = relX,
+                        y = relY,
+                        r = pt.r
+                    )
+                )
+            }
+
+            questions.add(Question(qNo, options))
+            qNo++
+        }
+
+        val template = Template(
+            version = "1.0",
+            sheet_width = 0,   // not needed now
+            sheet_height = 0,
+            options_per_question = 4,
+            grid = null,       // skip if not using grid
+            questions = questions
+        )
+
+        return gson.toJson(template)
     }
 
     private fun findDistanceBwAnchorAndBubbles(
@@ -91,9 +149,9 @@ object TemplateProcessor {
         return relativeDistanceBubbles2DArray
     }
 
-    private fun generate2DArrayOfBubbles(bubbleCenters: List<Point>): MutableList<MutableList<Point>> {
+    private fun generate2DArrayOfBubbles(bubbleCenters: List<Bubble>): MutableList<MutableList<Bubble>> {
         var ptr = 0
-        val bubbleGrid = mutableListOf<MutableList<Point>>()
+        val bubbleGrid = mutableListOf<MutableList<Bubble>>()
         if (bubbleCenters.isEmpty()) return bubbleGrid
 
         var rowPointer = 0
@@ -115,7 +173,7 @@ object TemplateProcessor {
         return bubbleGrid
     }
 
-    private fun detectBubbleCenters(gray: Mat): List<Point> {
+    private fun detectBubbleCenters(gray: Mat): List<Bubble> {
         val blurred = Mat()
         Imgproc.GaussianBlur(gray, blurred, Size(9.0, 9.0), 2.0)
 
@@ -132,17 +190,17 @@ object TemplateProcessor {
             30                   // maxRadius
         )
 
-        val centers = mutableListOf<Point>()
+        val centers = mutableListOf<Bubble>()
         for (i in 0 until circles.cols()) {
             val data = circles.get(0, i) ?: continue
             val x = data[0]
             val y = data[1]
             val r = data[2]
-            centers.add(Point(x, y))
+            centers.add(Bubble(x, y, r))
             // you can draw circle here if you want
         }
 
-        centers.sortWith(compareBy<Point> { it.y }.thenBy { it.x })
+        centers.sortWith(compareBy<Bubble> { it.y }.thenBy { it.x })
 
         blurred.release()
         circles.release()
@@ -231,25 +289,45 @@ object TemplateProcessor {
 
     private fun drawPoints(
         src: Mat,
-        points: List<Point>,
+        points: List<Point>? = null,
+        bubbles: List<Bubble>? = null,
         color: Scalar = Scalar(0.0, 0.0, 255.0)
     ): Mat {
         val out = src.clone()
 
-        for ((i, p) in points.withIndex()) {
-            // Draw small circle
-            Imgproc.circle(out, p, 10, color, -1)
+        points?.let {
+            for ((i, p) in it.withIndex()) {
+                // Draw small circle
+                Imgproc.circle(out, p, 10, color, -1)
 
-            // Label point index (TL=0, TR=1, BR=2, BL=3)
-            Imgproc.putText(
-                out,
-                "$i",
-                Point(p.x + 15, p.y),
-                Imgproc.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                color,
-                2
-            )
+                // Label point index (TL=0, TR=1, BR=2, BL=3)
+                Imgproc.putText(
+                    out,
+                    "$i",
+                    Point(p.x + 15, p.y),
+                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    color,
+                    2
+                )
+            }
+        }
+        bubbles?.let {
+            for ((i, p) in it.withIndex()) {
+                // Draw small circle
+                Imgproc.circle(out, Point(p.x, p.y), 10, color, -1)
+
+                // Label point index (TL=0, TR=1, BR=2, BL=3)
+                Imgproc.putText(
+                    out,
+                    "$i",
+                    Point(p.x + 15, p.y),
+                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    color,
+                    2
+                )
+            }
         }
         return out
     }

@@ -154,7 +154,8 @@ class PreviewImageActivity : BaseActivity() {
 //                                                    bm
 //                                                )
 //                                                showFinalProcessedImageDialog = true
-                                                preProcessImage = TemplateProcessor.generateTemplateJson(bm, omrTemplate)
+                                                preProcessImage =
+                                                    TemplateProcessor.generateTemplateJson(bm)
                                                 showFinalProcessedImageDialog = true
                                             }
 //                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)

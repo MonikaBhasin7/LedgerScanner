@@ -1,11 +1,12 @@
 package com.example.ledgerscanner.feature.scanner.scan.model
 
+// Reuse your data classes
 data class Template(
-    val version: String?,
-    val sheet_width: Int,
-    val sheet_height: Int,
+    val version: String? = "1.0",
+    val notes: String? = null,
+    val sheet_width: Int = 0,
+    val sheet_height: Int = 0,
     val options_per_question: Int,
-    val bubble_diameter: Int?,
     val grid: Grid?,
     val questions: List<Question>
 )
@@ -17,7 +18,7 @@ data class Grid(
     val row_spacing: Int?,
     val bubble_w: Int?,
     val bubble_h: Int?,
-    val padding: Int?
+    val padding: Int? = 0
 )
 
 data class Question(
@@ -27,15 +28,13 @@ data class Question(
 
 data class OptionBox(
     val option: String,
-    val x: Int,
-    val y: Int,
-    val w: Int,
-    val h: Int
+    val x: Double,
+    val y: Double,
+    val r: Double
 )
 
-data class BubbleResult(
-    val question: Int,
-    val option: String,
-    val filled: Boolean,
-    val confidence: Double
+data class Bubble(
+    val x: Double,
+    val y: Double,
+    val r: Double,
 )
