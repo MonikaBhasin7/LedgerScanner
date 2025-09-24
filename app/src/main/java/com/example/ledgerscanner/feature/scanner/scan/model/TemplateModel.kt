@@ -6,8 +6,8 @@ import android.graphics.Point
 data class Template(
     val version: String? = "1.0",
     val notes: String? = null,
-    val sheet_width: Int = 0,
-    val sheet_height: Int = 0,
+    val sheet_width: Double = 0.0,
+    val sheet_height: Double = 0.0,
     val options_per_question: Int,
     val grid: Grid?,
     val questions: List<Question>,

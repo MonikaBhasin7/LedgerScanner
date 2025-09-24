@@ -66,7 +66,8 @@ class TemplateProcessor {
 //            )
         val templateJson = generateTemplateJsonSimple(
             anchorPoints,
-            bubbles2DArray
+            bubbles2DArray,
+            srcMat.size()
         )
         println("templateJson - $templateJson")
 //        println("relativeDistanceBubbles2DArray - $relativeDistanceBubbles2DArray")
@@ -95,6 +96,7 @@ class TemplateProcessor {
     fun generateTemplateJsonSimple(
         anchors: List<Point>,
         bubbleGrid: List<List<Bubble>>,
+        size: Size,
     ): String {
         val gson = Gson()
         val questions = mutableListOf<Question>()
@@ -124,8 +126,8 @@ class TemplateProcessor {
 
         val template = Template(
             version = "1.0",
-            sheet_width = 0,   // not needed now
-            sheet_height = 0,
+            sheet_width = size.width,
+            sheet_height = size.height,
             options_per_question = 4,
             grid = null,       // skip if not using grid
             questions = questions,

@@ -17,6 +17,7 @@ class OmrProcessor {
 
     companion object {
         val templateProcessor = TemplateProcessor()
+        val cropper = PageCropper()
     }
 
     @WorkerThread
@@ -55,10 +56,7 @@ class OmrProcessor {
             src = gray,
             detectedAnchors = detectedAnchors,
             templateAnchors = templateAnchors,
-            size = Size(
-                template.anchor_top_right.x - template.anchor_top_left.x,
-                template.anchor_bottom_right.y - template.anchor_top_right.y
-            )
+            size = Size(template.sheet_width, template.sheet_height)
         )
         debugMap["warped"] = warped.toBitmapSafe()
 
@@ -107,7 +105,7 @@ class OmrProcessor {
         val H = Imgproc.getPerspectiveTransform(srcPoints, dstPoints)
 
         val warped = Mat()
-        Imgproc.warpPerspective(src, warped, H, Size(0.0,0.0))
+        Imgproc.warpPerspective(src, warped, H, size)
         return warped
     }
 }
