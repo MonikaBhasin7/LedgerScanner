@@ -20,6 +20,8 @@ import org.opencv.core.Point
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 class TemplateProcessor {
 
@@ -89,6 +91,62 @@ class TemplateProcessor {
         )
     }
 
+    fun groupBubblesIntoRows(bubbles: List<Bubble>, yTolerance: Double?): List<List<Bubble>> {
+        if (bubbles.isEmpty()) return emptyList()
+
+        val tol = yTolerance ?: computeRowToleranceFromBubbles(bubbles)
+
+        // 1. Sort by y first
+        val sorted = bubbles.sortedBy { it.y }
+        val rows = mutableListOf<MutableList<Bubble>>()
+
+        // 2. Make buckets by Y tolerance
+        var currentRow = mutableListOf<Bubble>()
+        var currentY = sorted.first().y
+
+        for (b in sorted) {
+            if (abs(b.y - currentY) <= tol) {
+                currentRow.add(b)
+            } else {
+                // finalize this row
+                rows.add(currentRow.sortedBy { it.x }.toMutableList())
+                // start new row
+                currentRow = mutableListOf(b)
+                currentY = b.y
+            }
+        }
+        // Add last row
+        if (currentRow.isNotEmpty()) {
+            rows.add(currentRow.sortedBy { it.x }.toMutableList())
+        }
+
+        return rows
+    }
+
+    private fun computeRowToleranceFromBubbles(
+        bubbles: List<Bubble>,
+        factor: Double = 0.6,     // typical choice 0.5..0.8
+        minTol: Double = 6.0,     // lower bound in pixels
+        maxTol: Double = 60.0     // upper bound (prevent huge merges)
+    ): Double {
+        if (bubbles.isEmpty()) return minTol
+
+        // compute radii list
+        val radii = bubbles.map { it.r }.filter { it.isFinite() && it > 0.0 }
+        if (radii.isEmpty()) return minTol
+
+        // median radius (robust to outliers)
+        val sorted = radii.sorted()
+        val median = if (sorted.size % 2 == 1) {
+            sorted[sorted.size / 2]
+        } else {
+            (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2.0
+        }
+
+        val tol = (median * factor).coerceIn(minTol, maxTol)
+        return tol
+    }
+
     fun generateTemplateJsonSimple(
         anchors: List<Point>,
         bubbleGrid: List<List<Bubble>>,
@@ -153,32 +211,43 @@ class TemplateProcessor {
         return relativeDistanceBubbles2DArray
     }
 
-    private fun generate2DArrayOfBubbles(bubbleCenters: List<Bubble>): MutableList<MutableList<Bubble>> {
-        var ptr = 0
-        val bubbleGrid = mutableListOf<MutableList<Bubble>>()
-        if (bubbleCenters.isEmpty()) return bubbleGrid
+    private fun generate2DArrayOfBubbles(
+        bubbleCenters: List<Bubble>,
+        rowTolerance: Double? = null
+    ): MutableList<MutableList<Bubble>> {
+        if (bubbleCenters.isEmpty()) return mutableListOf()
 
-        var rowPointer = 0
-        bubbleGrid.add(mutableListOf())
-        while (ptr < bubbleCenters.size) {
-            if ((ptr + 1) >= bubbleCenters.size) {
-                bubbleGrid[rowPointer].add(bubbleCenters[ptr])
-                break
-            }
-            if (bubbleCenters[ptr].y == bubbleCenters[ptr + 1].y) {
-                bubbleGrid[rowPointer].add(bubbleCenters[ptr])
+        // decide tolerance
+        val tol = rowTolerance ?: computeRowToleranceFromBubbles(bubbleCenters)
+
+        // sort by Y then X
+        val sorted = bubbleCenters.sortedWith(compareBy<Bubble> { it.y }.thenBy { it.x })
+
+        val bubbleGrid = mutableListOf<MutableList<Bubble>>()
+        var currentRow = mutableListOf<Bubble>()
+        var lastY = sorted.first().y
+
+        for (bubble in sorted) {
+            if (abs(bubble.y - lastY) <= tol) {
+                currentRow.add(bubble)
             } else {
-                bubbleGrid[rowPointer].add(bubbleCenters[ptr])
-                bubbleGrid.add(mutableListOf())
-                rowPointer++
+                // finalize previous row
+                if (currentRow.isNotEmpty()) bubbleGrid.add(currentRow)
+                currentRow = mutableListOf(bubble)
             }
-            ptr++
+            lastY = bubble.y
         }
+        if (currentRow.isNotEmpty()) bubbleGrid.add(currentRow)
+
         return bubbleGrid
     }
 
 
-    private fun detectBubbleCenters(gray: Mat, anchors: List<Point>, debugCallback: (Mat,String) -> Unit): List<Bubble> {
+    private fun detectBubbleCenters(
+        gray: Mat,
+        anchors: List<Point>,
+        debugCallback: (Mat, String) -> Unit
+    ): List<Bubble> {
         // 1. Make a mask same size as gray
         val mask = Mat.zeros(gray.size(), CvType.CV_8UC1)
 
@@ -221,6 +290,9 @@ class TemplateProcessor {
 
         centers.sortWith(compareBy<Bubble> { it.y }.thenBy { it.x })
 
+        centers.sortWith(
+            compareBy({ it.y.roundToInt() }, { it.x })
+        )
         mask.release()
         masked.release()
         blurred.release()
@@ -233,7 +305,13 @@ class TemplateProcessor {
 
         // 1. Threshold (since anchors are black)
         val bin = Mat()
-        Imgproc.threshold(gray, bin, 50.0, 255.0, Imgproc.THRESH_BINARY_INV)
+        Imgproc.threshold(
+            gray,
+            bin,
+            50.0,
+            255.0,
+            Imgproc.THRESH_BINARY_INV
+        )
 
         // 2. Find contours
         val contours = mutableListOf<MatOfPoint>()
