@@ -162,25 +162,37 @@ class TemplateProcessor {
 
         // 3. Filter contours that look like squares
         for (contour in contours) {
-            val peri = Imgproc.arcLength(MatOfPoint2f(*contour.toArray()), true)
+            val mp2f = MatOfPoint2f(*contour.toArray())
+            val peri = Imgproc.arcLength(mp2f, true)
             val approx = MatOfPoint2f()
-            Imgproc.approxPolyDP(MatOfPoint2f(*contour.toArray()), approx, 0.04 * peri, true)
+            Imgproc.approxPolyDP(mp2f, approx, 0.04 * peri, true)
 
             if (approx.total() == 4L) {
-                val rect = Imgproc.boundingRect(MatOfPoint(*approx.toArray()))
-                val aspect = rect.width.toDouble() / rect.height.toDouble()
-                if (aspect in 0.8..1.2) { // close to square
-                    val area = rect.width * rect.height
-                    if (area in 200..5000) { // filter by size
-                        val center = Point(
-                            rect.x + rect.width / 2.0,
-                            rect.y + rect.height / 2.0
-                        )
-                        anchors.add(center)
-                    }
+                val approxMp = MatOfPoint(*approx.toArray())
+                val rect = Imgproc.boundingRect(approxMp)
+                val w = rect.width.toDouble()
+                val h = rect.height.toDouble()
+                if (w <= 0.0 || h <= 0.0) { approxMp.release(); approx.release(); mp2f.release(); continue }
+
+                val aspect = w / h
+
+                // solidity against axis-aligned box (simple & fast)
+                val contourArea = Imgproc.contourArea(contour)
+                val rectArea = w * h
+                val solidity = if (rectArea > 0.0) contourArea / rectArea else 0.0
+                // Optional convexity: Imgproc.isContourConvex(approxMp)
+
+                // Keep near-square, not-too-tiny, reasonably solid, solidity >=0.7, likely a circle, skip
+                if (aspect in 0.9..1.1 && rectArea >= 800.0 && solidity >= 0.7) {
+                    val center = Point(rect.x + w / 2.0, rect.y + h / 2.0)
+                    anchors.add(center)
                 }
+                approxMp.release()
             }
+            approx.release()
+            mp2f.release()
         }
+
 
         // 4. Sort anchors into LT, RT, RB, LB
         if (anchors.size == 4) {
