@@ -31,7 +31,7 @@ class OmrProcessor {
 
 
         // 2. Detect 4 anchor squares in scanned sheet
-        val detectedAnchors = templateProcessor.detectAnchorSquares(gray)
+        val detectedAnchors = templateProcessor.detectAnchorPointsImpl(gray)
         if (detectedAnchors.size != 4) {
             return OmrImageProcessResult(
                 success = false,

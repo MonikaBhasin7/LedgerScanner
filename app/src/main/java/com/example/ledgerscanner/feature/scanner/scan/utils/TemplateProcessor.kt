@@ -46,7 +46,6 @@ class TemplateProcessor {
             if (debug) debugMap["gray"] = this.toBitmapSafe()
         }
 
-
         // 2. Detect 4 anchor squares
         val anchorPoints: List<Point> = detectAnchorPoints(
             grayMat,
@@ -69,10 +68,10 @@ class TemplateProcessor {
             },
         )
 
-        // 3. Make grid of bubbles
+        // 4. Make grid of bubbles
         val bubbles2DArray = sortBubblesColumnWise(bubbles)
 
-        // 4. generate template json
+        // 5. generate template json
         val templatePair = generateTemplateJsonSimple(
             anchorPoints,
             bubbles2DArray,
@@ -163,7 +162,7 @@ class TemplateProcessor {
         grayMat: Mat,
         failedCallback: () -> Unit
     ): List<Point>? {
-        val anchorPoints = detectAnchorSquares(grayMat)
+        val anchorPoints = detectAnchorPointsImpl(grayMat)
         if (anchorPoints.size != 4) {
             failedCallback()
             return null
@@ -307,7 +306,7 @@ class TemplateProcessor {
     }
 
 
-    fun detectAnchorSquares(gray: Mat, debug: Boolean = false): List<Point> {
+    fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<Point> {
         val anchors = mutableListOf<Point>()
 
         // 1. Threshold (since anchors are black)
