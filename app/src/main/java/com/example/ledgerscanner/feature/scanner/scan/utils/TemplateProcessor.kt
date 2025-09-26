@@ -49,7 +49,12 @@ class TemplateProcessor {
 
             // 2. Detect 4 anchor squares
             val anchorPoints: List<Point> = detectAnchorPoints(
+                srcMat,
                 grayMat,
+                debug,
+                debugMapAdditionCallback = { title, bitmap ->
+                    debugMap[title] = bitmap
+                },
                 failedCallback = { reason ->
                     return OmrTemplateResult(
                         success = false,
@@ -108,11 +113,22 @@ class TemplateProcessor {
 
     @Throws
     private inline fun detectAnchorPoints(
+        srcMat: Mat,
         grayMat: Mat,
+        debug: Boolean = false,
+        debugMapAdditionCallback: (String, Bitmap) -> Unit,
         failedCallback: (String) -> Unit
     ): List<Point>? {
         val anchorPoints = detectAnchorPointsImpl(grayMat, true)
         if (anchorPoints.size != 4) {
+            if(debug) {
+                OmrUtils.drawPoints(
+                    srcMat,
+                    points = anchorPoints,
+                ).apply {
+                    debugMapAdditionCallback("Anchor Points other than 4 - ${anchorPoints.size}", toBitmapSafe())
+                }
+            }
             failedCallback("Anchor points are ${anchorPoints.size}. It should be 4")
             return null
         }
