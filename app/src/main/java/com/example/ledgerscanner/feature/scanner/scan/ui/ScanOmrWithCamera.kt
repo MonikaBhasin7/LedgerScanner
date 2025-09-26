@@ -1,8 +1,11 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui
 
 import android.Manifest
+import android.R
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -67,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.ledgerscanner.base.enums.PermissionStatus
@@ -134,6 +138,27 @@ class ScanOmrWithCamera : BaseActivity() {
                 context.startActivity(intent)
             }
 
+        val cropLauncher = createActivityLauncherComposeSpecific(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { res ->
+            if (res.resultCode == Activity.RESULT_OK) {
+                val resultUri = com.yalantis.ucrop.UCrop.getOutput(res.data!!)
+                if (resultUri != null) {
+                    context.startActivity(
+                        Intent(
+                            context,
+                            PreviewImageActivity::class.java
+                        ).apply {
+                            putExtra("image_uri", resultUri)
+                        })
+                }
+            } else if (res.resultCode == Activity.RESULT_CANCELED) {
+
+            } else {
+                val err = com.yalantis.ucrop.UCrop.getError(res.data!!)
+            }
+        }
+
         Column {
             Divider(
                 color = Grey200,  // or any color you want
@@ -180,14 +205,24 @@ class ScanOmrWithCamera : BaseActivity() {
                                     }
 
                                     private fun onImageCaptured(fromFile: Uri) {
-                                        val intent =
-                                            Intent(
-                                                context,
-                                                PreviewImageActivity::class.java
-                                            ).apply {
-                                                putExtra("image_uri", fromFile)
-                                            }
-                                        context.startActivity(intent)
+                                        val destFile = File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg")
+                                        val destUri = FileProvider.getUriForFile(context, "${context.packageName}.provider", destFile)
+
+                                        val options = com.yalantis.ucrop.UCrop.Options().apply {
+                                            setToolbarTitle("Crop")
+                                            setCompressionFormat(Bitmap.CompressFormat.PNG)
+                                            setCompressionQuality(92)
+                                            setHideBottomControls(false)     // show rotate/scale controls bar
+                                            setFreeStyleCropEnabled(true)    // user can drag corners
+                                        }
+
+                                        val intent = com.yalantis.ucrop.UCrop.of(fromFile, destUri)
+                                            .withAspectRatio(1f, 1f)        // change or remove for free aspect
+                                            .withMaxResultSize(1080, 1080)  // clamp output size
+                                            .withOptions(options)
+                                            .getIntent(context)
+
+                                        cropLauncher.launch(intent)
                                     }
 
                                     override fun onError(exception: ImageCaptureException) {

@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
 class TemplateProcessor {
 
     companion object {
-        val TAG = "TemplateProcessor"
+        const val TAG = "TemplateProcessor"
     }
 
     @WorkerThread

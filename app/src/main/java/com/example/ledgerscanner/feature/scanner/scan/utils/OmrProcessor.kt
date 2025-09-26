@@ -16,6 +16,7 @@ import org.opencv.imgproc.Imgproc
 class OmrProcessor {
 
     companion object {
+        const val TAG = "OmrProcessor"
         val templateProcessor = TemplateProcessor()
     }
 
