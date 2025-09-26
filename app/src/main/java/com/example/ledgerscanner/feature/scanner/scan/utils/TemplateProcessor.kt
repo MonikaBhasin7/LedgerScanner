@@ -49,10 +49,7 @@ class TemplateProcessor {
 
         // 2. Detect 4 anchor squares
         val anchorPoints: List<Point> = detectAnchorPoints(
-            srcMat, grayMat, debug,
-            debugMapAdditionCallback = { title, bitmap ->
-                debugMap[title] = bitmap
-            },
+            grayMat,
             failedCallback = {
                 return OmrTemplateResult(
                     success = false,
@@ -82,16 +79,16 @@ class TemplateProcessor {
             srcMat.size()
         )
 
-        if(debug) {
+        if (debug) {
             OmrUtils.drawPoints(
                 srcMat,
                 bubbles2DArray = bubbles2DArray,
+                points = anchorPoints,
                 color = Scalar(255.0)
             ).apply {
-                debugMap["bubbles"] = this.toBitmapSafe()
+                debugMap["Bubbles - Anchors"] = this.toBitmapSafe()
             }
         }
-
 
         return OmrTemplateResult(
             success = true,
@@ -163,24 +160,13 @@ class TemplateProcessor {
     }
 
     private inline fun detectAnchorPoints(
-        srcMat: Mat,
         grayMat: Mat,
-        debug: Boolean = false,
-        debugMapAdditionCallback: (String, Bitmap) -> Unit,
         failedCallback: () -> Unit
     ): List<Point>? {
         val anchorPoints = detectAnchorSquares(grayMat)
         if (anchorPoints.size != 4) {
             failedCallback()
             return null
-        }
-        if (debug) {
-            // 3. Debug visualization: draw anchor points
-            val anchorOverlay = OmrUtils.drawPoints(
-                srcMat,
-                points = anchorPoints,
-            )
-            debugMapAdditionCallback("anchors", anchorOverlay.toBitmapSafe())
         }
         return anchorPoints
     }
