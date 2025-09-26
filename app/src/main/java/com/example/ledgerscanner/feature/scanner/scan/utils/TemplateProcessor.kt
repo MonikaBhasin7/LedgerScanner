@@ -21,6 +21,7 @@ import org.opencv.core.Point
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import kotlin.jvm.Throws
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -36,80 +37,89 @@ class TemplateProcessor {
         debug: Boolean = true
     ): OmrTemplateResult {
         val debugMap = mutableMapOf<String, Bitmap>()
-
-        // 1. Convert bitmap to grayscale
-        val srcMat = Mat().apply {
-            Utils.bitmapToMat(inputBitmap, this)
-        }
-        val grayMat = Mat().apply {
-            Imgproc.cvtColor(srcMat, this, Imgproc.COLOR_BGR2GRAY)
-            if (debug) debugMap["gray"] = this.toBitmapSafe()
-        }
-
-        // 2. Detect 4 anchor squares
-        val anchorPoints: List<Point> = detectAnchorPoints(
-            grayMat,
-            failedCallback = {
-                return OmrTemplateResult(
-                    success = false,
-                    reason = "Could not detect 4 anchor points",
-                    debugBitmaps = debugMap
-                )
-            },
-        ) ?: listOf()
-
-        // 3. Detect bubble centers
-        val bubbles = detectAndFetchBubblesWithinAnchors(
-            grayMat,
-            anchorPoints,
-            debug,
-            debugMapAdditionCallback = { title, bitmap ->
-                debugMap[title] = bitmap
-            },
-        )
-
-        // 4. Make grid of bubbles
-        val bubbles2DArray = sortBubblesColumnWise(bubbles)
-
-        // 5. generate template json
-        val templatePair = generateTemplateJsonSimple(
-            anchorPoints,
-            bubbles2DArray,
-            srcMat.size()
-        )
-
-        if (debug) {
-            OmrUtils.drawPoints(
-                srcMat,
-                bubbles2DArray = bubbles2DArray,
-                points = anchorPoints,
-                radius = (templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r)
-                    ?.roundToInt()
-            ).apply {
-                debugMap["Bubbles - Anchors"] = toBitmapSafe()
+        try {
+            // 1. Convert bitmap to grayscale
+            val srcMat = Mat().apply {
+                Utils.bitmapToMat(inputBitmap, this)
             }
-        }
+            val grayMat = Mat().apply {
+                Imgproc.cvtColor(srcMat, this, Imgproc.COLOR_BGR2GRAY)
+                if (debug) debugMap["gray"] = this.toBitmapSafe()
+            }
 
-        return OmrTemplateResult(
-            success = true,
-            debugBitmaps = debugMap,
-            templateJson = templatePair.templateJson,
-            template = templatePair.template
-        )
+            // 2. Detect 4 anchor squares
+            val anchorPoints: List<Point> = detectAnchorPoints(
+                grayMat,
+                failedCallback = { reason ->
+                    return OmrTemplateResult(
+                        success = false,
+                        reason = reason,
+                        debugBitmaps = debugMap
+                    )
+                },
+            ) ?: listOf()
+
+            // 3. Detect bubble centers
+            val bubbles = detectAndFetchBubblesWithinAnchors(
+                grayMat,
+                anchorPoints,
+                debug,
+                debugMapAdditionCallback = { title, bitmap ->
+                    debugMap[title] = bitmap
+                },
+            )
+
+            // 4. Make grid of bubbles
+            val bubbles2DArray = sortBubblesColumnWise(bubbles)
+
+            // 5. generate template json
+            val templatePair = generateTemplateJsonSimple(
+                anchorPoints,
+                bubbles2DArray,
+                srcMat.size()
+            )
+
+            if (debug) {
+                OmrUtils.drawPoints(
+                    srcMat,
+                    bubbles2DArray = bubbles2DArray,
+                    points = anchorPoints,
+                    radius = (templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r)
+                        ?.roundToInt()
+                ).apply {
+                    debugMap["Bubbles - Anchors"] = toBitmapSafe()
+                }
+            }
+
+            return OmrTemplateResult(
+                success = true,
+                debugBitmaps = debugMap,
+                templateJson = templatePair.templateJson,
+                template = templatePair.template
+            )
+        } catch (e: Exception) {
+            return OmrTemplateResult(
+                success = false,
+                e.toString(),
+                debugBitmaps = debugMap,
+            )
+        }
     }
 
+    @Throws
     private inline fun detectAnchorPoints(
         grayMat: Mat,
-        failedCallback: () -> Unit
+        failedCallback: (String) -> Unit
     ): List<Point>? {
         val anchorPoints = detectAnchorPointsImpl(grayMat, true)
         if (anchorPoints.size != 4) {
-            failedCallback()
+            failedCallback("Anchor points are ${anchorPoints.size}. It should be 4")
             return null
         }
         return anchorPoints
     }
 
+    @Throws
     fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<Point> {
         val anchors = mutableListOf<Point>()
 
@@ -176,6 +186,7 @@ class TemplateProcessor {
         return anchors
     }
 
+    @Throws
     private fun detectAndFetchBubblesWithinAnchors(
         grayMat: Mat,
         anchorPoints: List<Point>,
@@ -237,6 +248,7 @@ class TemplateProcessor {
         return centers
     }
 
+    @Throws
     private fun sortBubblesColumnWise(bubbles: List<Bubble>): List<List<Bubble>> {
         if (bubbles.isEmpty()) return emptyList()
 
@@ -269,6 +281,7 @@ class TemplateProcessor {
         return rows
     }
 
+    @Throws
     private fun computeRowToleranceFromBubbles(
         bubbles: List<Bubble>,
         factor: Double = 0.6,     // typical choice 0.5..0.8
@@ -293,6 +306,7 @@ class TemplateProcessor {
         return tol
     }
 
+    @Throws
     private fun generateTemplateJsonSimple(
         anchors: List<Point>,
         bubbleGrid: List<List<Bubble>>,
@@ -341,6 +355,7 @@ class TemplateProcessor {
         return TemplatePair(json, template)
     }
 
+    @Throws
     private fun generate2DArrayOfBubbles(
         bubbleCenters: List<Bubble>,
         rowTolerance: Double? = null

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -62,11 +63,18 @@ class PreviewImageActivity : BaseActivity() {
 
     @Composable
     fun PreviewImageScreen(imageUri: Uri, onClose: () -> Unit, onSubmit: (File) -> Unit = {}) {
-
+        val context = LocalContext.current
         var showFinalProcessedImageDialog by remember { mutableStateOf(false) }
         var omrResult by remember { mutableStateOf<OmrResult?>(null) }
 
-        val context = LocalContext.current
+        LaunchedEffect(omrResult) {
+            omrResult?.let {
+                if (!it.success && !it.reason.isNullOrEmpty()) {
+                    Toast.makeText(context, it.reason, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
         // decode once on background thread and remember
         val bitmap by produceState<Bitmap?>(initialValue = null, imageUri) {
             value =
@@ -150,7 +158,6 @@ class PreviewImageActivity : BaseActivity() {
                                                 Toast.makeText(context, "", Toast.LENGTH_SHORT)
                                                     .show()
                                             } else {
-
                                                 omrResult =
                                                     TemplateProcessor().generateTemplateJson(bm)
 //                                                preProcessImage =
@@ -158,28 +165,6 @@ class PreviewImageActivity : BaseActivity() {
                                                 showFinalProcessedImageDialog = true
 
                                             }
-//                                            preProcessImage = OmrDetector.detectFilledBubbles(bm, true)
-//                                            showFinalProcessedImageDialog = true
-
-//                                            val result = debugPreprocessFile(bm, context, true)
-//                                            preProcessImage = result
-//                                            showFinalProcessedImageDialog = true
-//                                            if (result.ok) {
-//                                                preProcessImage = result
-//                                                showFinalProcessedImageDialog = true
-//                                            } else {
-//                                                result.reason?.let {
-//                                                    Toast.makeText(
-//                                                        context, it,
-//                                                        Toast.LENGTH_SHORT
-//                                                    ).show()
-//                                                } ?: run {
-//                                                    Toast.makeText(
-//                                                        context, "Not able to process the image",
-//                                                        Toast.LENGTH_SHORT
-//                                                    ).show()
-//                                                }
-//                                            }
                                         }
                                     }
                                 )
