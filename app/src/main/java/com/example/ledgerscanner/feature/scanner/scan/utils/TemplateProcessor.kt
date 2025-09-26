@@ -83,9 +83,10 @@ class TemplateProcessor {
                 srcMat,
                 bubbles2DArray = bubbles2DArray,
                 points = anchorPoints,
-                color = Scalar(255.0)
+                radius = (templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r)
+                    ?.roundToInt()
             ).apply {
-                debugMap["Bubbles - Anchors"] = this.toBitmapSafe()
+                debugMap["Bubbles - Anchors"] = toBitmapSafe()
             }
         }
 
@@ -95,6 +96,84 @@ class TemplateProcessor {
             templateJson = templatePair.templateJson,
             template = templatePair.template
         )
+    }
+
+    private inline fun detectAnchorPoints(
+        grayMat: Mat,
+        failedCallback: () -> Unit
+    ): List<Point>? {
+        val anchorPoints = detectAnchorPointsImpl(grayMat, true)
+        if (anchorPoints.size != 4) {
+            failedCallback()
+            return null
+        }
+        return anchorPoints
+    }
+
+    fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<Point> {
+        val anchors = mutableListOf<Point>()
+
+        // 1. Threshold (since anchors are black)
+        val bin = Mat()
+        Imgproc.threshold(
+            gray,
+            bin,
+            50.0,
+            255.0,
+            Imgproc.THRESH_BINARY_INV
+        )
+
+        // 2. Find contours
+        val contours = mutableListOf<MatOfPoint>()
+        val hierarchy = Mat()
+        Imgproc.findContours(
+            bin,
+            contours,
+            hierarchy,
+            Imgproc.RETR_EXTERNAL,
+            Imgproc.CHAIN_APPROX_SIMPLE
+        )
+
+        // 3. Filter contours that look like squares
+        for (contour in contours) {
+            val peri = Imgproc.arcLength(MatOfPoint2f(*contour.toArray()), true)
+            val approx = MatOfPoint2f()
+            Imgproc.approxPolyDP(MatOfPoint2f(*contour.toArray()), approx, 0.04 * peri, true)
+
+            if (approx.total() == 4L) {
+                val rect = Imgproc.boundingRect(MatOfPoint(*approx.toArray()))
+                val aspect = rect.width.toDouble() / rect.height.toDouble()
+                if (aspect in 0.8..1.2) { // close to square
+                    val area = rect.width * rect.height
+                    if (area in 200..5000) { // filter by size
+                        val center = Point(
+                            rect.x + rect.width / 2.0,
+                            rect.y + rect.height / 2.0
+                        )
+                        anchors.add(center)
+                    }
+                }
+            }
+        }
+
+        // 4. Sort anchors into LT, RT, RB, LB
+        if (anchors.size == 4) {
+            // sort top vs bottom by y
+            val sorted = anchors.sortedBy { it.y }
+            val top = sorted.take(2).sortedBy { it.x }   // left, right
+            val bottom = sorted.takeLast(2).sortedBy { it.x } // left, right
+
+            anchors.clear()
+            anchors.add(top[0])     // LT
+            anchors.add(top[1])     // RT
+            anchors.add(bottom[1])  // RB
+            anchors.add(bottom[0])  // LB
+        }
+
+        bin.release()
+        hierarchy.release()
+
+        return anchors
     }
 
     private fun detectAndFetchBubblesWithinAnchors(
@@ -114,7 +193,7 @@ class TemplateProcessor {
         val masked = Mat()
         Core.bitwise_and(grayMat, mask, masked)
         if (debug) debugMapAdditionCallback(
-            "masked before detecting bubbles",
+            "masked within anchors detecting bubbles",
             masked.toBitmapSafe()
         )
 
@@ -158,19 +237,7 @@ class TemplateProcessor {
         return centers
     }
 
-    private inline fun detectAnchorPoints(
-        grayMat: Mat,
-        failedCallback: () -> Unit
-    ): List<Point>? {
-        val anchorPoints = detectAnchorPointsImpl(grayMat)
-        if (anchorPoints.size != 4) {
-            failedCallback()
-            return null
-        }
-        return anchorPoints
-    }
-
-    fun sortBubblesColumnWise(bubbles: List<Bubble>): List<List<Bubble>> {
+    private fun sortBubblesColumnWise(bubbles: List<Bubble>): List<List<Bubble>> {
         if (bubbles.isEmpty()) return emptyList()
 
         val tol = computeRowToleranceFromBubbles(bubbles)
@@ -226,7 +293,7 @@ class TemplateProcessor {
         return tol
     }
 
-    fun generateTemplateJsonSimple(
+    private fun generateTemplateJsonSimple(
         anchors: List<Point>,
         bubbleGrid: List<List<Bubble>>,
         size: Size,
@@ -303,92 +370,5 @@ class TemplateProcessor {
         if (currentRow.isNotEmpty()) bubbleGrid.add(currentRow)
 
         return bubbleGrid
-    }
-
-
-    fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<Point> {
-        val anchors = mutableListOf<Point>()
-
-        // 1. Threshold (since anchors are black)
-        val bin = Mat()
-        Imgproc.threshold(
-            gray,
-            bin,
-            50.0,
-            255.0,
-            Imgproc.THRESH_BINARY_INV
-        )
-
-        // 2. Find contours
-        val contours = mutableListOf<MatOfPoint>()
-        val hierarchy = Mat()
-        Imgproc.findContours(
-            bin,
-            contours,
-            hierarchy,
-            Imgproc.RETR_EXTERNAL,
-            Imgproc.CHAIN_APPROX_SIMPLE
-        )
-
-        // 3. Filter contours that look like squares
-        for (contour in contours) {
-            val peri = Imgproc.arcLength(MatOfPoint2f(*contour.toArray()), true)
-            val approx = MatOfPoint2f()
-            Imgproc.approxPolyDP(MatOfPoint2f(*contour.toArray()), approx, 0.04 * peri, true)
-
-            if (approx.total() == 4L) {
-                val rect = Imgproc.boundingRect(MatOfPoint(*approx.toArray()))
-                val aspect = rect.width.toDouble() / rect.height.toDouble()
-                if (aspect in 0.8..1.2) { // close to square
-                    val area = rect.width * rect.height
-                    if (area in 200..5000) { // filter by size
-                        val center = Point(
-                            rect.x + rect.width / 2.0,
-                            rect.y + rect.height / 2.0
-                        )
-                        anchors.add(center)
-                    }
-                }
-            }
-        }
-
-        // 4. Sort anchors into LT, RT, RB, LB
-        if (anchors.size == 4) {
-            // sort top vs bottom by y
-            val sorted = anchors.sortedBy { it.y }
-            val top = sorted.take(2).sortedBy { it.x }   // left, right
-            val bottom = sorted.takeLast(2).sortedBy { it.x } // left, right
-
-            anchors.clear()
-            anchors.add(top[0])     // LT
-            anchors.add(top[1])     // RT
-            anchors.add(bottom[1])  // RB
-            anchors.add(bottom[0])  // LB
-        }
-
-        // 5. Optional debug
-        if (debug) {
-            val debugMat = Mat()
-            Imgproc.cvtColor(gray, debugMat, Imgproc.COLOR_GRAY2BGR)
-            anchors.forEachIndexed { i, pt ->
-                Imgproc.circle(debugMat, pt, 10, Scalar(0.0, 0.0, 255.0), 2)
-                Imgproc.putText(
-                    debugMat,
-                    "$i",
-                    Point(pt.x + 15, pt.y),
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    Scalar(255.0, 0.0, 0.0),
-                    2
-                )
-            }
-            // save/show debugMat if needed
-            debugMat.release()
-        }
-
-        bin.release()
-        hierarchy.release()
-
-        return anchors
     }
 }
