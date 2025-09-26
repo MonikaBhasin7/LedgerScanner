@@ -6,9 +6,10 @@ import com.example.ledgerscanner.base.utils.OmrUtils
 import com.example.ledgerscanner.base.utils.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
-import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Question
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.feature.scanner.scan.model.TemplatePair
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.google.gson.Gson
 import org.opencv.android.Utils
 import org.opencv.core.Core
@@ -25,76 +26,169 @@ import kotlin.math.roundToInt
 
 class TemplateProcessor {
 
+    companion object {
+        val TAG = "TemplateProcessor"
+    }
+
     @WorkerThread
     fun generateTemplateJson(
         inputBitmap: Bitmap,
         debug: Boolean = true
-    ): PreprocessResult {
+    ): OmrTemplateResult {
         val debugMap = mutableMapOf<String, Bitmap>()
 
         // 1. Convert bitmap to grayscale
-        val srcMat = Mat()
-        Utils.bitmapToMat(inputBitmap, srcMat)
-        val grayMat = Mat()
-        Imgproc.cvtColor(srcMat, grayMat, Imgproc.COLOR_BGR2GRAY)
-        if (debug) debugMap["gray"] = grayMat.toBitmapSafe()
+        val srcMat = Mat().apply {
+            Utils.bitmapToMat(inputBitmap, this)
+        }
+        val grayMat = Mat().apply {
+            Imgproc.cvtColor(srcMat, this, Imgproc.COLOR_BGR2GRAY)
+            if (debug) debugMap["gray"] = this.toBitmapSafe()
+        }
+
 
         // 2. Detect 4 anchor squares
-        val anchorPoints = detectAnchorSquares(grayMat)
-        if (anchorPoints.size != 4) {
-            return PreprocessResult(
-                ok = false,
-                reason = "Could not detect 4 anchor points",
-                warpedBitmap = null,
-                transformMatrix = null,
-                confidence = 0.0,
-                intermediate = debugMap
-            )
-        }
-        // 3. Debug visualization: draw anchor points
-        val anchorOverlay = OmrUtils.drawPoints(
-            srcMat,
-            points = anchorPoints,
-            color = Scalar(0.0, 0.0, 255.0)
-        )
-        if (debug) debugMap["anchors"] = anchorOverlay.toBitmapSafe()
+        val anchorPoints: List<Point> = detectAnchorPoints(
+            srcMat, grayMat, debug,
+            debugMapAdditionCallback = { title, bitmap ->
+                debugMap[title] = bitmap
+            },
+            failedCallback = {
+                return OmrTemplateResult(
+                    success = false,
+                    reason = "Could not detect 4 anchor points",
+                    debugBitmaps = debugMap
+                )
+            },
+        ) ?: listOf()
 
-        // 4. Detect bubble centers
-        val bubbleCenters = detectBubbleCenters(grayMat, anchorPoints) { mat, debugLabel ->
-            if (debug) debugMap["debugLabel"] = mat.toBitmapSafe()
-        }
-        val bubbles2DArray = generate2DArrayOfBubbles(bubbleCenters)
-        val templateJson = generateTemplateJsonSimple(
+        // 3. Detect bubble centers
+        val bubbles = detectAndFetchBubblesWithinAnchors(
+            grayMat,
+            anchorPoints,
+            debug,
+            debugMapAdditionCallback = { title, bitmap ->
+                debugMap[title] = bitmap
+            },
+        )
+
+        // 3. Make grid of bubbles
+        val bubbles2DArray = sortBubblesColumnWise(bubbles)
+
+        // 4. generate template json
+        val templatePair = generateTemplateJsonSimple(
             anchorPoints,
             bubbles2DArray,
             srcMat.size()
         )
-        println("templateJson - $templateJson")
-        val bubbleOverlay =
+
+        if(debug) {
             OmrUtils.drawPoints(
                 srcMat,
-                bubbles = bubbleCenters,
-                color = Scalar(0.0, 0.0, 0.0)
-            )
-        if (debug) debugMap["bubbles"] = bubbleOverlay.toBitmapSafe()
+                bubbles2DArray = bubbles2DArray,
+                color = Scalar(255.0)
+            ).apply {
+                debugMap["bubbles"] = this.toBitmapSafe()
+            }
+        }
 
 
-
-
-        return PreprocessResult(
-            ok = true,
-            reason = null,
-            warpedBitmap = null,
-            transformMatrix = null,
-            confidence = 0.0,
-            intermediate = debugMap
+        return OmrTemplateResult(
+            success = true,
+            debugBitmaps = debugMap,
+            templateJson = templatePair.templateJson,
+            template = templatePair.template
         )
     }
 
-    fun groupBubblesIntoRows(bubbles: List<Bubble>, yTolerance: Double?): List<List<Bubble>> {
+    private fun detectAndFetchBubblesWithinAnchors(
+        grayMat: Mat,
+        anchorPoints: List<Point>,
+        debug: Boolean = false,
+        debugMapAdditionCallback: (String, Bitmap) -> Unit,
+    ): List<Bubble> {
+        // 1. Make a mask same size as gray
+        val mask = Mat.zeros(grayMat.size(), CvType.CV_8UC1)
+
+        // 2. Define polygon (anchors are LT, RT, RB, LB)
+        val anchorMat = MatOfPoint(*anchorPoints.toTypedArray())
+        Imgproc.fillConvexPoly(mask, anchorMat, Scalar(255.0))
+
+        // 3. Apply mask
+        val masked = Mat()
+        Core.bitwise_and(grayMat, mask, masked)
+        if (debug) debugMapAdditionCallback(
+            "masked before detecting bubbles",
+            masked.toBitmapSafe()
+        )
+
+
+        // 4. Blur
+        val blurred = Mat()
+        Imgproc.GaussianBlur(masked, blurred, Size(9.0, 9.0), 2.0)
+
+        // 5. Detect circles
+        val circles = Mat()
+        Imgproc.HoughCircles(
+            blurred,
+            circles,
+            Imgproc.HOUGH_GRADIENT,
+            1.0,
+            20.0,
+            100.0,
+            30.0,
+            8,
+            20
+        )
+
+        val centers = mutableListOf<Bubble>()
+        for (i in 0 until circles.cols()) {
+            val data = circles.get(0, i) ?: continue
+            val x = data[0]
+            val y = data[1]
+            val r = data[2]
+            centers.add(Bubble(x, y, r))
+        }
+
+        centers.sortWith(compareBy<Bubble> { it.y }.thenBy { it.x })
+
+        centers.sortWith(
+            compareBy({ it.y.roundToInt() }, { it.x })
+        )
+        mask.release()
+        masked.release()
+        blurred.release()
+        circles.release()
+        return centers
+    }
+
+    private inline fun detectAnchorPoints(
+        srcMat: Mat,
+        grayMat: Mat,
+        debug: Boolean = false,
+        debugMapAdditionCallback: (String, Bitmap) -> Unit,
+        failedCallback: () -> Unit
+    ): List<Point>? {
+        val anchorPoints = detectAnchorSquares(grayMat)
+        if (anchorPoints.size != 4) {
+            failedCallback()
+            return null
+        }
+        if (debug) {
+            // 3. Debug visualization: draw anchor points
+            val anchorOverlay = OmrUtils.drawPoints(
+                srcMat,
+                points = anchorPoints,
+            )
+            debugMapAdditionCallback("anchors", anchorOverlay.toBitmapSafe())
+        }
+        return anchorPoints
+    }
+
+    fun sortBubblesColumnWise(bubbles: List<Bubble>): List<List<Bubble>> {
         if (bubbles.isEmpty()) return emptyList()
 
-        val tol = yTolerance ?: computeRowToleranceFromBubbles(bubbles)
+        val tol = computeRowToleranceFromBubbles(bubbles)
 
         // 1. Sort by y first
         val sorted = bubbles.sortedBy { it.y }
@@ -151,7 +245,7 @@ class TemplateProcessor {
         anchors: List<Point>,
         bubbleGrid: List<List<Bubble>>,
         size: Size,
-    ): String {
+    ): TemplatePair {
         val gson = Gson()
         val questions = mutableListOf<Question>()
 
@@ -190,25 +284,9 @@ class TemplateProcessor {
             anchor_bottom_right = anchors[2],
             anchor_bottom_left = anchors[3]
         )
-
-        return gson.toJson(template)
-    }
-
-    private fun findDistanceBwAnchorAndBubbles(
-        topLeftAnchorPoint: Point,
-        bubbles2DArray: MutableList<MutableList<Point>>
-    ): MutableList<MutableList<Point>> {
-        val relativeDistanceBubbles2DArray =
-            bubbles2DArray.map { it.toMutableList() }.toMutableList()
-        for (row in 0 until bubbles2DArray.size) {
-            for (col in 0 until bubbles2DArray[row].size) {
-                val point = bubbles2DArray[row][col]
-                val x = point.x - topLeftAnchorPoint.x
-                val y = point.y - topLeftAnchorPoint.y
-                relativeDistanceBubbles2DArray[row][col] = Point(x, y)
-            }
-        }
-        return relativeDistanceBubbles2DArray
+        val json = gson.toJson(template)
+        println("$TAG - templateJson - $json")
+        return TemplatePair(json, template)
     }
 
     private fun generate2DArrayOfBubbles(
@@ -242,63 +320,6 @@ class TemplateProcessor {
         return bubbleGrid
     }
 
-
-    private fun detectBubbleCenters(
-        gray: Mat,
-        anchors: List<Point>,
-        debugCallback: (Mat, String) -> Unit
-    ): List<Bubble> {
-        // 1. Make a mask same size as gray
-        val mask = Mat.zeros(gray.size(), CvType.CV_8UC1)
-
-        // 2. Define polygon (anchors are LT, RT, RB, LB)
-        val anchorMat = MatOfPoint(*anchors.toTypedArray())
-        Imgproc.fillConvexPoly(mask, anchorMat, Scalar(255.0))
-
-        // 3. Apply mask
-        val masked = Mat()
-        Core.bitwise_and(gray, mask, masked)
-        debugCallback(masked, "masked before detecting bubbles")
-
-
-        // 4. Blur
-        val blurred = Mat()
-        Imgproc.GaussianBlur(masked, blurred, Size(9.0, 9.0), 2.0)
-
-        // 5. Detect circles
-        val circles = Mat()
-        Imgproc.HoughCircles(
-            blurred,
-            circles,
-            Imgproc.HOUGH_GRADIENT,
-            1.0,
-            20.0,
-            100.0,
-            30.0,
-            8,
-            20
-        )
-
-        val centers = mutableListOf<Bubble>()
-        for (i in 0 until circles.cols()) {
-            val data = circles.get(0, i) ?: continue
-            val x = data[0]
-            val y = data[1]
-            val r = data[2]
-            centers.add(Bubble(x, y, r))
-        }
-
-        centers.sortWith(compareBy<Bubble> { it.y }.thenBy { it.x })
-
-        centers.sortWith(
-            compareBy({ it.y.roundToInt() }, { it.x })
-        )
-        mask.release()
-        masked.release()
-        blurred.release()
-        circles.release()
-        return centers
-    }
 
     fun detectAnchorSquares(gray: Mat, debug: Boolean = false): List<Point> {
         val anchors = mutableListOf<Point>()

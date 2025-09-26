@@ -36,10 +36,9 @@ import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.utils.ImageUtils
-import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
-import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import kotlinx.coroutines.launch
 import java.io.File
@@ -65,7 +64,7 @@ class PreviewImageActivity : BaseActivity() {
     fun PreviewImageScreen(imageUri: Uri, onClose: () -> Unit, onSubmit: (File) -> Unit = {}) {
 
         var showFinalProcessedImageDialog by remember { mutableStateOf(false) }
-        var preProcessImage by remember { mutableStateOf<PreprocessResult?>(null) }
+        var omrResult by remember { mutableStateOf<OmrResult?>(null) }
 
         val context = LocalContext.current
         // decode once on background thread and remember
@@ -83,10 +82,13 @@ class PreviewImageActivity : BaseActivity() {
 
         Column(modifier = Modifier.fillMaxSize()) {
 
-            if (showFinalProcessedImageDialog && (preProcessImage?.warpedBitmap != null || preProcessImage?.intermediate?.isNotEmpty() == true)) {
+            if (showFinalProcessedImageDialog
+                && (omrResult?.finalBitmap != null
+                        || omrResult?.debugBitmaps?.isNotEmpty() == true)
+            ) {
                 WarpedImageDialog(
-                    warpedBitmap = preProcessImage?.warpedBitmap,
-                    intermediateBitmaps = preProcessImage?.intermediate,
+                    warpedBitmap = omrResult?.finalBitmap,
+                    intermediateBitmaps = omrResult?.debugBitmaps,
                     onDismiss = { showFinalProcessedImageDialog = false },
                     onRetry = {
                         showFinalProcessedImageDialog = false
@@ -149,7 +151,7 @@ class PreviewImageActivity : BaseActivity() {
                                                     .show()
                                             } else {
 
-                                                preProcessImage =
+                                                omrResult =
                                                     TemplateProcessor().generateTemplateJson(bm)
 //                                                preProcessImage =
 //                                                    OmrProcessor().processOmrSheet(omrTemplate, bm)

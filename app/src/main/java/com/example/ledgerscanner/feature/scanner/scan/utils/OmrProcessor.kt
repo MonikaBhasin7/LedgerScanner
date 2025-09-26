@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
 import com.example.ledgerscanner.base.utils.OmrUtils
 import com.example.ledgerscanner.base.utils.toBitmapSafe
-import com.example.ledgerscanner.feature.scanner.scan.model.PreprocessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.android.Utils
 import org.opencv.core.Mat
@@ -17,11 +17,10 @@ class OmrProcessor {
 
     companion object {
         val templateProcessor = TemplateProcessor()
-        val cropper = PageCropper()
     }
 
     @WorkerThread
-    fun processOmrSheet(template: Template, inputBitmap: Bitmap): PreprocessResult {
+    fun processOmrSheet(template: Template, inputBitmap: Bitmap): OmrImageProcessResult {
         val debugMap = mutableMapOf<String, Bitmap>()
 
         val srcMat = Mat()
@@ -34,13 +33,11 @@ class OmrProcessor {
         // 2. Detect 4 anchor squares in scanned sheet
         val detectedAnchors = templateProcessor.detectAnchorSquares(gray)
         if (detectedAnchors.size != 4) {
-            return PreprocessResult(
-                ok = false,
+            return OmrImageProcessResult(
+                success = false,
                 reason = "Could not detect 4 anchors",
-                warpedBitmap = null,
-                transformMatrix = null,
                 confidence = 0.0,
-                intermediate = debugMap
+                debugBitmaps = debugMap
             )
         }
         debugMap["anchors"] = OmrUtils.drawPoints(srcMat, detectedAnchors).toBitmapSafe()
@@ -74,17 +71,16 @@ class OmrProcessor {
         }
         debugMap["first-highlight"] = OmrUtils.drawPoints(
             warped,
-            debugPoints
+            debugPoints,
         ).toBitmapSafe()
 
 
-        return PreprocessResult(
-            ok = true,
+        return OmrImageProcessResult(
+            success = true,
             reason = null,
-            warpedBitmap = warped.toBitmapSafe(),
-            transformMatrix = null,
+            finalBitmap = warped.toBitmapSafe(),
             confidence = 1.0,
-            intermediate = debugMap,
+            debugBitmaps = debugMap,
         )
     }
 

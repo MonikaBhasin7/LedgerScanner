@@ -12,9 +12,33 @@ object OmrUtils {
         src: Mat,
         points: List<Point>? = null,
         bubbles: List<Bubble>? = null,
-        color: Scalar = Scalar(0.0, 0.0, 255.0)
+        bubbles2DArray: List<List<Bubble>>? = null,
+        color: Scalar = Scalar(0.0, 0.0, 255.0),
     ): Mat {
         val out = src.clone()
+
+        bubbles2DArray?.let {
+            var index = 0
+            for (row in it) {
+                for (p in row) {
+                    // Draw small circle
+                    Imgproc.circle(out, Point(p.x, p.y), 10, color, -1)
+
+                    // Label point index (TL=0, TR=1, BR=2, BL=3)
+                    Imgproc.putText(
+                        out,
+                        "$index",
+                        Point(p.x + 15, p.y),
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        color,
+                        2
+                    )
+                    index++
+                }
+            }
+        }
+
 
         points?.let {
             for ((i, p) in it.withIndex()) {
