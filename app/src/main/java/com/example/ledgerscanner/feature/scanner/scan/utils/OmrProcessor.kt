@@ -3,13 +3,16 @@ package com.example.ledgerscanner.feature.scanner.scan.utils
 import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
 import com.example.ledgerscanner.base.utils.OmrUtils
+import com.example.ledgerscanner.base.utils.preCleanGray
 import com.example.ledgerscanner.base.utils.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint2f
 import org.opencv.core.Point
+import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 
@@ -21,7 +24,7 @@ class OmrProcessor {
     }
 
     @WorkerThread
-    fun processOmrSheet(template: Template, inputBitmap: Bitmap): OmrImageProcessResult {
+    fun processOmrSheet(template: Template, inputBitmap: Bitmap, debug : Boolean = false): OmrImageProcessResult {
         val debugMap = mutableMapOf<String, Bitmap>()
 
         val srcMat = Mat()
@@ -30,18 +33,27 @@ class OmrProcessor {
         Imgproc.cvtColor(srcMat, gray, Imgproc.COLOR_BGR2GRAY)
         debugMap["gray"] = gray.toBitmapSafe()
 
+        val grayClean = gray.preCleanGray(
+            useClahe = true,        // turn off if paper already well-lit
+            useBilateral = false    // set true if bubble edges look jagged/noisy
+        )
+
+        debugMap["gray-clean"] = grayClean.toBitmapSafe()
 
         // 2. Detect 4 anchor squares in scanned sheet
-        val detectedAnchors = templateProcessor.detectAnchorPointsImpl(gray)
-        if (detectedAnchors.size != 4) {
-            return OmrImageProcessResult(
-                success = false,
-                reason = "Could not detect 4 anchors",
-                confidence = 0.0,
-                debugBitmaps = debugMap
-            )
-        }
-        debugMap["anchors"] = OmrUtils.drawPoints(srcMat, detectedAnchors).toBitmapSafe()
+        val detectedAnchors = templateProcessor.detectAnchorPoints(
+            srcMat, grayClean, true,
+            debugMapAdditionCallback = { title, bitmap ->
+                debugMap[title] = bitmap
+            },
+            failedCallback = { reason ->
+                return OmrImageProcessResult(
+                    success = false,
+                    reason = reason,
+                    debugBitmaps = debugMap
+                )
+            },
+        ) ?: listOf()
 
         // 3. Warp scanned sheet to template’s canonical size
         val templateAnchors = listOf(
@@ -54,7 +66,7 @@ class OmrProcessor {
             src = gray,
             detectedAnchors = detectedAnchors,
             templateAnchors = templateAnchors,
-            size = Size(template.sheet_width, template.sheet_height)
+            templateSize = Size(template.sheet_width, template.sheet_height)
         )
         debugMap["warped"] = warped.toBitmapSafe()
 
@@ -73,6 +85,8 @@ class OmrProcessor {
         debugMap["first-highlight"] = OmrUtils.drawPoints(
             warped,
             debugPoints,
+            fillColor = Scalar(255.0, 255.0, 255.0),
+            textColor = Scalar(0.0, 255.0, 255.0),
         ).toBitmapSafe()
 
 
@@ -89,14 +103,15 @@ class OmrProcessor {
         src: Mat,
         detectedAnchors: List<Point>,
         templateAnchors: List<Point>,
-        size: Size
+        templateSize: Size
     ): Mat {
         val srcPoints = MatOfPoint2f(*detectedAnchors.toTypedArray())
         val dstPoints = MatOfPoint2f(*templateAnchors.toTypedArray())
         val H = Imgproc.getPerspectiveTransform(srcPoints, dstPoints)
 
         val warped = Mat()
-        Imgproc.warpPerspective(src, warped, H, size)
+        Imgproc.warpPerspective(src, warped, H, templateSize)
         return warped
     }
+
 }

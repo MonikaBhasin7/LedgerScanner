@@ -135,7 +135,8 @@ object ImageUtils {
                     ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                         val origW = info.size.width
                         val origH = info.size.height
-                        val scale = maxOf(1f, origW.toFloat() / reqWidth, origH.toFloat() / reqHeight)
+                        val scale =
+                            maxOf(1f, origW.toFloat() / reqWidth, origH.toFloat() / reqHeight)
                         val targetW = (origW / scale).toInt().coerceAtLeast(1)
                         val targetH = (origH / scale).toInt().coerceAtLeast(1)
                         decoder.setTargetSize(targetW, targetH)
@@ -187,13 +188,16 @@ object ImageUtils {
                             // If decoded width > height and rotationDegrees says 90/270, decoder probably DID NOT rotate -> rotate manually.
                             decoded.width > decoded.height
                         }
+
                         180 -> {
                             // For 180, dimension stays same — rely on EXIF value here (rotate if rotationDegrees==180)
                             true
                         }
+
                         else -> false
                     }
                 }
+
                 else -> {
                     // older devices: ImageDecoder not available -> we must rotate according to EXIF
                     rotationDegrees != 0
@@ -208,7 +212,8 @@ object ImageUtils {
 
             // perform rotation
             val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
-            val rotated = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
+            val rotated =
+                Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
             // recycle original if distinct to free memory
             if (rotated !== decoded) decoded.recycle()
             return rotated
@@ -218,7 +223,11 @@ object ImageUtils {
         }
     }
 
-    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Int {
         val (height: Int, width: Int) = options.outHeight to options.outWidth
         var inSampleSize = 1
         if (height > reqHeight || width > reqWidth) {
@@ -230,6 +239,7 @@ object ImageUtils {
         }
         return inSampleSize
     }
+
     fun findDocumentContour(matGray: Mat): MatOfPoint2f? {
         val blurred = Mat()
         Imgproc.GaussianBlur(matGray, blurred, Size(5.0, 5.0), 0.0)
@@ -532,4 +542,44 @@ fun Mat.toBitmapSafe(): Bitmap {
     Utils.matToBitmap(tmp, bmp)
     tmp.release()
     return bmp
+}
+
+/**
+ * Pre-clean a grayscale Mat:
+ * 1) optional CLAHE to flatten lighting
+ * 2) light denoise (Gaussian or Bilateral)
+ */
+fun Mat.preCleanGray(
+    useClahe: Boolean = true,
+    useBilateral: Boolean = false
+): Mat {
+    require(this.type() == CvType.CV_8UC1) {
+        "preCleanGray expects single-channel 8-bit grayscale."
+    }
+
+    val work = this.clone()
+
+    // 1) Contrast-Limited Adaptive Histogram Equalization (good for shadows/uneven light)
+    if (useClahe) {
+        val clahe = org.opencv.imgproc.Imgproc.createCLAHE(2.0, Size(8.0, 8.0))
+        clahe.apply(work, work)
+    }
+
+    // 2) Denoise
+    if (useBilateral) {
+        // Bilateral keeps edges sharper (slower). Good when circles are thin.
+        // d: neighborhood diameter, sigmaColor/sigmaSpace tune smoothness.
+        Imgproc.bilateralFilter(
+            work,
+            work, /*d*/
+            9, /*sigmaColor*/
+            50.0, /*sigmaSpace*/
+            50.0
+        )
+    } else {
+        // Gaussian is fast + stable
+        org.opencv.imgproc.Imgproc.GaussianBlur(work, work, Size(5.0, 5.0), 0.0)
+    }
+
+    return work
 }

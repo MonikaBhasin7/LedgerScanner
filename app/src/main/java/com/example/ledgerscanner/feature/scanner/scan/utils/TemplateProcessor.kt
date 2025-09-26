@@ -112,7 +112,7 @@ class TemplateProcessor {
     }
 
     @Throws
-    private inline fun detectAnchorPoints(
+    inline fun detectAnchorPoints(
         srcMat: Mat,
         grayMat: Mat,
         debug: Boolean = false,
@@ -120,15 +120,18 @@ class TemplateProcessor {
         failedCallback: (String) -> Unit
     ): List<Point>? {
         val anchorPoints = detectAnchorPointsImpl(grayMat, true)
-        if (anchorPoints.size != 4) {
-            if(debug) {
-                OmrUtils.drawPoints(
-                    srcMat,
-                    points = anchorPoints,
-                ).apply {
-                    debugMapAdditionCallback("Anchor Points other than 4 - ${anchorPoints.size}", toBitmapSafe())
-                }
+        if (debug) {
+            OmrUtils.drawPoints(
+                srcMat,
+                points = anchorPoints,
+            ).apply {
+                debugMapAdditionCallback(
+                    if (anchorPoints.size != 4) "Anchor Points other than 4 - ${anchorPoints.size}" else "4 Anchor points",
+                    toBitmapSafe()
+                )
             }
+        }
+        if (anchorPoints.size != 4) {
             failedCallback("Anchor points are ${anchorPoints.size}. It should be 4")
             return null
         }
@@ -172,7 +175,9 @@ class TemplateProcessor {
                 val rect = Imgproc.boundingRect(approxMp)
                 val w = rect.width.toDouble()
                 val h = rect.height.toDouble()
-                if (w <= 0.0 || h <= 0.0) { approxMp.release(); approx.release(); mp2f.release(); continue }
+                if (w <= 0.0 || h <= 0.0) {
+                    approxMp.release(); approx.release(); mp2f.release(); continue
+                }
 
                 val aspect = w / h
 

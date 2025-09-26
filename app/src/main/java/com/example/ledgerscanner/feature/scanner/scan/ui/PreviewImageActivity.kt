@@ -40,6 +40,7 @@ import com.example.ledgerscanner.base.utils.ImageUtils
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
+import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import kotlinx.coroutines.launch
 import java.io.File
@@ -153,15 +154,19 @@ class PreviewImageActivity : BaseActivity() {
                                     onClick = {
                                         coroutineScope.launch {
                                             val omrTemplate =
-                                                context.loadJsonFromAssets<Template>("template_16_ques.json")
+                                                context.loadJsonFromAssets<Template>("template_omr_10_ques.json")
                                             if (omrTemplate == null) {
                                                 Toast.makeText(context, "", Toast.LENGTH_SHORT)
                                                     .show()
                                             } else {
+//                                                omrResult =
+//                                                    TemplateProcessor().generateTemplateJson(bm)
                                                 omrResult =
-                                                    TemplateProcessor().generateTemplateJson(bm)
-//                                                preProcessImage =
-//                                                    OmrProcessor().processOmrSheet(omrTemplate, bm)
+                                                    OmrProcessor().processOmrSheet(
+                                                        omrTemplate,
+                                                        bm,
+                                                        debug = true
+                                                    )
                                                 showFinalProcessedImageDialog = true
 
                                             }
