@@ -7,10 +7,12 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -71,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.doOnLayout
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.ledgerscanner.base.enums.PermissionStatus
@@ -354,6 +357,14 @@ class ScanOmrWithCamera : BaseActivity() {
         cameraReadyCallback: () -> Unit
     ) {
         val fraction = 0.65f
+        val anchors = listOf(
+            // TL, TR, BR, BL (or any order — the overlay just plots)
+            AnchorTemplateSpace(470.5, 269.5),
+            AnchorTemplateSpace(719.0, 269.5),
+            AnchorTemplateSpace(728.5, 1395.0),
+            AnchorTemplateSpace(471.0, 1394.5),
+        )
+
 
         if (cameraPermissionStatus == PermissionStatus.PermissionGranted) {
             AndroidView(
@@ -362,7 +373,43 @@ class ScanOmrWithCamera : BaseActivity() {
                     .fillMaxHeight(fraction)
                     .clip(RoundedCornerShape(12.dp)),
                 factory = { ctx ->
-                    val previewView = PreviewView(ctx)
+                    val container = FrameLayout(ctx)
+
+                    val previewView = PreviewView(ctx).apply {
+                        this.scaleType = PreviewView.ScaleType.FIT_CENTER
+                    }
+                    container.addView(
+                        previewView,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                        )
+                    )
+
+                    // 2) Our overlay
+                    val overlay = OverlayView(ctx).apply {
+                        setWillNotDraw(false)
+                        bringToFront()
+                        setTemplateSpec(1080, 1527, anchors)
+                    }
+                    container.addView(
+                        overlay,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                        )
+                    )
+
+                    // set default preview rect after first layout (full view)
+                    container.doOnLayout {
+                        overlay.setPreviewRect(
+                            RectF(
+                                0f, 0f,
+                                container.width.toFloat(),
+                                container.height.toFloat()
+                            )
+                        )
+                    }
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                     cameraProviderFuture.addListener({
                         val cameraProvider = cameraProviderFuture.get()
@@ -380,7 +427,7 @@ class ScanOmrWithCamera : BaseActivity() {
                             cameraReadyCallback()
                         }
                     }, ContextCompat.getMainExecutor(ctx))
-                    previewView
+                    container
                 })
         } else {
             Box(
