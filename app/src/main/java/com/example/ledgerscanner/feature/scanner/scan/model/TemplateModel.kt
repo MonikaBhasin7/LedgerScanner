@@ -1,7 +1,5 @@
 package com.example.ledgerscanner.feature.scanner.scan.model
 
-import android.graphics.Point
-
 // Reuse your data classes
 data class Template(
     val version: String? = "1.0",
@@ -15,7 +13,15 @@ data class Template(
     val anchor_top_right: org.opencv.core.Point,
     val anchor_bottom_right: org.opencv.core.Point,
     val anchor_bottom_left: org.opencv.core.Point,
-)
+) {
+    private var totalBubbles: Int? = null
+    fun totalBubbles(): Int? {
+        if (totalBubbles == null) {
+            totalBubbles = questions.size * 4 //todo monika make it generic in future
+        }
+        return totalBubbles
+    }
+}
 
 data class Grid(
     val start_x: Int?,

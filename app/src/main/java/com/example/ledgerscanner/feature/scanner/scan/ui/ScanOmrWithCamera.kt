@@ -1,16 +1,13 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui
 
 import android.Manifest
-import android.R
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -18,13 +15,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,16 +39,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.WbSunny
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -67,7 +62,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -79,6 +76,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.ledgerscanner.base.enums.PermissionStatus
 import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
+import com.example.ledgerscanner.base.extensions.loadJsonFromAssets
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
@@ -89,9 +87,19 @@ import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.FileUtils
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
+import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
+import org.opencv.core.Point
 import java.io.File
+import java.util.concurrent.Executors
 
 class ScanOmrWithCamera : BaseActivity() {
+
+    companion object {
+        const val TAG = "ScanOmrWithCamera"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -208,8 +216,15 @@ class ScanOmrWithCamera : BaseActivity() {
                                     }
 
                                     private fun onImageCaptured(fromFile: Uri) {
-                                        val destFile = File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg")
-                                        val destUri = FileProvider.getUriForFile(context, "${context.packageName}.provider", destFile)
+                                        val destFile = File(
+                                            context.cacheDir,
+                                            "crop_${System.currentTimeMillis()}.jpg"
+                                        )
+                                        val destUri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.provider",
+                                            destFile
+                                        )
 
                                         val options = com.yalantis.ucrop.UCrop.Options().apply {
                                             setToolbarTitle("Crop")
@@ -220,7 +235,10 @@ class ScanOmrWithCamera : BaseActivity() {
                                         }
 
                                         val intent = com.yalantis.ucrop.UCrop.of(fromFile, destUri)
-                                            .withAspectRatio(1f, 1f)        // change or remove for free aspect
+                                            .withAspectRatio(
+                                                1f,
+                                                1f
+                                            )        // change or remove for free aspect
                                             .withMaxResultSize(1080, 1080)  // clamp output size
                                             .withOptions(options)
                                             .getIntent(context)
@@ -261,7 +279,22 @@ class ScanOmrWithCamera : BaseActivity() {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
+        var showFinalProcessedImageDialog by remember { mutableStateOf(false) }
+        var omrResult by remember { mutableStateOf<OmrResult?>(null) }
+
         Column {
+            if (showFinalProcessedImageDialog && omrResult != null)
+                WarpedImageDialog(
+                    warpedBitmap = omrResult?.finalBitmap,
+                    intermediateBitmaps = omrResult?.debugBitmaps,
+                    onDismiss = { showFinalProcessedImageDialog = false },
+                    onRetry = {
+                        showFinalProcessedImageDialog = false
+                    },
+                    onSave = {
+                        showFinalProcessedImageDialog = false
+                    }
+                )
             CameraViewOrPermissionCard(
                 context,
                 lifecycleOwner,
@@ -277,7 +310,10 @@ class ScanOmrWithCamera : BaseActivity() {
                     } else {
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
-                }, cameraReadyCallback
+                }, cameraReadyCallback, showDebugImageDialog = {
+                    showFinalProcessedImageDialog = true
+                    omrResult = it
+                }
             )
             ScanningTipsCard()
         }
@@ -354,21 +390,33 @@ class ScanOmrWithCamera : BaseActivity() {
         imageCapture: ImageCapture,
         cameraPermissionStatus: PermissionStatus,
         takePermissionCallback: () -> Unit,
-        cameraReadyCallback: () -> Unit
+        cameraReadyCallback: () -> Unit,
+        showDebugImageDialog: (OmrImageProcessResult) -> Unit //todo monika remove in future
     ) {
+        val haptic = LocalHapticFeedback.current
         val fraction = 0.65f
         val anchors = listOf(
             // TL, TR, BR, BL (or any order — the overlay just plots)
-            AnchorTemplateSpace(470.5, 269.5),
-            AnchorTemplateSpace(719.0, 269.5),
-            AnchorTemplateSpace(728.5, 1395.0),
-            AnchorTemplateSpace(471.0, 1394.5),
+            Point(470.5, 269.5),
+            Point(719.0, 269.5),
+            Point(728.5, 1395.0),
+            Point(471.0, 1394.5),
         )
+
+        val cameraExecutor = Executors.newSingleThreadExecutor()
+        var omrImageProcessResultGlobal: OmrImageProcessResult? = null
+        var anchorPointsOnCapturedImage = listOf<Point>()
 
 
         if (cameraPermissionStatus == PermissionStatus.PermissionGranted) {
             AndroidView(
                 modifier = Modifier
+                    .clickable {
+                        omrImageProcessResultGlobal?.let {
+                            println("$TAG - points - $anchorPointsOnCapturedImage")
+                            showDebugImageDialog(it)
+                        }
+                    }
                     .fillMaxWidth()
                     .fillMaxHeight(fraction)
                     .clip(RoundedCornerShape(12.dp)),
@@ -410,6 +458,51 @@ class ScanOmrWithCamera : BaseActivity() {
                             )
                         )
                     }
+
+                    val analysisUseCase = ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+                        .build()
+
+
+                    val omrTemplate =
+                        context.loadJsonFromAssets<Template>("template_omr_10_ques.json")
+                    if (omrTemplate == null) {
+                        Toast.makeText(context, "Error in decoding template", Toast.LENGTH_SHORT)
+                            .show()
+                    } else {
+                        analysisUseCase.setAnalyzer(cameraExecutor, { imageProxy ->
+                            val (omrImageProcessResult, centers) = overlay.detectAnchorsInsideOverlay(
+                                imageProxy,
+                                omrTemplate,
+                                debug = true
+                            )
+                            if (omrImageProcessResult.success && omrImageProcessResult.debugBitmaps.isNotEmpty()) {
+                                omrImageProcessResultGlobal = omrImageProcessResult
+                                anchorPointsOnCapturedImage = centers
+//                                imageCapture.takePicture(
+//                                    ContextCompat.getMainExecutor(context),
+//                                    object : ImageCapture.OnImageCapturedCallback() {
+//                                        override fun onCaptureSuccess(captured: ImageProxy) {
+//                                            try {
+//                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+//                                                omrImageProcessResultGlobal = omrImageProcessResult
+//                                                anchorPointsOnCapturedImage = centers
+//
+//                                            } finally {
+//                                                captured.close()
+//                                            }
+//                                        }
+//                                        override fun onError(exc: ImageCaptureException) {
+//
+//                                        }
+//                                    }
+//                                )
+                            }
+                            imageProxy.close()
+                        })
+                    }
+
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                     cameraProviderFuture.addListener({
                         val cameraProvider = cameraProviderFuture.get()
@@ -422,7 +515,8 @@ class ScanOmrWithCamera : BaseActivity() {
                             lifecycleOwner,
                             cameraSelector,
                             preview,
-                            imageCapture
+                            imageCapture,
+                            analysisUseCase
                         ).also {
                             cameraReadyCallback()
                         }

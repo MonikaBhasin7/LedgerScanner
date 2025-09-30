@@ -119,7 +119,7 @@ class TemplateProcessor {
         debugMapAdditionCallback: (String, Bitmap) -> Unit,
         failedCallback: (String) -> Unit
     ): List<Point>? {
-        val anchorPoints = detectAnchorPointsImpl(grayMat, true)
+        val anchorPoints = detectAnchorPointsImpl(grayMat, debug)
         if (debug) {
             OmrUtils.drawPoints(
                 srcMat,
@@ -418,5 +418,23 @@ class TemplateProcessor {
         if (currentRow.isNotEmpty()) bubbleGrid.add(currentRow)
 
         return bubbleGrid
+    }
+
+    @Throws
+    fun mapTemplateBubblesToImagePoints(
+        template: Template,
+    ): List<Point> {
+        val points = mutableListOf<Point>()
+        for (q in template.questions) {
+            for (o in q.options) {
+                points.add(
+                    Point(
+                        template.anchor_top_left.x + o.x,
+                        template.anchor_top_left.y + o.y
+                    )
+                )
+            }
+        }
+        return points
     }
 }

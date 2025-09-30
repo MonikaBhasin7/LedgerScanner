@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.example.ledgerscanner.base.ui.theme.Black
 import kotlinx.coroutines.launch
 
 @Composable
@@ -268,7 +267,10 @@ fun ImageCarousel(
             }
 
             // keep selectedIndex synced with scroll position
-            LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
+            LaunchedEffect(
+                listState.firstVisibleItemIndex,
+                listState.firstVisibleItemScrollOffset
+            ) {
                 selectedIndex = listState.firstVisibleItemIndex
             }
         }

@@ -6,7 +6,6 @@ import com.example.ledgerscanner.base.utils.OmrUtils
 import com.example.ledgerscanner.base.utils.preCleanGray
 import com.example.ledgerscanner.base.utils.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.android.Utils
 import org.opencv.core.Mat
