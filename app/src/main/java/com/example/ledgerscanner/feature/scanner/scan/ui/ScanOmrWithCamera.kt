@@ -477,7 +477,7 @@ class ScanOmrWithCamera : BaseActivity() {
                                 omrTemplate,
                                 debug = true
                             )
-                            if (omrImageProcessResult.success && omrImageProcessResult.debugBitmaps.isNotEmpty()) {
+                            if (omrImageProcessResult.success) {
                                 omrImageProcessResultGlobal = omrImageProcessResult
                                 anchorPointsOnCapturedImage = centers
 //                                imageCapture.takePicture(
@@ -493,6 +493,7 @@ class ScanOmrWithCamera : BaseActivity() {
 //                                                captured.close()
 //                                            }
 //                                        }
+//
 //                                        override fun onError(exc: ImageCaptureException) {
 //
 //                                        }
