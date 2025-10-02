@@ -1,7 +1,6 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui
+package com.example.ledgerscanner.feature.scanner.scan.ui.screen
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -18,7 +17,6 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -62,7 +60,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
@@ -91,6 +88,7 @@ import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResul
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
+import com.yalantis.ucrop.UCrop
 import org.opencv.core.Point
 import java.io.File
 import java.util.concurrent.Executors
@@ -152,8 +150,8 @@ class ScanOmrWithCamera : BaseActivity() {
         val cropLauncher = createActivityLauncherComposeSpecific(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { res ->
-            if (res.resultCode == Activity.RESULT_OK) {
-                val resultUri = com.yalantis.ucrop.UCrop.getOutput(res.data!!)
+            if (res.resultCode == RESULT_OK) {
+                val resultUri = UCrop.getOutput(res.data!!)
                 if (resultUri != null) {
                     context.startActivity(
                         Intent(
@@ -163,10 +161,10 @@ class ScanOmrWithCamera : BaseActivity() {
                             putExtra("image_uri", resultUri)
                         })
                 }
-            } else if (res.resultCode == Activity.RESULT_CANCELED) {
+            } else if (res.resultCode == RESULT_CANCELED) {
 
             } else {
-                val err = com.yalantis.ucrop.UCrop.getError(res.data!!)
+                val err = UCrop.getError(res.data!!)
             }
         }
 
@@ -226,7 +224,7 @@ class ScanOmrWithCamera : BaseActivity() {
                                             destFile
                                         )
 
-                                        val options = com.yalantis.ucrop.UCrop.Options().apply {
+                                        val options = UCrop.Options().apply {
                                             setToolbarTitle("Crop")
                                             setCompressionFormat(Bitmap.CompressFormat.PNG)
                                             setCompressionQuality(92)
@@ -234,7 +232,7 @@ class ScanOmrWithCamera : BaseActivity() {
                                             setFreeStyleCropEnabled(true)    // user can drag corners
                                         }
 
-                                        val intent = com.yalantis.ucrop.UCrop.of(fromFile, destUri)
+                                        val intent = UCrop.of(fromFile, destUri)
                                             .withAspectRatio(
                                                 1f,
                                                 1f
