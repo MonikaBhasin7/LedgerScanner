@@ -5,6 +5,7 @@ import androidx.annotation.WorkerThread
 import com.example.ledgerscanner.base.utils.OmrUtils
 import com.example.ledgerscanner.base.utils.preCleanGray
 import com.example.ledgerscanner.base.utils.toBitmapSafe
+import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.android.Utils
@@ -23,7 +24,11 @@ class OmrProcessor {
     }
 
     @WorkerThread
-    fun processOmrSheet(template: Template, inputBitmap: Bitmap, debug : Boolean = false): OmrImageProcessResult {
+    fun processOmrSheet(
+        template: Template,
+        inputBitmap: Bitmap,
+        debug: Boolean = false
+    ): OmrImageProcessResult {
         val debugMap = mutableMapOf<String, Bitmap>()
 
         val srcMat = Mat()
@@ -70,11 +75,11 @@ class OmrProcessor {
         debugMap["warped"] = warped.toBitmapSafe()
 
 
-        val debugPoints = mutableListOf<Point>()
+        val debugPoints = mutableListOf<AnchorPoint>()
         for (q in template.questions) {
             for (o in q.options) {
                 debugPoints.add(
-                    Point(
+                    AnchorPoint(
                         o.x + template.anchor_top_left.x,
                         o.y + template.anchor_top_left.y
                     )
@@ -100,12 +105,14 @@ class OmrProcessor {
 
     fun warpWithAnchors(
         src: Mat,
-        detectedAnchors: List<Point>,
-        templateAnchors: List<Point>,
+        detectedAnchors: List<AnchorPoint>,
+        templateAnchors: List<AnchorPoint>,
         templateSize: Size
     ): Mat {
-        val srcPoints = MatOfPoint2f(*detectedAnchors.toTypedArray())
-        val dstPoints = MatOfPoint2f(*templateAnchors.toTypedArray())
+        val srcPoints = MatOfPoint2f(*detectedAnchors.map { Point(it.x, it.y) }
+            .toTypedArray())
+        val dstPoints = MatOfPoint2f(*templateAnchors.map { Point(it.x, it.y) }
+            .toTypedArray())
         val H = Imgproc.getPerspectiveTransform(srcPoints, dstPoints)
 
         val warped = Mat()

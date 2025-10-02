@@ -2,6 +2,7 @@ package com.example.ledgerscanner.feature.scanner.exam.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -29,17 +30,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -55,11 +51,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.GenericButton
@@ -77,6 +73,8 @@ import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateType
+import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.ScanOmrWithCamera
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -104,12 +102,31 @@ class ExamListingActivity : ComponentActivity() {
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                                 .fillMaxWidth(),
                             onClick = {
-                                context.startActivity(
-                                    Intent(
-                                        context,
-                                        ScanOmrWithCamera::class.java
-                                    )
-                                )
+
+                                Template.loadOmrTemplateSafe(
+                                    context,
+                                    OmrTemplateType.TEN_QUESTIONS
+                                ).let {
+                                    when (it) {
+                                        is OperationResult.Error -> Toast.makeText(
+                                            context, it.message,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        is OperationResult.Success -> {
+                                            context.startActivity(
+                                                Intent(
+                                                    context,
+                                                    ScanOmrWithCamera::class.java
+                                                ).apply {
+                                                    putExtra(
+                                                        "template", it.data
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         )
                     },

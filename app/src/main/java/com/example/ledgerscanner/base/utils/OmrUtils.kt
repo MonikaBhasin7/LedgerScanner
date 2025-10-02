@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.base.utils
 
+import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
 import org.opencv.core.Mat
 import org.opencv.core.Point
@@ -9,7 +10,7 @@ import org.opencv.imgproc.Imgproc
 object OmrUtils {
     fun drawPoints(
         src: Mat,
-        points: List<Point>? = null,
+        points: List<AnchorPoint>? = null,
         bubbles: List<Bubble>? = null,
         bubbles2DArray: List<List<Bubble>>? = null,
         fillColor: Scalar = Scalar(255.0, 0.0, 0.0),
@@ -46,7 +47,7 @@ object OmrUtils {
         }
 
         // 2) Draw simple point list
-        points?.forEachIndexed { i, p -> draw(p, "$i") }
+        points?.forEachIndexed { i, p -> draw(p.toPoint(), "$i") }
 
         // 3) Draw flat bubble list
         bubbles?.forEachIndexed { i, b -> draw(Point(b.x, b.y), "$i") }

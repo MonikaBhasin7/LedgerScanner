@@ -13,6 +13,7 @@ import android.view.View
 import androidx.camera.core.ImageProxy
 import com.example.ledgerscanner.base.utils.OmrUtils
 import com.example.ledgerscanner.base.utils.toBitmapSafe
+import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
@@ -44,7 +45,7 @@ class OverlayView @JvmOverloads constructor(
     // template image size used when coordinates were measured
     private var templateWidth = 0.0
     private var templateHeight = 0.0
-    private var anchorsTemplate: List<Point> = emptyList()
+    private var anchorsTemplate: List<AnchorPoint> = emptyList()
     private var anchorsOnPreviewInRect: MutableList<RectF> = mutableListOf()
 
     // where the camera buffer is drawn inside this View; defaults to full view
@@ -67,10 +68,10 @@ class OverlayView @JvmOverloads constructor(
     }
 
     /** call once you know your template’s pixel size and its four anchors (in that space) */
-    fun setTemplateSpec(sheetWidthPx: Int, sheetHeightPx: Int, anchors: List<Point>) {
-        templateWidth = sheetWidthPx.toDouble()
-        templateHeight = sheetHeightPx.toDouble()
-        anchorsTemplate = anchors
+    fun setTemplateSpec(template: Template) {
+        templateWidth = template.sheet_width
+        templateHeight = template.sheet_height
+        anchorsTemplate = template.getAnchorListClockwise()
         invalidate()
     }
 
@@ -293,7 +294,7 @@ class OverlayView @JvmOverloads constructor(
         image: ImageProxy,
         omrTemplate: Template,
         debug: Boolean = false
-    ): Pair<OmrImageProcessResult, List<Point>> {
+    ): Pair<OmrImageProcessResult, List<AnchorPoint>> {
         val debugBitmaps = mutableMapOf<String, Bitmap>()
 
         try {
@@ -308,7 +309,7 @@ class OverlayView @JvmOverloads constructor(
             val gray = imageProxyToGrayMatUpright(image)
             if (debug) debugBitmaps["image proxy gray mat"] = gray.toBitmapSafe()
 
-            val centersInBuffer = ArrayList<Point>(overlayRects.size)
+            val centersInBuffer = ArrayList<AnchorPoint>(overlayRects.size)
             var allFound = true
 
             // 3) For each overlay square: map to buffer → crop → detect black square
@@ -329,7 +330,7 @@ class OverlayView @JvmOverloads constructor(
                     allFound = false
                 } else {
                     // 4) Convert ROI-local center to full Mat coordinates
-                    centersInBuffer += Point(
+                    centersInBuffer += AnchorPoint(
                         (matRect.x + anchor.x.toFloat()).toDouble(),
                         (matRect.y + anchor.y.toFloat()).toDouble()
                     )

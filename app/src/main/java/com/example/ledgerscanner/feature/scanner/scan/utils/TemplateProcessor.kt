@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
 import com.example.ledgerscanner.base.utils.OmrUtils
 import com.example.ledgerscanner.base.utils.toBitmapSafe
+import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
 import com.example.ledgerscanner.feature.scanner.scan.model.Question
@@ -48,7 +49,7 @@ class TemplateProcessor {
             }
 
             // 2. Detect 4 anchor squares
-            val anchorPoints: List<Point> = detectAnchorPoints(
+            val anchorPoints: List<AnchorPoint> = detectAnchorPoints(
                 srcMat,
                 grayMat,
                 debug,
@@ -118,7 +119,7 @@ class TemplateProcessor {
         debug: Boolean = false,
         debugMapAdditionCallback: (String, Bitmap) -> Unit,
         failedCallback: (String) -> Unit
-    ): List<Point>? {
+    ): List<AnchorPoint>? {
         val anchorPoints = detectAnchorPointsImpl(grayMat, debug)
         if (debug) {
             OmrUtils.drawPoints(
@@ -139,8 +140,8 @@ class TemplateProcessor {
     }
 
     @Throws
-    fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<Point> {
-        val anchors = mutableListOf<Point>()
+    fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<AnchorPoint> {
+        val anchors = mutableListOf<AnchorPoint>()
 
         // 1. Threshold (since anchors are black)
         val bin = Mat()
@@ -189,7 +190,7 @@ class TemplateProcessor {
 
                 // Keep near-square, not-too-tiny, reasonably solid, solidity >=0.7, likely a circle, skip
                 if (aspect in 0.9..1.1 && rectArea >= 800.0 && solidity >= 0.7) {
-                    val center = Point(rect.x + w / 2.0, rect.y + h / 2.0)
+                    val center = AnchorPoint(rect.x + w / 2.0, rect.y + h / 2.0)
                     anchors.add(center)
                 }
                 approxMp.release()
@@ -222,7 +223,7 @@ class TemplateProcessor {
     @Throws
     private fun detectAndFetchBubblesWithinAnchors(
         grayMat: Mat,
-        anchorPoints: List<Point>,
+        anchorPoints: List<AnchorPoint>,
         debug: Boolean = false,
         debugMapAdditionCallback: (String, Bitmap) -> Unit,
     ): List<Bubble> {
@@ -230,7 +231,8 @@ class TemplateProcessor {
         val mask = Mat.zeros(grayMat.size(), CvType.CV_8UC1)
 
         // 2. Define polygon (anchors are LT, RT, RB, LB)
-        val anchorMat = MatOfPoint(*anchorPoints.toTypedArray())
+        val anchorMat = MatOfPoint(*anchorPoints.map { Point(it.x, it.y) }
+            .toTypedArray())
         Imgproc.fillConvexPoly(mask, anchorMat, Scalar(255.0))
 
         // 3. Apply mask
@@ -341,7 +343,7 @@ class TemplateProcessor {
 
     @Throws
     private fun generateTemplateJsonSimple(
-        anchors: List<Point>,
+        anchors: List<AnchorPoint>,
         bubbleGrid: List<List<Bubble>>,
         size: Size,
     ): TemplatePair {
@@ -423,12 +425,12 @@ class TemplateProcessor {
     @Throws
     fun mapTemplateBubblesToImagePoints(
         template: Template,
-    ): List<Point> {
-        val points = mutableListOf<Point>()
+    ): List<AnchorPoint> {
+        val points = mutableListOf<AnchorPoint>()
         for (q in template.questions) {
             for (o in q.options) {
                 points.add(
-                    Point(
+                    AnchorPoint(
                         template.anchor_top_left.x + o.x,
                         template.anchor_top_left.y + o.y
                     )
