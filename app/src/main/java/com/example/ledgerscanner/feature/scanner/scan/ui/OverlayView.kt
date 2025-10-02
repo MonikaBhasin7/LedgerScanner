@@ -53,7 +53,7 @@ class OverlayView @JvmOverloads constructor(
 
     private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 6f
         color = Color.GREEN
     }
     private val pointFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -95,44 +95,50 @@ class OverlayView @JvmOverloads constructor(
         if (templateWidth <= 0.0 || templateHeight <= 0.0) return
         if (anchorsTemplate.isEmpty()) return
 
-        // debug frame
-        canvas.drawRect(previewRect, framePaint)
-
-        // square size (screen px). tweak as you like or expose as a setter.
-
         val cornerRadius = 4f  // set 0f for sharp corners
         anchorsOnPreviewInRect.clear()
 
-        anchorsTemplate.forEachIndexed { idx, a ->
-            val sx = previewRect.left + (a.x / templateWidth) * previewRect.width()
-            val sy = previewRect.top + (a.y / templateHeight) * previewRect.height()
+        val halfPreviewWidth = previewRect.width() / 2
+        val halfPreviewHeight = previewRect.height() / 2
+        val templateAnchorWidth = (anchorsTemplate[1].x - anchorsTemplate[0].x) / 2
+        val templateAnchorHeight = (anchorsTemplate[3].y - anchorsTemplate[0].y) / 2
 
-            val left = sx.toFloat() - side
-            val top = sy.toFloat() - side
-            val right = sx.toFloat() + side
-            val bottom = sy.toFloat() + side
+        anchorsTemplate.forEachIndexed { idx, a ->
+            var left: Float = if (a.x < halfPreviewWidth) {
+                (halfPreviewWidth - templateAnchorWidth).toFloat()
+            } else {
+                (halfPreviewWidth + templateAnchorWidth).toFloat()
+            }
+            left = left - side
+            val right = left + 2 * side
+
+            var top: Float = if (a.y < halfPreviewHeight) {
+                (halfPreviewHeight - templateAnchorHeight).toFloat()
+            } else {
+                (halfPreviewHeight + templateAnchorHeight).toFloat()
+            }
+            top = top - side
+            val bottom = top + 2 * side
             val rect = RectF(left, top, right, bottom)
             anchorsOnPreviewInRect.add(idx, rect)
-
-            // filled square
-            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, pointFill)
-            // outline
-            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, framePaint)
-            // label
-            canvas.drawText("#$idx", right + 8f, top - 8f, labelPaint)
+            canvas.apply {
+                drawRoundRect(rect, cornerRadius, cornerRadius, pointFill)
+                drawRoundRect(rect, cornerRadius, cornerRadius, framePaint)
+//                drawText("#$idx", right + 8f, top - 8f, labelPaint)
+            }
         }
     }
 
     fun getPreviewRect(): RectF = RectF(previewRect)
 
     /** Returns the current anchor squares as RectF in SCREEN/OVERLAY pixels.   */
-    fun getAnchorSquaresOnScreen(sidePx: Float = 60f): List<RectF> {
+    fun getAnchorSquaresOnScreen(): List<RectF> {
         return anchorsOnPreviewInRect
     }
 
     fun screenRectToMatRect(
-        screenRect: android.graphics.RectF,
-        previewRect: android.graphics.RectF,
+        screenRect: RectF,
+        previewRect: RectF,
         mat: Mat
     ): Rect {
         // 1) Normalize the overlay rect into the previewRect (0..1 in both axes)

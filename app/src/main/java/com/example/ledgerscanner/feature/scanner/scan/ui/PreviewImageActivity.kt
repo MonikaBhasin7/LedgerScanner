@@ -99,12 +99,6 @@ class PreviewImageActivity : BaseActivity() {
                     warpedBitmap = omrResult?.finalBitmap,
                     intermediateBitmaps = omrResult?.debugBitmaps,
                     onDismiss = { showFinalProcessedImageDialog = false },
-                    onRetry = {
-                        showFinalProcessedImageDialog = false
-                    },
-                    onSave = {
-                        showFinalProcessedImageDialog = false
-                    }
                 )
             } else {
                 Column {

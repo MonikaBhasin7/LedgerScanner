@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -87,6 +88,7 @@ import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import org.opencv.core.Point
 import java.io.File
 import java.util.concurrent.Executors
@@ -267,22 +269,18 @@ class ScanOmrWithCamera : BaseActivity() {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
-        var showFinalProcessedImageDialog by remember { mutableStateOf(false) }
-        var omrResult by remember { mutableStateOf<OmrResult?>(null) }
-
-        //            if (showFinalProcessedImageDialog && omrResult != null)
-        //                WarpedImageDialog(
-        //                    warpedBitmap = omrResult?.finalBitmap,
-        //                    intermediateBitmaps = omrResult?.debugBitmaps,
-        //                    onDismiss = { showFinalProcessedImageDialog = false },
-        //                    onRetry = {
-        //                        showFinalProcessedImageDialog = false
-        //                    },
-        //                    onSave = {
-        //                        showFinalProcessedImageDialog = false
-        //                    }
-        //                )
-        //            else null
+//        var showFinalProcessedImageDialog by remember { mutableStateOf(false) }
+//        var omrResult by remember { mutableStateOf<OmrResult?>(null) }
+//
+//        if (showFinalProcessedImageDialog && omrResult != null)
+//            WarpedImageDialog(
+//                warpedBitmap = omrResult?.finalBitmap,
+//                intermediateBitmaps = omrResult?.debugBitmaps,
+//                onDismiss = {
+//                    showFinalProcessedImageDialog = false
+//                    omrResult = null
+//                },
+//            )
         CameraViewOrPermissionCard(
             context,
             lifecycleOwner,
@@ -298,10 +296,8 @@ class ScanOmrWithCamera : BaseActivity() {
                 } else {
                     cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                 }
-            }, cameraReadyCallback, showDebugImageDialog = {
-                showFinalProcessedImageDialog = true
-                omrResult = it
-            }
+            },
+            cameraReadyCallback,
         )
     }
 
@@ -377,7 +373,6 @@ class ScanOmrWithCamera : BaseActivity() {
         cameraPermissionStatus: PermissionStatus,
         takePermissionCallback: () -> Unit,
         cameraReadyCallback: () -> Unit,
-        showDebugImageDialog: (OmrImageProcessResult) -> Unit //todo monika remove in future
     ) {
         val haptic = LocalHapticFeedback.current
 
@@ -389,12 +384,6 @@ class ScanOmrWithCamera : BaseActivity() {
         if (cameraPermissionStatus == PermissionStatus.PermissionGranted) {
             AndroidView(
                 modifier = Modifier
-                    .clickable {
-                        omrImageProcessResultGlobal?.let {
-                            println("$TAG - points - $anchorPointsOnCapturedImage")
-                            showDebugImageDialog(it)
-                        }
-                    }
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(12.dp)),
@@ -402,7 +391,7 @@ class ScanOmrWithCamera : BaseActivity() {
                     val container = FrameLayout(ctx)
 
                     val previewView = PreviewView(ctx).apply {
-                        this.scaleType = PreviewView.ScaleType.FIT_CENTER
+                        this.scaleType = PreviewView.ScaleType.FILL_CENTER
                     }
                     container.addView(
                         previewView,
@@ -462,6 +451,7 @@ class ScanOmrWithCamera : BaseActivity() {
                             imageProxy.close()
                         })
                     }
+
 
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                     cameraProviderFuture.addListener({

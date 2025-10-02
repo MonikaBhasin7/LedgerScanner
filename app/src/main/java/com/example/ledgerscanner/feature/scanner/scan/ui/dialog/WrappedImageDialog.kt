@@ -53,8 +53,6 @@ import kotlinx.coroutines.launch
 fun WarpedImageDialog(
     warpedBitmap: Bitmap?,
     onDismiss: () -> Unit,
-    onRetry: () -> Unit = {},
-    onSave: () -> Unit = {},
     intermediateBitmaps: Map<String, Bitmap>?
 ) {
     if (warpedBitmap == null && intermediateBitmaps.isNullOrEmpty()) {
@@ -126,31 +124,14 @@ fun WarpedImageDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Buttons row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    TextButton(onClick = onRetry) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Retry",
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Rescan")
-                    }
-
-                    Row {
-                        TextButton(onClick = onDismiss) {
-                            Text("Close")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = onSave) {
-                            Text("Save")
-                        }
-                    }
+                TextButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Retry",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Rescan")
                 }
             }
         }
