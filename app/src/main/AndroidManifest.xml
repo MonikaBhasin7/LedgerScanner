@@ -35,11 +35,11 @@
             android:theme="@style/Theme.LedgerScanner" />
 
         <activity
-            android:name=".feature.scanner.scan.ui.screen.ScanOmrWithCamera"
+            android:name=".feature.scanner.scan.ui.ScanOmrWithCamera"
             android:theme="@style/Theme.LedgerScanner" />
 
         <activity
-            android:name=".feature.scanner.scan.ui.screen.PreviewImageActivity"
+            android:name=".feature.scanner.scan.ui.PreviewImageActivity"
             android:theme="@style/Theme.LedgerScanner" />
 
         <activity

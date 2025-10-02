@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui.screen
+package com.example.ledgerscanner.feature.scanner.scan.ui
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -41,6 +41,7 @@ import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
+import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import kotlinx.coroutines.launch
 import java.io.File
 

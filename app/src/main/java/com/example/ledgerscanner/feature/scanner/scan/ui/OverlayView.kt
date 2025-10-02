@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui.screen
+package com.example.ledgerscanner.feature.scanner.scan.ui
 
 
 import android.content.Context
@@ -62,7 +62,7 @@ class OverlayView @JvmOverloads constructor(
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textSize = 28f
-        Paint.setTypeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
         setShadowLayer(4f, 0f, 0f, Color.BLACK)
     }
 
@@ -130,8 +130,8 @@ class OverlayView @JvmOverloads constructor(
     }
 
     fun screenRectToMatRect(
-        screenRect: RectF,
-        previewRect: RectF,
+        screenRect: android.graphics.RectF,
+        previewRect: android.graphics.RectF,
         mat: Mat
     ): Rect {
         // 1) Normalize the overlay rect into the previewRect (0..1 in both axes)
@@ -168,7 +168,7 @@ class OverlayView @JvmOverloads constructor(
             Imgproc.THRESH_BINARY_INV
         )
 
-        val contours = mutableListOf<MatOfPoint>()
+        val contours = mutableListOf<org.opencv.core.MatOfPoint>()
         val hierarchy = Mat()
         Imgproc.findContours(
             bin,

@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.ledgerscanner.feature.scanner.exam.ui.ExamListingActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.ScanOmrWithCamera
 
 class SplashActivity : AppCompatActivity() {
 
