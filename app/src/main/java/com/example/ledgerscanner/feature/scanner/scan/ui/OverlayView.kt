@@ -302,6 +302,7 @@ class OverlayView @JvmOverloads constructor(
         debug: Boolean = false
     ): Pair<OmrImageProcessResult, List<AnchorPoint>> {
         val debugBitmaps = hashMapOf<String, Bitmap>()
+        var finalBitmap: Bitmap? = null
 
         try {
             // 1) Get overlay squares in SCREEN pixels and the preview rectangle we drew against
@@ -377,12 +378,13 @@ class OverlayView @JvmOverloads constructor(
                     omrTemplate
                 )
                 if (debug) {
-                    debugBitmaps["bubble"] = OmrUtils.drawPoints(
+                    finalBitmap = OmrUtils.drawPoints(
                         warped,
                         bubblePoints,
                         fillColor = Scalar(255.0, 255.0, 255.0), // white dots
                         textColor = Scalar(0.0, 255.0, 255.0),   // cyan labels
                     ).toBitmapSafe()
+                    debugBitmaps["bubble"] = finalBitmap
                 }
                 if (bubblePoints.size != omrTemplate.totalBubbles()) {
                     return OmrImageProcessResult(
@@ -396,7 +398,8 @@ class OverlayView @JvmOverloads constructor(
 
             return OmrImageProcessResult(
                 success = true,
-                debugBitmaps = debugBitmaps
+                debugBitmaps = debugBitmaps,
+                finalBitmap = finalBitmap
             ) to centersInBuffer
         } catch (e: Exception) {
             return OmrImageProcessResult(

@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui
+package com.example.ledgerscanner.feature.scanner.scan.ui.activity
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -41,7 +41,6 @@ import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
-import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -55,7 +54,7 @@ class PreviewImageActivity : BaseActivity() {
 
         setContent {
             LedgerScannerTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.Companion.fillMaxSize()) {
                     PreviewImageScreen(imageUri = imageUri!!, onClose = { finish() })
                 }
             }
@@ -89,7 +88,7 @@ class PreviewImageActivity : BaseActivity() {
 
         val coroutineScope = rememberCoroutineScope()
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.Companion.fillMaxSize()) {
 
             if (showFinalProcessedImageDialog
                 && (omrResult?.finalBitmap != null
@@ -103,20 +102,20 @@ class PreviewImageActivity : BaseActivity() {
             } else {
                 Column {
                     Box(
-                        modifier = Modifier
+                        modifier = Modifier.Companion
                             .weight(1f)
                             .fillMaxWidth()
-                            .background(Color.Black),
-                        contentAlignment = Alignment.Center
+                            .background(Color.Companion.Black),
+                        contentAlignment = Alignment.Companion.Center
                     ) {
                         bitmap?.let {
                             Image(
                                 bitmap = it.asImageBitmap(),
                                 contentDescription = "Captured image",
-                                modifier = Modifier
+                                modifier = Modifier.Companion
                                     .fillMaxWidth()
                                     .padding(8.dp),
-                                contentScale = ContentScale.Fit
+                                contentScale = ContentScale.Companion.Fit
                             )
                         } ?: run {
                             GenericLoader()
@@ -124,18 +123,18 @@ class PreviewImageActivity : BaseActivity() {
                     }
 
                     Box(
-                        modifier = Modifier
+                        modifier = Modifier.Companion
                             .background(color = Grey200)
                             .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         Row(
-                            modifier = Modifier
+                            modifier = Modifier.Companion
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             GenericButton(
                                 text = "Rescan",
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.Companion.weight(1f),
                                 onClick = {
                                     onClose()
                                 }
@@ -144,7 +143,7 @@ class PreviewImageActivity : BaseActivity() {
                             bitmap?.let { bm ->
                                 GenericButton(
                                     text = "Submit",
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.Companion.weight(1f),
                                     onClick = {
                                         coroutineScope.launch {
                                             val omrTemplate =

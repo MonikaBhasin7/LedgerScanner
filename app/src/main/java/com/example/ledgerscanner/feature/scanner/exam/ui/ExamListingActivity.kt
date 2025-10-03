@@ -75,7 +75,7 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateType
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.ScanOmrWithCamera
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCamera
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
