@@ -75,7 +75,7 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateType
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCamera
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -117,7 +117,7 @@ class ExamListingActivity : ComponentActivity() {
                                             context.startActivity(
                                                 Intent(
                                                     context,
-                                                    ScanOmrWithCamera::class.java
+                                                    ScanOmrWithCameraActivity::class.java
                                                 ).apply {
                                                     putExtra(
                                                         "template", it.data

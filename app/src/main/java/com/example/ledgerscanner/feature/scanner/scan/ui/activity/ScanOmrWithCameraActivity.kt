@@ -15,9 +15,11 @@ import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.compose.CapturePreviewScreen
 import com.example.ledgerscanner.feature.scanner.scan.ui.compose.ScannerScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlin.getValue
 
-class ScanOmrWithCamera : BaseActivity() {
+@AndroidEntryPoint
+class ScanOmrWithCameraActivity : BaseActivity() {
 
     companion object {
         const val TAG = "ScanOmrWithCamera"

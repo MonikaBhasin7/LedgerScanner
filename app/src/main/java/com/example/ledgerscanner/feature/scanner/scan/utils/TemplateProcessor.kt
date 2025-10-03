@@ -2,8 +2,8 @@ package com.example.ledgerscanner.feature.scanner.scan.utils
 
 import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
-import com.example.ledgerscanner.base.utils.OmrUtils
-import com.example.ledgerscanner.base.utils.toBitmapSafe
+import com.example.ledgerscanner.base.utils.image.OpenCvUtils
+import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
@@ -22,11 +22,12 @@ import org.opencv.core.Point
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import javax.inject.Inject
 import kotlin.jvm.Throws
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-class TemplateProcessor {
+class TemplateProcessor @Inject constructor() {
 
     companion object {
         const val TAG = "TemplateProcessor"
@@ -86,7 +87,7 @@ class TemplateProcessor {
             )
 
             if (debug) {
-                OmrUtils.drawPoints(
+                OpenCvUtils.drawPoints(
                     srcMat,
                     bubbles2DArray = bubbles2DArray,
                     points = anchorPoints,
@@ -122,7 +123,7 @@ class TemplateProcessor {
     ): List<AnchorPoint>? {
         val anchorPoints = detectAnchorPointsImpl(grayMat, debug)
         if (debug) {
-            OmrUtils.drawPoints(
+            OpenCvUtils.drawPoints(
                 srcMat,
                 points = anchorPoints,
             ).apply {

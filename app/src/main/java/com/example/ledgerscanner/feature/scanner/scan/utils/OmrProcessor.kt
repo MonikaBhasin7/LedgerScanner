@@ -2,9 +2,9 @@ package com.example.ledgerscanner.feature.scanner.scan.utils
 
 import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
-import com.example.ledgerscanner.base.utils.OmrUtils
-import com.example.ledgerscanner.base.utils.preCleanGray
-import com.example.ledgerscanner.base.utils.toBitmapSafe
+import com.example.ledgerscanner.base.utils.image.OpenCvUtils
+import com.example.ledgerscanner.base.utils.image.preCleanGray
+import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
@@ -15,8 +15,9 @@ import org.opencv.core.Point
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import javax.inject.Inject
 
-class OmrProcessor {
+class OmrProcessor @Inject constructor() {
 
     companion object {
         const val TAG = "OmrProcessor"
@@ -86,7 +87,7 @@ class OmrProcessor {
                 )
             }
         }
-        debugMap["first-highlight"] = OmrUtils.drawPoints(
+        debugMap["first-highlight"] = OpenCvUtils.drawPoints(
             warped,
             debugPoints,
             fillColor = Scalar(255.0, 255.0, 255.0),

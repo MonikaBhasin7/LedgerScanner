@@ -69,7 +69,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.OverlayView
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCamera
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -258,9 +258,11 @@ private fun CameraViewOrPermissionCard(
                     .build()
 
                 analysisUseCase.setAnalyzer(cameraExecutor, { imageProxy ->
-                    val (omrImageProcessResult, centers) = overlay.detectAnchorsInsideOverlay(
+                    val (omrImageProcessResult, centers) = omrScannerViewModel.detectAnchorsInsideOverlay(
                         imageProxy,
                         omrTemplate,
+                        overlay.getAnchorSquaresOnScreen(),
+                        overlay.getPreviewRect(),
                         debug = true
                     )
                     if (omrImageProcessResult.success && isCapturing.compareAndSet(
@@ -271,7 +273,7 @@ private fun CameraViewOrPermissionCard(
                         mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
                         omrScannerViewModel.setOmrImageProcessResult(omrImageProcessResult)
                         scope.launch(Dispatchers.Main) {
-                            navController.navigate(ScanOmrWithCamera.CAPTURE_PREVIEW_SCREEN)
+                            navController.navigate(ScanOmrWithCameraActivity.CAPTURE_PREVIEW_SCREEN)
                         }
                     }
                     imageProxy.close()

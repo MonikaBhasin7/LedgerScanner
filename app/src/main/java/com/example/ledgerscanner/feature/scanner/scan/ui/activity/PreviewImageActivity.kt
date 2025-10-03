@@ -36,7 +36,7 @@ import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
-import com.example.ledgerscanner.base.utils.ImageUtils
+import com.example.ledgerscanner.base.utils.image.ImageUtils
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
