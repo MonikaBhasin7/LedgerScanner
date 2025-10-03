@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.RectF
+import android.media.MediaActionSound
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -61,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
@@ -71,6 +73,7 @@ import androidx.core.content.FileProvider
 import androidx.core.view.doOnLayout
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.navigation.compose.rememberNavController
 import com.example.ledgerscanner.base.enums.PermissionStatus
 import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
@@ -92,6 +95,7 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialo
 import org.opencv.core.Point
 import java.io.File
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class ScanOmrWithCamera : BaseActivity() {
 
@@ -101,12 +105,13 @@ class ScanOmrWithCamera : BaseActivity() {
     }
 
     lateinit var omrTemplate: Template
+    private val isCapturing = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        omrTemplate = intent.getParcelableExtra<Template>(ARG_TEMPLATE) ?: run {
+        omrTemplate = intent.getParcelableExtra(ARG_TEMPLATE) ?: run {
             finish()
             return
         }
@@ -117,9 +122,7 @@ class ScanOmrWithCamera : BaseActivity() {
                 Scaffold(
                     containerColor = White,
                     content = { innerPadding ->
-                        CameraWidget(imageCapture, cameraReadyCallback = {
-                            cameraReady = true
-                        })
+                        CameraWidget(imageCapture)
                     }
                 )
             }
@@ -252,7 +255,7 @@ class ScanOmrWithCamera : BaseActivity() {
     }
 
     @Composable
-    fun CameraWidget(imageCapture: ImageCapture, cameraReadyCallback: () -> Unit) {
+    fun CameraWidget(imageCapture: ImageCapture) {
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         var cameraPermissionStatus by remember { mutableStateOf(PermissionStatus.PermissionDenied) }
@@ -269,18 +272,6 @@ class ScanOmrWithCamera : BaseActivity() {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
-//        var showFinalProcessedImageDialog by remember { mutableStateOf(false) }
-//        var omrResult by remember { mutableStateOf<OmrResult?>(null) }
-//
-//        if (showFinalProcessedImageDialog && omrResult != null)
-//            WarpedImageDialog(
-//                warpedBitmap = omrResult?.finalBitmap,
-//                intermediateBitmaps = omrResult?.debugBitmaps,
-//                onDismiss = {
-//                    showFinalProcessedImageDialog = false
-//                    omrResult = null
-//                },
-//            )
         CameraViewOrPermissionCard(
             context,
             lifecycleOwner,
@@ -297,7 +288,6 @@ class ScanOmrWithCamera : BaseActivity() {
                     cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                 }
             },
-            cameraReadyCallback,
         )
     }
 
@@ -372,13 +362,12 @@ class ScanOmrWithCamera : BaseActivity() {
         imageCapture: ImageCapture,
         cameraPermissionStatus: PermissionStatus,
         takePermissionCallback: () -> Unit,
-        cameraReadyCallback: () -> Unit,
     ) {
-        val haptic = LocalHapticFeedback.current
-
+        val navController = rememberNavController()
+        val mediaActionSound = MediaActionSound().apply {
+            load(MediaActionSound.SHUTTER_CLICK)
+        }
         val cameraExecutor = Executors.newSingleThreadExecutor()
-        var omrImageProcessResultGlobal: OmrImageProcessResult? = null
-        var anchorPointsOnCapturedImage = listOf<AnchorPoint>()
 
 
         if (cameraPermissionStatus == PermissionStatus.PermissionGranted) {
@@ -431,26 +420,37 @@ class ScanOmrWithCamera : BaseActivity() {
                         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
                         .build()
 
-
-                    val omrTemplate =
-                        context.loadJsonFromAssets<Template>("template_omr_10_ques.json")
-                    if (omrTemplate == null) {
-                        Toast.makeText(context, "Error in decoding template", Toast.LENGTH_SHORT)
-                            .show()
-                    } else {
-                        analysisUseCase.setAnalyzer(cameraExecutor, { imageProxy ->
-                            val (omrImageProcessResult, centers) = overlay.detectAnchorsInsideOverlay(
-                                imageProxy,
-                                omrTemplate,
-                                debug = true
+                    analysisUseCase.setAnalyzer(cameraExecutor, { imageProxy ->
+                        val (omrImageProcessResult, centers) = overlay.detectAnchorsInsideOverlay(
+                            imageProxy,
+                            omrTemplate,
+                            debug = true
+                        )
+                        if (omrImageProcessResult.success && isCapturing.compareAndSet(
+                                false,
+                                true
                             )
-                            if (omrImageProcessResult.success) {
-                                omrImageProcessResultGlobal = omrImageProcessResult
-                                anchorPointsOnCapturedImage = centers
-                            }
-                            imageProxy.close()
-                        })
-                    }
+                        ) {
+                            mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
+                            // navigate from Composable A
+
+                            val result = omrImageProcessResult
+                            navController.currentBackStackEntry?.savedStateHandle?.set("omr_result", result)
+                            navController.navigate("capture_preview")
+//                            startActivity(
+//                                Intent(
+//                                    context,
+//                                    CapturePreviewActivity::class.java
+//                                ).apply {
+//                                    putExtra(
+//                                        CapturePreviewActivity.OMR_IMAGE_PROCESS_RESULT,
+//                                        omrImageProcessResult
+//                                    )
+//                                }
+//                            )
+                        }
+                        imageProxy.close()
+                    })
 
 
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
@@ -467,9 +467,7 @@ class ScanOmrWithCamera : BaseActivity() {
                             preview,
                             imageCapture,
                             analysisUseCase
-                        ).also {
-                            cameraReadyCallback()
-                        }
+                        )
                     }, ContextCompat.getMainExecutor(ctx))
                     container
                 })

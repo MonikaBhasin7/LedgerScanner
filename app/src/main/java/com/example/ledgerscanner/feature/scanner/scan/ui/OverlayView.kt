@@ -301,7 +301,7 @@ class OverlayView @JvmOverloads constructor(
         omrTemplate: Template,
         debug: Boolean = false
     ): Pair<OmrImageProcessResult, List<AnchorPoint>> {
-        val debugBitmaps = mutableMapOf<String, Bitmap>()
+        val debugBitmaps = hashMapOf<String, Bitmap>()
 
         try {
             // 1) Get overlay squares in SCREEN pixels and the preview rectangle we drew against

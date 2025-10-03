@@ -29,7 +29,7 @@ class OmrProcessor {
         inputBitmap: Bitmap,
         debug: Boolean = false
     ): OmrImageProcessResult {
-        val debugMap = mutableMapOf<String, Bitmap>()
+        val debugMap = hashMapOf<String, Bitmap>()
 
         val srcMat = Mat()
         Utils.bitmapToMat(inputBitmap, srcMat)

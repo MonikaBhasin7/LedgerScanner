@@ -37,7 +37,7 @@ class TemplateProcessor {
         inputBitmap: Bitmap,
         debug: Boolean = true
     ): OmrTemplateResult {
-        val debugMap = mutableMapOf<String, Bitmap>()
+        val debugMap = hashMapOf<String, Bitmap>()
         try {
             // 1. Convert bitmap to grayscale
             val srcMat = Mat().apply {
