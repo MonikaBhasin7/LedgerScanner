@@ -187,6 +187,12 @@ fun Mat.toBitmapSafe(): Bitmap {
     return bmp
 }
 
+fun Mat.toColoredWarped(): Mat {
+    val coloredWarped = Mat()
+    Imgproc.cvtColor(this, coloredWarped, Imgproc.COLOR_GRAY2BGR)
+    return coloredWarped
+}
+
 /**
  * Pre-clean a grayscale Mat:
  * 1) optional CLAHE to flatten lighting

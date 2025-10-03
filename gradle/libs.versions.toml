@@ -1,4 +1,5 @@
 [versions]
+accompanistSystemuicontroller = "0.36.0"
 agp = "8.11.2"
 androidImageCropper = "4.6.0"
 androidxHiltVersion = "1.3.0"
@@ -35,6 +36,7 @@ exifinterface = "1.3.6"
 navigationComposeJvmstubs = "2.9.5"
 
 [libraries]
+accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
 android-image-cropper = { module = "com.vanniktech:android-image-cropper", version.ref = "androidImageCropper" }
 androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activityCompose" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCore" }

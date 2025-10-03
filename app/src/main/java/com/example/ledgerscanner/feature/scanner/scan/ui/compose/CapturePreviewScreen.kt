@@ -4,10 +4,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -30,6 +37,7 @@ import androidx.core.view.WindowCompat.enableEdgeToEdge
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
+import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 
@@ -42,8 +50,7 @@ fun CapturePreviewScreen(
     var showDialog by remember { mutableStateOf<Boolean>(true) }
 
     Scaffold(
-        modifier = Modifier
-            .safeDrawingPadding(),
+        containerColor = White,
         topBar = {
             GenericToolbar(title = "Capture Preview", onBackClick = {
                 navController.popBackStack()

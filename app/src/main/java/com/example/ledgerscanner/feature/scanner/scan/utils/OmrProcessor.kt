@@ -11,6 +11,7 @@ import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.android.Utils
+import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint2f
 import org.opencv.core.Point
@@ -177,16 +178,10 @@ class OmrProcessor @Inject constructor() {
         debug: Boolean,
         debugBitmaps: MutableMap<String, Bitmap>
     ): Pair<Mat, Bitmap?> {
-        val templateAnchors = listOf(
-            omrTemplate.anchor_top_left,
-            omrTemplate.anchor_top_right,
-            omrTemplate.anchor_bottom_right,
-            omrTemplate.anchor_bottom_left
-        )
         val warped = warpWithAnchors(
             src = gray,
             detectedAnchors = centersInBuffer,
-            templateAnchors = templateAnchors,
+            templateAnchors = omrTemplate.getAnchorListClockwise(),
             templateSize = Size(omrTemplate.sheet_width, omrTemplate.sheet_height)
         )
 
@@ -194,6 +189,89 @@ class OmrProcessor @Inject constructor() {
             if (debug) warped.toBitmapSafe() else null
 
         return Pair(warped, warpedBitmap)
+    }
+
+    fun detectFilledBubbles(omrTemplate: Template, warped: Mat): List<Pair<AnchorPoint, Boolean>> {
+        val correctIndex = 1 //todo monika morning
+        val points = mutableListOf<Pair<AnchorPoint, Boolean>>()
+        omrTemplate.questions.forEachIndexed { index, q ->
+            val correctAnsBubblePoint = AnchorPoint(
+                omrTemplate.anchor_top_left.x + q.options[correctIndex].x,
+                omrTemplate.anchor_top_left.y + q.options[correctIndex].y,
+            )
+            q.options.forEachIndexed { optionIndex, o ->
+                val exactBubblePoint = AnchorPoint(
+                    omrTemplate.anchor_top_left.x + o.x,
+                    omrTemplate.anchor_top_left.y + o.y
+                )
+
+                val cx = Math.round(exactBubblePoint.x).coerceIn(0, (warped.cols() - 1).toLong())
+                val cy = Math.round(exactBubblePoint.y).coerceIn(0, (warped.rows() - 1).toLong())
+
+                // sample and decide filled/confidence
+                val (isFilled, confidence) = isBubbleFilled(
+                    srcMat = warped,
+                    cx = cx,
+                    cy = cy,
+                )
+
+                val filledFinal = isFilled && confidence >= 0.45
+                if (filledFinal && correctIndex == optionIndex) {
+                    points.add(Pair(exactBubblePoint, true))
+                } else if (filledFinal) {
+                    points.add(Pair(exactBubblePoint, false))
+                    points.add(Pair(correctAnsBubblePoint, true))
+                }
+            }
+        }
+        return points
+    }
+
+    /**
+     * Returns Pair(isFilled:Boolean, confidence:Double) where confidence is the fraction of dark pixels inside the circular mask (0..1).
+     * The caller decides a fill threshold (fillFractionThreshold) to convert confidence -> boolean filled.
+     */
+    fun isBubbleFilled(
+        srcMat: Mat,
+        cx: Long,
+        cy: Long,
+        radius: Int = 12,
+        binarizeThreshold: Double = 127.0,
+        fillFractionThreshold: Double = 0.5 // not used for returned confidence; caller will threshold
+    ): Pair<Boolean, Double> {
+        if (srcMat.empty()) return false to 0.0
+
+        val cols = srcMat.cols()
+        val rows = srcMat.rows()
+        val x = cx.coerceIn(0, (cols - 1).toLong())
+        val y = cy.coerceIn(0, (rows - 1).toLong())
+
+        // convert to gray if necessary
+        val gray = if (srcMat.channels() == 1) {
+            srcMat.clone()
+        } else {
+            Mat().also { Imgproc.cvtColor(srcMat, it, Imgproc.COLOR_BGR2GRAY) }
+        }
+
+        // mask
+        val mask = Mat.zeros(rows, cols, gray.type())
+        Imgproc.circle(mask, Point(x.toDouble(), y.toDouble()), radius, Scalar(255.0), -1)
+
+        // binary inverse: dark->255
+        val binary = Mat()
+        Imgproc.threshold(gray, binary, binarizeThreshold, 255.0, Imgproc.THRESH_BINARY_INV)
+
+        // mean over mask -> fraction dark
+        val meanScalar = Core.mean(binary, mask)
+        val darkFraction = (meanScalar.`val`[0] / 255.0).coerceIn(0.0, 1.0)
+
+        // cleanup
+        if (gray !== srcMat) gray.release()
+        mask.release()
+        binary.release()
+
+        val isFilled = darkFraction >= fillFractionThreshold
+        return isFilled to darkFraction
     }
 
 }

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import com.example.ledgerscanner.base.utils.image.ImageConversionUtils
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
+import com.example.ledgerscanner.base.utils.image.toColoredWarped
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
@@ -15,7 +16,9 @@ import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.opencv.core.Mat
 import org.opencv.core.Scalar
+import org.opencv.imgproc.Imgproc
 import javax.inject.Inject
 
 @HiltViewModel
@@ -95,25 +98,35 @@ class OmrScannerViewModel @Inject constructor(
 
             if (centersInBuffer.size == 4) {
                 val bubblePoints = templateProcessor.mapTemplateBubblesToImagePoints(omrTemplate)
+                val detectedBubbles = omrProcessor.detectFilledBubbles(omrTemplate, warped)
                 if (debug) {
-                    finalBitmap = OpenCvUtils.drawPoints(
+                    debugBitmaps["bubble"] = OpenCvUtils.drawPoints(
                         warped,
                         bubblePoints,
                         fillColor = Scalar(255.0, 255.0, 255.0), // white dots
                         textColor = Scalar(0.0, 255.0, 255.0),   // cyan labels
                     ).toBitmapSafe()
-                    debugBitmaps["bubble"] = finalBitmap
                 }
+                finalBitmap = OpenCvUtils.drawPoints(
+                    warped.toColoredWarped(),
+                    bubblesWithColor = detectedBubbles,
+                    fillColor = Scalar(255.0, 255.0, 255.0), // white dots
+                    textColor = Scalar(0.0, 255.0, 255.0),   // cyan labels
+                ).toBitmapSafe()
                 if (bubblePoints.size != omrTemplate.totalBubbles()) {
-                    gray.release()
                     return OmrImageProcessResult(
                         success = false,
                         debugBitmaps = debugBitmaps
                     ) to centersInBuffer
                 }
+                gray.release()
+            } else {
+                return OmrImageProcessResult(
+                    success = false,
+                    debugBitmaps = debugBitmaps,
+                ) to centersInBuffer
             }
 
-            gray.release()
 
             return OmrImageProcessResult(
                 success = true,

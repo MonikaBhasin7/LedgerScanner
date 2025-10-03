@@ -15,29 +15,37 @@ object OpenCvUtils {
         points: List<AnchorPoint>? = null,
         bubbles: List<Bubble>? = null,
         bubbles2DArray: List<List<Bubble>>? = null,
+        bubblesWithColor: List<Pair<AnchorPoint, Boolean>>? = null,
         fillColor: Scalar = Scalar(255.0, 0.0, 0.0),
         textColor: Scalar = Scalar(255.0, 255.0, 0.0),
         radius: Int? = 10
     ): Mat {
         val out = src.clone()
 
-        fun draw(pt: Point, label: String) {
+        fun draw(
+            pt: Point,
+            label: String? = null,
+            filledColor: Scalar = fillColor,
+            pointRadius: Int? = radius
+        ) {
             Imgproc.circle(
                 out,
                 pt,
-                radius ?: 10,
-                fillColor,
+                pointRadius ?: 10,
+                filledColor,
                 -1
             )
-            Imgproc.putText(
-                out,
-                label,
-                Point(pt.x - 4, pt.y + 2),
-                Imgproc.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                textColor,
-                2
-            )
+            label?.let {
+                Imgproc.putText(
+                    out,
+                    it,
+                    Point(pt.x - 4, pt.y + 2),
+                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    textColor,
+                    2
+                )
+            }
         }
 
         // 1) Draw 2D bubble grid (row-wise), label with running index
@@ -53,6 +61,14 @@ object OpenCvUtils {
 
         // 3) Draw flat bubble list
         bubbles?.forEachIndexed { i, b -> draw(Point(b.x, b.y), "$i") }
+
+        bubblesWithColor?.forEachIndexed { i, b ->
+            draw(
+                Point(b.first.x, b.first.y),
+                pointRadius = 15,
+                filledColor = if (b.second) Scalar(0.0, 255.0, 0.0) else Scalar(0.0, 0.0, 255.0)
+            )
+        }
 
         return out
     }
