@@ -1,7 +1,9 @@
 package com.example.ledgerscanner.feature.scanner.scan.utils
 
 import android.graphics.Bitmap
+import android.graphics.RectF
 import androidx.annotation.WorkerThread
+import com.example.ledgerscanner.base.utils.image.ImageConversionUtils
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.preCleanGray
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
@@ -119,6 +121,79 @@ class OmrProcessor @Inject constructor() {
         val warped = Mat()
         Imgproc.warpPerspective(src, warped, H, templateSize)
         return warped
+    }
+
+    /**
+     * Detect centers inside the provided overlay rects and fill centersOut.
+     * Returns true if all anchors found, false otherwise.
+     *
+     * NOTE: This helper preserves the exact loop logic and debug bitmap recording.
+     */
+    fun findCentersInBuffer(
+        overlayRects: List<RectF>,
+        previewRect: RectF,
+        gray: Mat,
+        debug: Boolean,
+        debugBitmaps: MutableMap<String, Bitmap>,
+        centersOut: MutableList<AnchorPoint>
+    ): Boolean {
+        var allFound = true
+
+        for ((index, screenRect) in overlayRects.withIndex()) {
+            // map screen overlay square -> Mat rect (same logic)
+            val matRect = ImageConversionUtils.screenRectToMatRect(screenRect, previewRect, gray)
+
+            // Crop ROI directly with that rect
+            val roi = Mat(gray, matRect)
+            if (debug) debugBitmaps["roi - $index"] = roi.toBitmapSafe()
+
+            // Detect anchor inside ROI (same implementation)
+            val anchor = OpenCvUtils.detectAnchorInRoi(roi)
+            roi.release()
+
+            if (anchor == null) {
+                allFound = false
+            } else {
+                centersOut += AnchorPoint(
+                    (matRect.x + anchor.x.toFloat()).toDouble(),
+                    (matRect.y + anchor.y.toFloat()).toDouble()
+                )
+            }
+        }
+
+        return allFound
+    }
+
+    /**
+     * Performs the warp step using omrProcessor.warpWithAnchors and returns the warped Mat
+     * plus an optional debug bitmap for warped (if debug=true)
+     *
+     * NOTE: Behavior unchanged: uses omrProcessor and templateProcessor as originally used.
+     */
+    fun warpWithTemplateAndGetWarped(
+        gray: Mat,
+        omrTemplate: Template,
+        centersInBuffer: List<AnchorPoint>,
+        debug: Boolean,
+        debugBitmaps: MutableMap<String, Bitmap>
+    ): Pair<Mat, Bitmap?> {
+        val templateAnchors = listOf(
+            omrTemplate.anchor_top_left,
+            omrTemplate.anchor_top_right,
+            omrTemplate.anchor_bottom_right,
+            omrTemplate.anchor_bottom_left
+        )
+        val warped = warpWithAnchors(
+            src = gray,
+            detectedAnchors = centersInBuffer,
+            templateAnchors = templateAnchors,
+            templateSize = Size(omrTemplate.sheet_width, omrTemplate.sheet_height)
+        )
+
+        val warpedBitmap: Bitmap? =
+            if (debug) warped.toBitmapSafe() else null
+
+        return Pair(warped, warpedBitmap)
     }
 
 }

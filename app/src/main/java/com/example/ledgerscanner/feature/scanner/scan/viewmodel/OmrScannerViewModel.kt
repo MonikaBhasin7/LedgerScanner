@@ -15,9 +15,7 @@ import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.opencv.core.Mat
 import org.opencv.core.Scalar
-import org.opencv.core.Size
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,89 +30,71 @@ class OmrScannerViewModel @Inject constructor(
         _omrImageProcessResult.value = result
     }
 
-    fun detectAnchorsInsideOverlay(
+    fun processOmrFrame(
         image: ImageProxy,
         omrTemplate: Template,
         anchorSquaresOnPreviewScreen: List<RectF>,
         previewRect: RectF,
         debug: Boolean = false
     ): Pair<OmrImageProcessResult, List<AnchorPoint>> {
+
         val debugBitmaps = hashMapOf<String, Bitmap>()
         var finalBitmap: Bitmap? = null
 
         try {
-            // 1) Get overlay squares in SCREEN pixels and the preview rectangle we drew against
-            val overlayRects = anchorSquaresOnPreviewScreen // same sidePx as your overlay
+            // 1) validate inputs (same behavior as before)
+            val overlayRects = anchorSquaresOnPreviewScreen
             if (overlayRects.isEmpty() || previewRect.width() <= 0f) {
                 return OmrImageProcessResult(false) to emptyList()
             }
 
-            // 2) Convert camera buffer to a gray Mat (once per frame)
+            // 2) convert to gray mat (unchanged implementation)
             val gray = ImageConversionUtils.imageProxyToGrayMatUpright(image)
             if (debug) debugBitmaps["image proxy gray mat"] = gray.toBitmapSafe()
 
-            val centersInBuffer = ArrayList<AnchorPoint>(overlayRects.size)
-            var allFound = true
+            // 3) detect centers in buffer (loop extracted)
+            val centersInBuffer = mutableListOf<AnchorPoint>()
+            val allFound = omrProcessor.findCentersInBuffer(
+                overlayRects = overlayRects,
+                previewRect = previewRect,
+                gray = gray,
+                debug = debug,
+                debugBitmaps = debugBitmaps,
+                centersOut = centersInBuffer
+            )
 
-            // 3) For each overlay square: map to buffer → crop → detect black square
-            for ((index, screenRect) in overlayRects.withIndex()) {
-                // 1) Map screen overlay square → Mat rect
-                val matRect =
-                    ImageConversionUtils.screenRectToMatRect(screenRect, previewRect, gray)
-
-                // 2) Crop ROI directly with that rect
-                val roi = Mat(gray, matRect)
-                if (debug) debugBitmaps["roi - $index"] = roi.toBitmapSafe()
-
-                // 3) Detect anchor inside ROI
-//                val anchor = TemplateProcessor().detectAnchorPointsImpl(roi).getOrNull(0)
-                val anchor = OpenCvUtils.detectAnchorInRoi(roi)
-                roi.release()
-
-                if (anchor == null) {
-                    allFound = false
-                } else {
-                    // 4) Convert ROI-local center to full Mat coordinates
-                    centersInBuffer += AnchorPoint(
-                        (matRect.x + anchor.x.toFloat()).toDouble(),
-                        (matRect.y + anchor.y.toFloat()).toDouble()
-                    )
-                }
-            }
-
-            if (debug)
+            if (debug) {
                 OpenCvUtils.drawPoints(
                     gray,
                     points = centersInBuffer,
                 ).apply {
                     debugBitmaps["full image with found anchor"] = toBitmapSafe()
                 }
+            }
 
             if (!allFound) {
+                gray.release()
                 return OmrImageProcessResult(
                     success = false,
                     debugBitmaps = debugBitmaps
                 ) to centersInBuffer
             }
 
-            val templateAnchors = listOf(
-                omrTemplate.anchor_top_left,
-                omrTemplate.anchor_top_right,
-                omrTemplate.anchor_bottom_right,
-                omrTemplate.anchor_bottom_left
-            ) // anchors from your template JSON
-            val warped = omrProcessor.warpWithAnchors(
-                src = gray,
-                detectedAnchors = centersInBuffer,
-                templateAnchors = templateAnchors,
-                templateSize = Size(omrTemplate.sheet_width, omrTemplate.sheet_height)
+            // 4) warp & bubble processing (extracted)
+            val (warped, warpedDebugBitmap) = omrProcessor.warpWithTemplateAndGetWarped(
+                gray = gray,
+                omrTemplate = omrTemplate,
+                centersInBuffer = centersInBuffer,
+                debug = debug,
+                debugBitmaps = debugBitmaps
             )
-            if (debug) debugBitmaps["warped"] = warped.toBitmapSafe()
+
+            if (debug && warpedDebugBitmap != null) {
+                debugBitmaps["warped"] = warpedDebugBitmap
+            }
 
             if (centersInBuffer.size == 4) {
-                val bubblePoints = templateProcessor.mapTemplateBubblesToImagePoints(
-                    omrTemplate
-                )
+                val bubblePoints = templateProcessor.mapTemplateBubblesToImagePoints(omrTemplate)
                 if (debug) {
                     finalBitmap = OpenCvUtils.drawPoints(
                         warped,
@@ -125,6 +105,7 @@ class OmrScannerViewModel @Inject constructor(
                     debugBitmaps["bubble"] = finalBitmap
                 }
                 if (bubblePoints.size != omrTemplate.totalBubbles()) {
+                    gray.release()
                     return OmrImageProcessResult(
                         success = false,
                         debugBitmaps = debugBitmaps
@@ -139,6 +120,7 @@ class OmrScannerViewModel @Inject constructor(
                 debugBitmaps = debugBitmaps,
                 finalBitmap = finalBitmap
             ) to centersInBuffer
+
         } catch (e: Exception) {
             return OmrImageProcessResult(
                 success = false,
