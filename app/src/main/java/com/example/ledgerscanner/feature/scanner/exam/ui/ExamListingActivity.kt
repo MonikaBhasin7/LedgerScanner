@@ -1,11 +1,9 @@
 package com.example.ledgerscanner.feature.scanner.exam.ui
 
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -59,12 +57,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.network.OperationResult
-import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
@@ -75,12 +72,12 @@ import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateType
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.PreviewImageActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.TemplatePickerDialog
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -100,6 +97,7 @@ class ExamListingActivity : ComponentActivity() {
                     },
                     floatingActionButton = {
                         val context = LocalContext.current
+                        var showTemplatePicker by remember { mutableStateOf(false) }
                         Column {
                             GenericButton(
                                 text = "Create Template",
@@ -116,6 +114,40 @@ class ExamListingActivity : ComponentActivity() {
                                     )
                                 }
                             )
+
+                            if (showTemplatePicker) {
+                                TemplatePickerDialog(
+                                    onDismiss = { showTemplatePicker = false },
+                                    onSelect = { assetFile ->
+                                        showTemplatePicker = false
+                                        Template.loadOmrTemplateSafe(
+                                            context,
+                                            assetFile
+                                        ).let {
+                                            when (it) {
+                                                is OperationResult.Error -> Toast.makeText(
+                                                    context, it.message,
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+
+                                                is OperationResult.Success -> {
+                                                    context.startActivity(
+                                                        Intent(
+                                                            context,
+                                                            ScanOmrWithCameraActivity::class.java
+                                                        ).apply {
+                                                            putExtra(
+                                                                "template", it.data
+                                                            )
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+
                             GenericButton(
                                 text = "Create Exam",
                                 icon = Icons.Default.Add,
@@ -123,30 +155,7 @@ class ExamListingActivity : ComponentActivity() {
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                                     .fillMaxWidth(),
                                 onClick = {
-                                    Template.loadOmrTemplateSafe(
-                                        context,
-                                        OmrTemplateType.SIXTEEN_DISTORTED_QUESTIONS
-                                    ).let {
-                                        when (it) {
-                                            is OperationResult.Error -> Toast.makeText(
-                                                context, it.message,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-
-                                            is OperationResult.Success -> {
-                                                context.startActivity(
-                                                    Intent(
-                                                        context,
-                                                        ScanOmrWithCameraActivity::class.java
-                                                    ).apply {
-                                                        putExtra(
-                                                            "template", it.data
-                                                        )
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
+                                    showTemplatePicker = true
                                 }
                             )
                         }

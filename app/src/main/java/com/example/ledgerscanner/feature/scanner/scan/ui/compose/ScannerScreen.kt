@@ -256,21 +256,25 @@ private fun CameraViewOrPermissionCard(
                     .build()
 
                 analysisUseCase.setAnalyzer(cameraExecutor, { imageProxy ->
-                    val (omrImageProcessResult, centers) = omrScannerViewModel.processOmrFrame(
-                        imageProxy,
-                        omrTemplate,
-                        overlay.getAnchorSquaresOnScreen(),
-                        overlay.getPreviewRect(),
-                        debug = true
-                    )
-                    if (omrImageProcessResult.success && isCapturing.compareAndSet(false, true)) {
-                        mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
-                        omrScannerViewModel.setOmrImageProcessResult(omrImageProcessResult)
-                        scope.launch(Dispatchers.Main) {
+                    scope.launch(Dispatchers.Main) {
+                        val (omrImageProcessResult, centers) = omrScannerViewModel.processOmrFrame(
+                            imageProxy,
+                            omrTemplate,
+                            overlay.getAnchorSquaresOnScreen(),
+                            overlay.getPreviewRect(),
+                            debug = true
+                        )
+                        if (omrImageProcessResult.success && isCapturing.compareAndSet(
+                                false,
+                                true
+                            )
+                        ) {
+                            mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
+                            omrScannerViewModel.setOmrImageProcessResult(omrImageProcessResult)
                             navController.navigate(ScanOmrWithCameraActivity.CAPTURE_PREVIEW_SCREEN)
                         }
+                        imageProxy.close()
                     }
-                    imageProxy.close()
                 })
 
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)

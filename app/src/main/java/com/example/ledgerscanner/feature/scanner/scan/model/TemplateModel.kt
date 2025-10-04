@@ -3,8 +3,8 @@ package com.example.ledgerscanner.feature.scanner.scan.model
 import android.content.Context
 import android.os.Parcelable
 import com.example.ledgerscanner.base.errors.OmrTemplateErrors
-import com.example.ledgerscanner.base.extensions.loadJsonFromAssets
 import com.example.ledgerscanner.base.network.OperationResult
+import com.example.ledgerscanner.base.utils.AssetUtils
 import com.google.gson.JsonSyntaxException
 import kotlinx.android.parcel.Parcelize
 import kotlinx.android.parcel.RawValue
@@ -50,7 +50,24 @@ data class Template(
         ): OperationResult<Template> {
             return try {
                 return OperationResult.Success(
-                    context.loadJsonFromAssets<Template>(type.fileName)
+                    AssetUtils.loadJsonFromAssets<Template>(context, type.fileName)
+                )
+            } catch (e: FileNotFoundException) {
+                OperationResult.Error(OmrTemplateErrors.TEMPLATE_NOT_FOUND)
+            } catch (e: JsonSyntaxException) {
+                OperationResult.Error(OmrTemplateErrors.TEMPLATE_DECODE_FAILED)
+            } catch (e: Exception) {
+                OperationResult.Error(OmrTemplateErrors.TEMPLATE_LOAD_UNKNOWN_ERROR)
+            }
+        }
+
+        fun loadOmrTemplateSafe(
+            context: Context,
+            jsonFile: String
+        ): OperationResult<Template> {
+            return try {
+                return OperationResult.Success(
+                    AssetUtils.loadJsonFromAssets<Template>(context, jsonFile)
                 )
             } catch (e: FileNotFoundException) {
                 OperationResult.Error(OmrTemplateErrors.TEMPLATE_NOT_FOUND)

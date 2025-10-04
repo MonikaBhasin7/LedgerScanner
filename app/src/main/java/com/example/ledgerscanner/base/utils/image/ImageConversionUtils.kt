@@ -9,7 +9,7 @@ import org.opencv.core.Rect
 
 object ImageConversionUtils {
 
-    fun imageProxyToGrayMatUpright(image: ImageProxy): Mat {
+     fun imageProxyToGrayMatUpright(image: ImageProxy): Mat {
         val yPlane = image.planes[0]
         val w = image.width
         val h = image.height

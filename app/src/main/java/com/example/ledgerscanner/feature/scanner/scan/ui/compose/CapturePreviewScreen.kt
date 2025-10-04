@@ -1,27 +1,15 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui.compose
 
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,9 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat.enableEdgeToEdge
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
@@ -44,7 +30,8 @@ import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewMo
 @Composable
 fun CapturePreviewScreen(
     navController: NavHostController,
-    omrScannerViewModel: OmrScannerViewModel
+    omrScannerViewModel: OmrScannerViewModel,
+    innerPadding: PaddingValues
 ) {
     val omrImageProcessResult by omrScannerViewModel.omrImageProcessResult.collectAsState()
     var showDialog by remember { mutableStateOf<Boolean>(true) }
@@ -62,7 +49,8 @@ fun CapturePreviewScreen(
                 onClick = {},
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(innerPadding)
+                    .padding(bottom = 12.dp, start = 16.dp, end = 16.dp),
             )
         }
     ) { innerPadding ->

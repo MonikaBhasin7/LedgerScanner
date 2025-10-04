@@ -53,7 +53,11 @@ class ScanOmrWithCameraActivity : BaseActivity() {
                             }
                             composable(CAPTURE_PREVIEW_SCREEN) { backStackEntry ->
                                 val id = backStackEntry.arguments?.getString("id")
-                                CapturePreviewScreen(navController, omrScannerViewModel)
+                                CapturePreviewScreen(
+                                    navController,
+                                    omrScannerViewModel,
+                                    innerPadding
+                                )
                             }
                         }
                     }

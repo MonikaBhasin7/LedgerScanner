@@ -30,12 +30,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.ledgerscanner.base.extensions.loadJsonFromAssets
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
+import com.example.ledgerscanner.base.utils.AssetUtils
 import com.example.ledgerscanner.base.utils.image.ImageUtils
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
@@ -148,7 +148,10 @@ class PreviewImageActivity : BaseActivity() {
                                     onClick = {
                                         coroutineScope.launch {
                                             val omrTemplate =
-                                                context.loadJsonFromAssets<Template>("template_omr_10_ques.json")
+                                                AssetUtils.loadJsonFromAssets<Template>(
+                                                    context,
+                                                    "template_omr_10_ques.json"
+                                                )
                                             if (omrTemplate == null) {
                                                 Toast.makeText(context, "", Toast.LENGTH_SHORT)
                                                     .show()

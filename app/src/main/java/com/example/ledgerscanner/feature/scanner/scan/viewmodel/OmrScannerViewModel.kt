@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.RectF
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.utils.image.ImageConversionUtils
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
@@ -14,8 +15,11 @@ import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
@@ -33,13 +37,13 @@ class OmrScannerViewModel @Inject constructor(
         _omrImageProcessResult.value = result
     }
 
-    fun processOmrFrame(
+    suspend fun processOmrFrame(
         image: ImageProxy,
         omrTemplate: Template,
         anchorSquaresOnPreviewScreen: List<RectF>,
         previewRect: RectF,
         debug: Boolean = false
-    ): Pair<OmrImageProcessResult, List<AnchorPoint>> {
+    ): Pair<OmrImageProcessResult, List<AnchorPoint>> = withContext(Dispatchers.Default) {
 
         val debugBitmaps = hashMapOf<String, Bitmap>()
         var finalBitmap: Bitmap? = null
@@ -48,7 +52,7 @@ class OmrScannerViewModel @Inject constructor(
             // 1) validate inputs (same behavior as before)
             val overlayRects = anchorSquaresOnPreviewScreen
             if (overlayRects.isEmpty() || previewRect.width() <= 0f) {
-                return OmrImageProcessResult(false) to emptyList()
+                return@withContext OmrImageProcessResult(false) to emptyList()
             }
 
             // 2) convert to gray mat (unchanged implementation)
@@ -77,7 +81,7 @@ class OmrScannerViewModel @Inject constructor(
 
             if (!allFound) {
                 gray.release()
-                return OmrImageProcessResult(
+                return@withContext OmrImageProcessResult(
                     success = false,
                     debugBitmaps = debugBitmaps
                 ) to centersInBuffer
@@ -114,28 +118,28 @@ class OmrScannerViewModel @Inject constructor(
                     textColor = Scalar(0.0, 255.0, 255.0),   // cyan labels
                 ).toBitmapSafe()
                 if (bubblePoints.size != omrTemplate.totalBubbles()) {
-                    return OmrImageProcessResult(
+                    return@withContext OmrImageProcessResult(
                         success = false,
                         debugBitmaps = debugBitmaps
                     ) to centersInBuffer
                 }
                 gray.release()
             } else {
-                return OmrImageProcessResult(
+                return@withContext OmrImageProcessResult(
                     success = false,
                     debugBitmaps = debugBitmaps,
                 ) to centersInBuffer
             }
 
 
-            return OmrImageProcessResult(
+            return@withContext OmrImageProcessResult(
                 success = true,
                 debugBitmaps = debugBitmaps,
                 finalBitmap = finalBitmap
             ) to centersInBuffer
 
         } catch (e: Exception) {
-            return OmrImageProcessResult(
+            return@withContext OmrImageProcessResult(
                 success = false,
                 reason = e.toString(),
                 debugBitmaps = debugBitmaps
