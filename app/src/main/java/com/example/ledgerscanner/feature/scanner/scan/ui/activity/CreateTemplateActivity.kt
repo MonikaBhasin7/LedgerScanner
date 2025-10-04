@@ -1,43 +1,20 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui.activity
 
+import android.graphics.Bitmap
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
@@ -47,18 +24,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
+import com.example.ledgerscanner.BuildConfig
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
-import com.example.ledgerscanner.base.ui.theme.Black
-import com.example.ledgerscanner.base.ui.theme.Blue100
-import com.example.ledgerscanner.base.ui.theme.Blue500
-import com.example.ledgerscanner.base.ui.theme.Grey500
-import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
-import com.example.ledgerscanner.base.ui.theme.White
+import com.example.ledgerscanner.base.ui.theme.*
 import com.example.ledgerscanner.base.utils.image.ImageUtils
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
@@ -81,191 +53,231 @@ class CreateTemplateActivity : BaseActivity() {
 
         setContent {
             LedgerScannerTheme {
-                Scaffold(
-                    containerColor = White,
-                    content = { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding)) {
-                            val navController = rememberNavController()
-                            NavHost(navController, startDestination = ROUTE_PICK_IMAGE) {
-                                composable(ROUTE_PICK_IMAGE) {
-                                    PickTemplateImageScreen(navController)
-                                }
-                                composable(ROUTE_VIEW_JSON) {
-                                    val jsonArg = navController.previousBackStackEntry
-                                        ?.savedStateHandle
-                                        ?.get<String>(TEMPLATE_JSON)
-                                    TemplateJsonViewer(navController, jsonArg)
-                                }
+                Scaffold(containerColor = White) { innerPadding ->
+                    Box(
+                        modifier = Modifier.padding(innerPadding)
+                    ) {
+                        val navController = rememberNavController()
+                        NavHost(navController, startDestination = ROUTE_PICK_IMAGE) {
+                            composable(ROUTE_PICK_IMAGE) { PickTemplateImageScreen(navController) }
+                            composable(ROUTE_VIEW_JSON) {
+                                val jsonArg = navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.get<String>(TEMPLATE_JSON)
+                                TemplateJsonViewer(navController, jsonArg)
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // ---------------------- MAIN SCREEN ----------------------
+
+    @Composable
+    fun PickTemplateImageScreen(navController: NavHostController) {
+        val context = LocalContext.current
+        val selectedBitmap by createTemplateViewModel.pickedBitmap.collectAsState()
+        val templateProcessingResult by createTemplateViewModel.templateResult.collectAsState()
+
+        val pickImageLauncher =
+            createActivityLauncherComposeSpecific(ActivityResultContracts.GetContent()) { uri ->
+                uri?.let {
+                    val bitmap = ImageUtils.loadBitmapCorrectOrientation(
+                        context, uri, reqWidth = 1080, reqHeight = 1920
+                    )
+                    createTemplateViewModel.setBitmap(bitmap)
+                }
+            }
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 📷 Image / Preview Section
+                TemplatePreviewSection(
+                    selectedBitmap = selectedBitmap,
+                    result = templateProcessingResult,
+                    pickImageLauncher = { pickImageLauncher.launch("image/*") },
+                    clearResult = { createTemplateViewModel.setTemplateResult(null) },
+                    modifier = Modifier.weight(1f)
                 )
+
+                // 🔘 Buttons Section
+                TemplateButtonsSection(
+                    selectedBitmap = selectedBitmap,
+                    result = templateProcessingResult,
+                    onReselect = {
+                        createTemplateViewModel.setTemplateResult(null)
+                        createTemplateViewModel.setBitmap(null)
+                    },
+                    onProcess = {
+                        val result =
+                            selectedBitmap?.let { TemplateProcessor().generateTemplateJson(it) }
+                        createTemplateViewModel.setTemplateResult(result)
+                    },
+                    onViewJson = { json ->
+                        navController.currentBackStackEntry?.savedStateHandle?.set(
+                            TEMPLATE_JSON,
+                            json
+                        )
+                        navController.navigate(ROUTE_VIEW_JSON)
+                    }
+                )
+            }
+
+            // 🚨 Error message overlay
+            templateProcessingResult?.let {
+                if (!it.success && !it.reason.isNullOrEmpty()) {
+                    ErrorBanner(it.reason)
+                }
+            }
+        }
+    }
+
+    // ---------------------- UI COMPONENTS ----------------------
+
+    @Composable
+    private fun TemplatePreviewSection(
+        selectedBitmap: Bitmap?,
+        result: OmrTemplateResult?,
+        pickImageLauncher: () -> Unit,
+        clearResult: () -> Unit,
+        modifier: Modifier
+    ) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            when {
+                result != null && result.success && result.finalBitmap != null -> {
+                    Image(
+                        bitmap = result.finalBitmap.asImageBitmap(),
+                        contentDescription = "Captured image",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        filterQuality = FilterQuality.High
+                    )
+                }
+
+                result != null && BuildConfig.ENABLE_IMAGE_LOGS -> {
+                    WarpedImageDialog(
+                        warpedBitmap = result.finalBitmap,
+                        intermediateBitmaps = result.debugBitmaps,
+                        onDismiss = { clearResult() }
+                    )
+                }
+
+                selectedBitmap != null -> {
+                    Image(
+                        bitmap = selectedBitmap.asImageBitmap(),
+                        contentDescription = "Selected image",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                else -> EmptyPickerPrompt(onPickClick = pickImageLauncher)
             }
         }
     }
 
     @Composable
-    fun PickTemplateImageScreen(navController: NavHostController) {
-        val context = LocalContext.current
-
-        val selectedBitmap by createTemplateViewModel.pickedBitmap.collectAsState()
-        val templateProcessingResult by createTemplateViewModel.templateResult.collectAsState()
-
-        LaunchedEffect(templateProcessingResult) {
-            templateProcessingResult?.let {
-                if (!it.success && !it.reason.isNullOrEmpty()) {
-                    Toast.makeText(context, it.reason, Toast.LENGTH_SHORT).show()
-                }
+    private fun TemplateButtonsSection(
+        selectedBitmap: android.graphics.Bitmap?,
+        result: com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult?,
+        onReselect: () -> Unit,
+        onProcess: () -> Unit,
+        onViewJson: (String) -> Unit
+    ) {
+        result?.let {
+            if (it.success && it.finalBitmap != null && !it.templateJson.isNullOrEmpty()) {
+                GenericButton(
+                    text = "View Json",
+                    enabled = selectedBitmap != null,
+                    modifier = Modifier
+                        .padding(bottom = 4.dp, start = 16.dp, end = 16.dp)
+                        .fillMaxWidth(),
+                    onClick = { onViewJson(it.templateJson!!) }
+                )
             }
         }
 
-        val pickImageLauncher =
-            createActivityLauncherComposeSpecific(ActivityResultContracts.GetContent()) { uri ->
-                if (uri == null) return@createActivityLauncherComposeSpecific
-                val bitmap = ImageUtils.loadBitmapCorrectOrientation(
-                    context,
-                    uri,
-                    reqWidth = 1080,
-                    reqHeight = 1920
-                )
-                createTemplateViewModel.setBitmap(bitmap)
-            }
+        GenericButton(
+            text = if (result != null) "Reselect another Image" else "Process template",
+            enabled = selectedBitmap != null,
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                .fillMaxWidth(),
+            onClick = { if (result != null) onReselect() else onProcess() }
+        )
+    }
 
-        Box {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+    @Composable
+    private fun EmptyPickerPrompt(onPickClick: () -> Unit) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { onPickClick() }
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(Blue100),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    templateProcessingResult?.let { result ->
-                        if (result.success && result.finalBitmap != null) {
-                            Image(
-                                bitmap = result.finalBitmap.asImageBitmap(),
-                                contentDescription = "Captured image",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp),
-                                filterQuality = FilterQuality.High
-                            )
-                        } else {
-                            WarpedImageDialog(
-                                warpedBitmap = result.finalBitmap,
-                                intermediateBitmaps = result.debugBitmaps,
-                                onDismiss = { createTemplateViewModel.setTemplateResult(null) },
-                            )
-                        }
-                    } ?: run {
-                        selectedBitmap?.asImageBitmap()?.let { bmp ->
-                            Image(
-                                bitmap = bmp,
-                                contentDescription = "Captured image",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                        } ?: run {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable { pickImageLauncher.launch("image/*") }
-                                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(72.dp)
-                                        .clip(CircleShape)
-                                        .background(Blue100),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CameraAlt,
-                                        contentDescription = null,
-                                        tint = Blue500,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Text(
-                                    "Pick Image from Gallery",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Black
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    "Tap to choose the template image.\nMake sure the sheet fills the frame.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Grey500,
-                                    textAlign = TextAlign.Center,
-                                )
-
-                                Spacer(modifier = Modifier.height(24.dp))
-
-                                // small tips row
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    TipChip(text = "Auto perspective", color = Color(0xFF0EA5A4))
-                                    TipChip(text = "Avoid glare", color = Color(0xFFF97316))
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                TipChip(text = "High contrast", color = Color(0xFF3B82F6))
-
-                                Spacer(modifier = Modifier.height(24.dp))
-                            }
-                        }
-                    }
-                }
-
-                templateProcessingResult?.let { result ->
-                    if (result.success && result.finalBitmap != null && !result.templateJson.isNullOrEmpty()) {
-                        GenericButton(
-                            text = "View Json",
-                            enabled = selectedBitmap != null,
-                            modifier = Modifier
-                                .padding(bottom = 4.dp, start = 16.dp, end = 16.dp)
-                                .fillMaxWidth(),
-                            onClick = {
-                                navController.currentBackStackEntry?.savedStateHandle?.set(
-                                    TEMPLATE_JSON,
-                                    result.templateJson
-                                )
-                                navController.navigate(ROUTE_VIEW_JSON)
-                            }
-                        )
-                    }
-                }
-
-                GenericButton(
-                    text = if (templateProcessingResult != null) "Reselect another Image" else "Process template",
-                    enabled = selectedBitmap != null,
-                    modifier = Modifier
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                        .fillMaxWidth(),
-                    onClick = {
-                        if (templateProcessingResult != null) {
-                            createTemplateViewModel.setTemplateResult(null)
-                            createTemplateViewModel.setBitmap(null)
-                        } else {
-                            val result =
-                                selectedBitmap?.let { bmp -> TemplateProcessor().generateTemplateJson(bmp) }
-                            createTemplateViewModel.setTemplateResult(result)
-                        }
-                    }
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = null,
+                    tint = Blue500,
+                    modifier = Modifier.size(32.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Pick Image from Gallery",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Black
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Tap to choose the template image.\nMake sure the sheet fills the frame.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Grey500,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                TipChip(text = "Auto perspective", color = Color(0xFF0EA5A4))
+                TipChip(text = "Avoid glare", color = Color(0xFFF97316))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TipChip(text = "High contrast", color = Color(0xFF3B82F6))
+        }
+    }
+
+    @Composable
+    private fun ErrorBanner(message: String) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Red50)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text(
+                message,
+                color = Red500,
+                modifier = Modifier.padding(12.dp),
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 
@@ -275,7 +287,7 @@ class CreateTemplateActivity : BaseActivity() {
             val gson = GsonBuilder().setPrettyPrinting().create()
             gson.toJson(gson.fromJson(templateJson, Template::class.java))
         } catch (e: Exception) {
-            templateJson // fallback
+            templateJson
         }
         Text(
             text = formatted.toString(),
@@ -291,8 +303,7 @@ class CreateTemplateActivity : BaseActivity() {
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = color.copy(alpha = 0.12f),
-            modifier = Modifier
-                .padding(end = 6.dp),
+            modifier = Modifier.padding(end = 6.dp),
             tonalElevation = 0.dp
         ) {
             Row(
