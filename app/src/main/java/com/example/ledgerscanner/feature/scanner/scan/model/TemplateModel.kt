@@ -100,12 +100,13 @@ data class AnchorPoint(
     val x: Double,
     val y: Double
 ) : Parcelable {
-    fun toPoint() : Point {
+    fun toPoint(): Point {
         return Point(x, y)
     }
 }
 
 enum class OmrTemplateType(val fileName: String) {
     TEN_QUESTIONS("template_omr_10_ques.json"),
-    SIXTEEN_QUESTIONS("template_omr_16_ques.json");
+    SIXTEEN_QUESTIONS("template_omr_16_ques.json"),
+    SIXTEEN_DISTORTED_QUESTIONS("template_omr_16_distorted_ques.json");
 }

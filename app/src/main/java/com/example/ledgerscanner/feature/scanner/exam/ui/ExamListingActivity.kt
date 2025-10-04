@@ -125,7 +125,7 @@ class ExamListingActivity : ComponentActivity() {
                                 onClick = {
                                     Template.loadOmrTemplateSafe(
                                         context,
-                                        OmrTemplateType.TEN_QUESTIONS
+                                        OmrTemplateType.SIXTEEN_DISTORTED_QUESTIONS
                                     ).let {
                                         when (it) {
                                             is OperationResult.Error -> Toast.makeText(

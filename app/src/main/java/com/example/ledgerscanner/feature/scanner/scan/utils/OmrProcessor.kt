@@ -220,7 +220,7 @@ class OmrProcessor @Inject constructor() {
                     points.add(Pair(exactBubblePoint, true))
                 } else if (filledFinal) {
                     points.add(Pair(exactBubblePoint, false))
-                    points.add(Pair(correctAnsBubblePoint, true))
+//                    points.add(Pair(correctAnsBubblePoint, true))
                 }
             }
         }
