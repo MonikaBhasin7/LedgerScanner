@@ -18,28 +18,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 @Composable
 fun ScoreSummaryCard(
-    totalQuestions: Int,
-    correctAnswers: Int,
-    incorrectAnswers: Int
+    marks: List<Boolean>
 ) {
+    val totalQuestions = marks.size
+    val correctAnswers = marks.count { it }
+    val incorrectAnswers = totalQuestions - correctAnswers
+    val ratio = if (totalQuestions > 0) correctAnswers.toDouble() / totalQuestions else 0.0
+    val percent = (ratio * 100).roundToInt()
+
     val scoreColor = when {
-        correctAnswers >= totalQuestions * 0.7 -> Color(0xFF16A34A) // Green
-        correctAnswers >= totalQuestions * 0.4 -> Color(0xFFF59E0B) // Amber
+        ratio >= 0.7 -> Color(0xFF16A34A) // Green
+        ratio >= 0.4 -> Color(0xFFF59E0B) // Amber
         else -> Color(0xFFDC2626) // Red
     }
 
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = scoreColor.copy(alpha = 0.1f)
+            containerColor = scoreColor.copy(alpha = 0.10f)
         ),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -49,11 +53,11 @@ fun ScoreSummaryCard(
             // Title
             Text(
                 text = "Score Summary",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.labelLarge,
                 color = Color.Black
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Score Rows
             ScoreRow(label = "Total Questions", value = "$totalQuestions")
@@ -64,9 +68,9 @@ fun ScoreSummaryCard(
             Divider(thickness = 1.dp, color = Color.LightGray.copy(alpha = 0.4f))
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Final Score
+            // Final Score + percent
             Text(
-                text = "🎯 Final Score: $correctAnswers / $totalQuestions",
+                text = "🎯 Final Score: $correctAnswers / $totalQuestions  •  $percent%",
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = scoreColor
             )

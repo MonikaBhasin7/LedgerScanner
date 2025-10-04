@@ -9,14 +9,16 @@ sealed class OmrResult(
     open val reason: String?,
     open val finalBitmap: Bitmap?,
     open val debugBitmaps: HashMap<String, Bitmap>
-): Parcelable
+) : Parcelable
+
 @Parcelize
 data class OmrImageProcessResult(
     override val success: Boolean,
     override val reason: String? = null,
     override val finalBitmap: Bitmap? = null,
     val confidence: Double? = null, // heuristic confidence
-    override val debugBitmaps: HashMap<String, Bitmap> = hashMapOf()
+    override val debugBitmaps: HashMap<String, Bitmap> = hashMapOf(),
+    val marks: List<Boolean>? = null
 ) : OmrResult(success, reason, finalBitmap, debugBitmaps)
 
 @Parcelize

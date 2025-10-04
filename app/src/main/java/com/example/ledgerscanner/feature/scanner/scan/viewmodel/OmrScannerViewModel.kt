@@ -100,9 +100,11 @@ class OmrScannerViewModel @Inject constructor(
                 debugBitmaps["warped"] = warpedDebugBitmap
             }
 
+            var marks : List<Boolean>? = null
             if (centersInBuffer.size == 4) {
                 val bubblePoints = templateProcessor.mapTemplateBubblesToImagePoints(omrTemplate)
                 val detectionResult = omrProcessor.detectFilledBubbles(omrTemplate, warped)
+                marks = detectionResult.marks
                 if (debug) {
                     debugBitmaps["bubble"] = OpenCvUtils.drawPoints(
                         warped,
@@ -136,7 +138,8 @@ class OmrScannerViewModel @Inject constructor(
             return@withContext OmrImageProcessResult(
                 success = true,
                 debugBitmaps = debugBitmaps,
-                finalBitmap = finalBitmap
+                finalBitmap = finalBitmap,
+                marks = marks
             ) to centersInBuffer
 
         } catch (e: Exception) {

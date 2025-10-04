@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -48,16 +47,16 @@ fun CapturedPreviewScreen(
                 navController.popBackStack()
             })
         },
-        bottomBar = {
-            GenericButton(
-                "Submit",
-                onClick = {},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(innerPadding)
-                    .padding(bottom = 12.dp, start = 16.dp, end = 16.dp),
-            )
-        }
+//        bottomBar = {
+//            GenericButton(
+//                "Submit",
+//                onClick = {},
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(innerPadding)
+//                    .padding(bottom = 12.dp, start = 16.dp, end = 16.dp),
+//            )
+//        }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             Column {
@@ -84,6 +83,9 @@ fun CapturedPreviewScreen(
                             )
                         }
                     }
+                }
+                omrImageProcessResult?.marks?.let {
+                    ScoreSummaryCard(it)
                 }
             }
 
