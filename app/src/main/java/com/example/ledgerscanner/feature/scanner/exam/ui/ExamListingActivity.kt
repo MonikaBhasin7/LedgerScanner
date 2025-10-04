@@ -31,6 +31,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Addchart
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
@@ -77,6 +78,8 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateType
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.PreviewImageActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -86,9 +89,7 @@ class ExamListingActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-        )
+        enableEdgeToEdge()
 
         setContent {
             LedgerScannerTheme {
@@ -99,40 +100,56 @@ class ExamListingActivity : ComponentActivity() {
                     },
                     floatingActionButton = {
                         val context = LocalContext.current
-                        GenericButton(
-                            text = "Create Exam",
-                            icon = Icons.Default.Add,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .fillMaxWidth(),
-                            onClick = {
+                        Column {
+                            GenericButton(
+                                text = "Create Template",
+                                icon = Icons.Default.Addchart,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .fillMaxWidth(),
+                                onClick = {
+                                    startActivity(
+                                        Intent(
+                                            context,
+                                            CreateTemplateActivity::class.java
+                                        )
+                                    )
+                                }
+                            )
+                            GenericButton(
+                                text = "Create Exam",
+                                icon = Icons.Default.Add,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .fillMaxWidth(),
+                                onClick = {
+                                    Template.loadOmrTemplateSafe(
+                                        context,
+                                        OmrTemplateType.TEN_QUESTIONS
+                                    ).let {
+                                        when (it) {
+                                            is OperationResult.Error -> Toast.makeText(
+                                                context, it.message,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
 
-                                Template.loadOmrTemplateSafe(
-                                    context,
-                                    OmrTemplateType.TEN_QUESTIONS
-                                ).let {
-                                    when (it) {
-                                        is OperationResult.Error -> Toast.makeText(
-                                            context, it.message,
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-
-                                        is OperationResult.Success -> {
-                                            context.startActivity(
-                                                Intent(
-                                                    context,
-                                                    ScanOmrWithCameraActivity::class.java
-                                                ).apply {
-                                                    putExtra(
-                                                        "template", it.data
-                                                    )
-                                                }
-                                            )
+                                            is OperationResult.Success -> {
+                                                context.startActivity(
+                                                    Intent(
+                                                        context,
+                                                        ScanOmrWithCameraActivity::class.java
+                                                    ).apply {
+                                                        putExtra(
+                                                            "template", it.data
+                                                        )
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     },
                     floatingActionButtonPosition = FabPosition.Center,
                     content = { innerPadding ->

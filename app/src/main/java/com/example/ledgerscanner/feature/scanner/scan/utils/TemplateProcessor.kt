@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
+import com.example.ledgerscanner.base.utils.image.toColoredWarped
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
@@ -86,21 +87,21 @@ class TemplateProcessor @Inject constructor() {
                 srcMat.size()
             )
 
-            if (debug) {
-                OpenCvUtils.drawPoints(
-                    srcMat,
-                    bubbles2DArray = bubbles2DArray,
-                    points = anchorPoints,
-                    radius = (templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r)
-                        ?.roundToInt()
-                ).apply {
-                    debugMap["Bubbles - Anchors"] = toBitmapSafe()
-                }
-            }
+
+            val finalBitmap = OpenCvUtils.drawPoints(
+                grayMat.toColoredWarped(),
+                bubbles2DArray = bubbles2DArray,
+                points = anchorPoints,
+                radius = (templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r)
+                    ?.roundToInt(),
+            ).apply {
+                debugMap["Bubbles - Anchors"] = toBitmapSafe()
+            }.toBitmapSafe()
 
             return OmrTemplateResult(
                 success = true,
                 debugBitmaps = debugMap,
+                finalBitmap = finalBitmap,
                 templateJson = templatePair.templateJson,
                 template = templatePair.template
             )

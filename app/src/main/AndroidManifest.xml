@@ -43,6 +43,10 @@
             android:theme="@style/Theme.LedgerScanner" />
 
         <activity
+            android:name=".feature.scanner.scan.ui.activity.CreateTemplateActivity"
+            android:theme="@style/Theme.LedgerScanner" />
+
+        <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:exported="false"
             android:theme="@style/Theme.UCrop" />
