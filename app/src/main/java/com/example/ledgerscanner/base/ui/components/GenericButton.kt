@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.base.ui.components
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -30,7 +31,7 @@ fun GenericButton(
     backgroundColor: Color = MaterialTheme.colorScheme.primary,
     contentColor: Color = Color.White,
     shape: Shape = RoundedCornerShape(24.dp),
-    textStyle: TextStyle = MaterialTheme.typography.labelMedium,
+    textStyle: TextStyle = MaterialTheme.typography.labelLarge,
 ) {
     Button(
         onClick = onClick,
@@ -42,7 +43,8 @@ fun GenericButton(
             disabledContentColor = Grey500
         ),
         shape = shape,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = PaddingValues(vertical = 15.dp, horizontal = 12.dp)
     ) {
         if (icon != null) {
             Icon(

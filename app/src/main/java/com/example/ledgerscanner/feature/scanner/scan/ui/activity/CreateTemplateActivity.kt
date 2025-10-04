@@ -1,43 +1,50 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui.activity
 
-import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -45,20 +52,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
-import com.example.ledgerscanner.base.ui.theme.Grey200
+import com.example.ledgerscanner.base.ui.theme.Black
+import com.example.ledgerscanner.base.ui.theme.Blue100
+import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.image.ImageUtils
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
+import com.example.ledgerscanner.feature.scanner.scan.viewmodel.CreateTemplateViewModel
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonElement
-import com.google.gson.JsonParser
 
 class CreateTemplateActivity : BaseActivity() {
+
+    private val pickImageViewModel: CreateTemplateViewModel by viewModels()
 
     companion object {
         const val PICK_IMAGE = "pick_image"
@@ -99,8 +108,8 @@ class CreateTemplateActivity : BaseActivity() {
     @Composable
     fun PickImageScreen(navController: NavHostController) {
         val context = LocalContext.current
-        var pickedBitmap by rememberSaveable { mutableStateOf<Bitmap?>(null) }
-        var templateResult by rememberSaveable { mutableStateOf<OmrTemplateResult?>(null) }
+        val pickedBitmap by pickImageViewModel.pickedBitmap.collectAsState()
+        val templateResult by pickImageViewModel.templateResult.collectAsState()
 
         LaunchedEffect(templateResult) {
             templateResult?.let {
@@ -114,12 +123,13 @@ class CreateTemplateActivity : BaseActivity() {
                 if (uri == null) {
                     return@createActivityLauncherComposeSpecific
                 }
-                pickedBitmap = ImageUtils.loadBitmapCorrectOrientation(
+                val b = ImageUtils.loadBitmapCorrectOrientation(
                     context,
                     uri,
                     reqWidth = 1080,
                     reqHeight = 1920
                 )
+                pickImageViewModel.setBitmap(b)
             }
 
         Column(
@@ -144,7 +154,7 @@ class CreateTemplateActivity : BaseActivity() {
                         WarpedImageDialog(
                             warpedBitmap = it.finalBitmap,
                             intermediateBitmaps = it.debugBitmaps,
-                            onDismiss = { templateResult = null },
+                            onDismiss = { pickImageViewModel.setTemplateResult(null) },
                         )
                     }
                 } ?: run {
@@ -158,25 +168,56 @@ class CreateTemplateActivity : BaseActivity() {
                             contentScale = ContentScale.Companion.Fit
                         )
                     } ?: run {
-                        Box(
-                            contentAlignment = Alignment.Center,
+                        Column(
                             modifier = Modifier
-                                .alpha(0.4f)
-                                .padding(32.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Grey200)
+                                .fillMaxSize()
                                 .clickable {
                                     pickLauncher.launch("image/*")
                                 }
-                                .padding(horizontal = 16.dp, vertical = 50.dp)
+                                .padding(horizontal = 24.dp, vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(CircleShape)
+                                    .background(Blue100),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = null,
+                                    tint = Blue500,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 "Pick Image from Gallery",
-                                modifier = Modifier
-                                    .align(Alignment.Center),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Grey500
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Black
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Tap to choose the template image.\nMake sure the sheet fills the frame.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Grey500,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // small tips row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                TipChip(text = "Auto perspective", color = Color(0xFF0EA5A4))
+                                TipChip(text = "Avoid glare", color = Color(0xFFF97316))
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TipChip(text = "High contrast", color = Color(0xFF3B82F6))
+                            Spacer(modifier = Modifier.height(24.dp))
                         }
                     }
                 }
@@ -209,10 +250,11 @@ class CreateTemplateActivity : BaseActivity() {
                     .fillMaxWidth(),
                 onClick = {
                     if (templateResult != null) {
-                        templateResult = null
-                        pickedBitmap = null
+                        pickImageViewModel.setTemplateResult(null)
+                        pickImageViewModel.setBitmap(null)
                     } else {
-                        templateResult = TemplateProcessor().generateTemplateJson(pickedBitmap!!)
+                        val r = pickedBitmap?.let { TemplateProcessor().generateTemplateJson(it) }
+                        pickImageViewModel.setTemplateResult(r)
                     }
                 }
             )
@@ -235,5 +277,30 @@ class CreateTemplateActivity : BaseActivity() {
                 .horizontalScroll(rememberScrollState())
                 .padding(16.dp)
         )
+    }
+
+    @Composable
+    private fun TipChip(text: String, color: Color) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = color.copy(alpha = 0.12f),
+            modifier = Modifier
+                .padding(end = 6.dp),
+            tonalElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = text, style = MaterialTheme.typography.bodySmall, color = color)
+            }
+        }
     }
 }
