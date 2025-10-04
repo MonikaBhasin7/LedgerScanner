@@ -1,7 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui.activity
 
-import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -9,14 +9,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +37,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -46,15 +50,21 @@ import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.image.ImageUtils
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
+import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
 
 class CreateTemplateActivity : BaseActivity() {
 
     companion object {
         const val PICK_IMAGE = "pick_image"
+        const val TEMPLATE_JSON = "template_json"
+        const val VIEW_JSON = "view_json"
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,6 +82,12 @@ class CreateTemplateActivity : BaseActivity() {
                                 composable(PICK_IMAGE) {
                                     PickImageScreen(navController)
                                 }
+                                composable(VIEW_JSON) {
+                                    val jsonArg = navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.get<String>(TEMPLATE_JSON)
+                                    ViewJsonScreen(navController, jsonArg)
+                                }
                             }
                         }
                     }
@@ -83,8 +99,8 @@ class CreateTemplateActivity : BaseActivity() {
     @Composable
     fun PickImageScreen(navController: NavHostController) {
         val context = LocalContext.current
-        var pickedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-        var templateResult by remember { mutableStateOf<OmrTemplateResult?>(null) }
+        var pickedBitmap by rememberSaveable { mutableStateOf<Bitmap?>(null) }
+        var templateResult by rememberSaveable { mutableStateOf<OmrTemplateResult?>(null) }
 
         LaunchedEffect(templateResult) {
             templateResult?.let {
@@ -166,12 +182,30 @@ class CreateTemplateActivity : BaseActivity() {
                 }
             }
 
+            templateResult?.let {
+                if (it.success && it.finalBitmap != null && !it.templateJson.isNullOrEmpty()) {
+                    GenericButton(
+                        text = "View Json",
+                        enabled = pickedBitmap != null,
+                        modifier = Modifier
+                            .padding(bottom = 4.dp, start = 16.dp, end = 16.dp)
+                            .fillMaxWidth(),
+                        onClick = {
+                            navController.currentBackStackEntry?.savedStateHandle?.set(
+                                TEMPLATE_JSON,
+                                it.templateJson
+                            )
+                            navController.navigate(VIEW_JSON)
+                        }
+                    )
+                }
+            }
 
             GenericButton(
                 text = if (templateResult != null) "Reselect another Image" else "Process template",
                 enabled = pickedBitmap != null,
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .fillMaxWidth(),
                 onClick = {
                     if (templateResult != null) {
@@ -184,5 +218,22 @@ class CreateTemplateActivity : BaseActivity() {
             )
         }
 
+    }
+
+    @Composable
+    fun ViewJsonScreen(navController: NavHostController, templateJson: String?) {
+        val formatted = try {
+            val gson = GsonBuilder().setPrettyPrinting().create()
+            gson.toJson(gson.fromJson(templateJson, Template::class.java))
+        } catch (e: Exception) {
+            templateJson // fallback
+        }
+        Text(
+            text = formatted.toString(),
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .horizontalScroll(rememberScrollState())
+                .padding(16.dp)
+        )
     }
 }

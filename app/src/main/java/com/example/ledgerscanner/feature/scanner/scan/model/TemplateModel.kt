@@ -106,5 +106,6 @@ data class AnchorPoint(
 }
 
 enum class OmrTemplateType(val fileName: String) {
-    TEN_QUESTIONS("template_omr_10_ques.json");
+    TEN_QUESTIONS("template_omr_10_ques.json"),
+    SIXTEEN_QUESTIONS("template_omr_16_ques.json");
 }
