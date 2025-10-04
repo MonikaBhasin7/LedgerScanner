@@ -28,7 +28,7 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialo
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 
 @Composable
-fun CapturePreviewScreen(
+fun CapturedPreviewScreen(
     navController: NavHostController,
     omrScannerViewModel: OmrScannerViewModel,
     innerPadding: PaddingValues

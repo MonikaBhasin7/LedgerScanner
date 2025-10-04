@@ -12,7 +12,7 @@ import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.compose.CapturePreviewScreen
+import com.example.ledgerscanner.feature.scanner.scan.ui.compose.CapturedPreviewScreen
 import com.example.ledgerscanner.feature.scanner.scan.ui.compose.ScannerScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -53,7 +53,7 @@ class ScanOmrWithCameraActivity : BaseActivity() {
                             }
                             composable(CAPTURE_PREVIEW_SCREEN) { backStackEntry ->
                                 val id = backStackEntry.arguments?.getString("id")
-                                CapturePreviewScreen(
+                                CapturedPreviewScreen(
                                     navController,
                                     omrScannerViewModel,
                                     innerPadding

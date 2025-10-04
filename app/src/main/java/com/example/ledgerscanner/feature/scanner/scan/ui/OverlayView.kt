@@ -41,6 +41,14 @@ class OverlayView @JvmOverloads constructor(
         strokeWidth = 6f
         color = Color.GREEN
     }
+
+    private val progressIndicatorPaint = Paint().apply {
+        isAntiAlias = true
+        color = Color.GREEN
+        style = Paint.Style.STROKE
+        strokeWidth = 8f
+        strokeCap = Paint.Cap.ROUND
+    }
     private val pointFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         color = Color.GREEN
@@ -112,6 +120,19 @@ class OverlayView @JvmOverloads constructor(
 //                drawText("#$idx", right + 8f, top - 8f, labelPaint)
             }
         }
+
+        val bounding = RectF()
+        anchorsOnPreviewInRect.forEach { rect -> bounding.union(rect) }
+        val centerX = bounding.centerX()
+        val centerY = bounding.centerY()
+        val sweepAngle = (System.currentTimeMillis() / 2) % 360
+        canvas.drawArc(
+            centerX - 40f, centerY - 40f, centerX + 40f, centerY + 40f,
+            0f, sweepAngle.toFloat(),
+            false, progressIndicatorPaint
+        )
+        // Invalidate again for animation
+        postInvalidateOnAnimation()
     }
 
     fun getPreviewRect(): RectF = RectF(previewRect)
