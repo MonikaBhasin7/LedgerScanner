@@ -102,20 +102,21 @@ class OmrScannerViewModel @Inject constructor(
 
             if (centersInBuffer.size == 4) {
                 val bubblePoints = templateProcessor.mapTemplateBubblesToImagePoints(omrTemplate)
-                val detectedBubbles = omrProcessor.detectFilledBubbles(omrTemplate, warped)
+                val detectionResult = omrProcessor.detectFilledBubbles(omrTemplate, warped)
                 if (debug) {
                     debugBitmaps["bubble"] = OpenCvUtils.drawPoints(
                         warped,
-                        bubblePoints,
+                        points = detectionResult.bubbles.map { it.point },
                         fillColor = Scalar(255.0, 255.0, 255.0), // white dots
-                        textColor = Scalar(0.0, 255.0, 255.0),   // cyan labels
+                        textColor = Scalar(0.0, 255.0, 255.0)    // cyan labels
                     ).toBitmapSafe()
                 }
+
                 finalBitmap = OpenCvUtils.drawPoints(
                     warped.toColoredWarped(),
-                    bubblesWithColor = detectedBubbles,
-                    fillColor = Scalar(255.0, 255.0, 255.0), // white dots
-                    textColor = Scalar(0.0, 255.0, 255.0),   // cyan labels
+                    bubblesWithColor = detectionResult.bubbles,
+                    fillColor = Scalar(255.0, 255.0, 255.0),
+                    textColor = Scalar(0.0, 255.0, 255.0)
                 ).toBitmapSafe()
                 if (bubblePoints.size != omrTemplate.totalBubbles()) {
                     return@withContext OmrImageProcessResult(

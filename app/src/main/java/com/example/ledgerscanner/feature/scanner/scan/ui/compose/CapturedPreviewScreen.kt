@@ -1,11 +1,14 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui.compose
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -19,8 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.ledgerscanner.BuildConfig
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.White
@@ -55,29 +60,35 @@ fun CapturedPreviewScreen(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            omrImageProcessResult?.finalBitmap?.asImageBitmap()?.let {
-                Image(
-                    bitmap = it,
-                    contentDescription = "image",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
-                    alignment = Alignment.Center,
-                    contentScale = ContentScale.Fit
-                )
-            } ?: run {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No image available",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+            Column {
+                InfoBanner(text = "For testing purposes, option 2 is assumed to be the correct answer for all questions. Each correct answer is awarded 1 mark, while incorrect answers receive 0 marks.")//todo monika remove in future
+                Box(modifier = Modifier.weight(1f)) {
+                    omrImageProcessResult?.finalBitmap?.asImageBitmap()?.let {
+                        Image(
+                            bitmap = it,
+                            contentDescription = "image",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            alignment = Alignment.Center,
+                            contentScale = ContentScale.Fit
+                        )
+                    } ?: run {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No image available",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
                 }
             }
 
-            if (showDialog)
+
+            if (showDialog && BuildConfig.ENABLE_IMAGE_LOGS)
                 WarpedImageDialog(
                     warpedBitmap = omrImageProcessResult?.finalBitmap,
                     intermediateBitmaps = omrImageProcessResult?.debugBitmaps,
@@ -88,4 +99,25 @@ fun CapturedPreviewScreen(
         }
     }
 
+}
+
+@Composable
+private fun InfoBanner(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            textAlign = TextAlign.Center
+        )
+    }
 }

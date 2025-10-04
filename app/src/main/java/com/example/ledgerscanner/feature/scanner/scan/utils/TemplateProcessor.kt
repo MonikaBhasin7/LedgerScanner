@@ -90,8 +90,8 @@ class TemplateProcessor @Inject constructor() {
 
             val finalBitmap = OpenCvUtils.drawPoints(
                 grayMat.toColoredWarped(),
-                bubbles2DArray = bubbles2DArray,
                 points = anchorPoints,
+                bubbles2DArray = bubbles2DArray,
                 radius = (templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r)
                     ?.roundToInt(),
             ).apply {

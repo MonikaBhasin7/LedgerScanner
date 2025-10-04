@@ -8,6 +8,8 @@ import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.preCleanGray
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
+import com.example.ledgerscanner.feature.scanner.scan.model.BubbleResult
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrDetectionResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.android.Utils
@@ -19,6 +21,7 @@ import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 class OmrProcessor @Inject constructor() {
 
@@ -191,40 +194,51 @@ class OmrProcessor @Inject constructor() {
         return Pair(warped, warpedBitmap)
     }
 
-    fun detectFilledBubbles(omrTemplate: Template, warped: Mat): List<Pair<AnchorPoint, Boolean>> {
-        val correctIndex = 1 //todo monika morning
-        val points = mutableListOf<Pair<AnchorPoint, Boolean>>()
-        omrTemplate.questions.forEachIndexed { index, q ->
-            val correctAnsBubblePoint = AnchorPoint(
-                omrTemplate.anchor_top_left.x + q.options[correctIndex].x,
-                omrTemplate.anchor_top_left.y + q.options[correctIndex].y,
-            )
-            q.options.forEachIndexed { optionIndex, o ->
-                val exactBubblePoint = AnchorPoint(
-                    omrTemplate.anchor_top_left.x + o.x,
-                    omrTemplate.anchor_top_left.y + o.y
+    fun detectFilledBubbles(
+        omrTemplate: Template,
+        warped: Mat
+    ): OmrDetectionResult {
+
+        val correctOptionIndex = 1 // TODO: monika - placeholder change it
+        val bubbleResults = mutableListOf<BubbleResult>()
+        val marks = mutableListOf<Boolean>()
+
+        omrTemplate.questions.forEachIndexed { _, question ->
+            var isQuestionCorrect = false
+
+            question.options.forEachIndexed { optionIndex, option ->
+                val bubblePoint = AnchorPoint(
+                    omrTemplate.anchor_top_left.x + option.x,
+                    omrTemplate.anchor_top_left.y + option.y
                 )
 
-                val cx = Math.round(exactBubblePoint.x).coerceIn(0, (warped.cols() - 1).toLong())
-                val cy = Math.round(exactBubblePoint.y).coerceIn(0, (warped.rows() - 1).toLong())
+                val cx = bubblePoint.x.roundToInt().coerceIn(0, warped.cols() - 1)
+                val cy = bubblePoint.y.roundToInt().coerceIn(0, warped.rows() - 1)
 
-                // sample and decide filled/confidence
                 val (isFilled, confidence) = isBubbleFilled(
                     srcMat = warped,
-                    cx = cx,
-                    cy = cy,
+                    cx = cx.toLong(),
+                    cy = cy.toLong()
                 )
 
-                val filledFinal = isFilled && confidence >= 0.45
-                if (filledFinal && correctIndex == optionIndex) {
-                    points.add(Pair(exactBubblePoint, true))
-                } else if (filledFinal) {
-                    points.add(Pair(exactBubblePoint, false))
-//                    points.add(Pair(correctAnsBubblePoint, true))
+                val isMarked = isFilled && confidence >= 0.45
+
+                if (isMarked && optionIndex == correctOptionIndex) {
+                    isQuestionCorrect = true
+                    bubbleResults.add(BubbleResult(bubblePoint, true))
+                } else if (isMarked) {
+                    isQuestionCorrect = false
+                    bubbleResults.add(BubbleResult(bubblePoint, false))
                 }
             }
+
+            marks.add(isQuestionCorrect)
         }
-        return points
+
+        return OmrDetectionResult(
+            bubbles = bubbleResults,
+            marks = marks
+        )
     }
 
     /**

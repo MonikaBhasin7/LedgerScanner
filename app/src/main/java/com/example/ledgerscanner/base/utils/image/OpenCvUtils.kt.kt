@@ -2,6 +2,7 @@ package com.example.ledgerscanner.base.utils.image
 
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
+import com.example.ledgerscanner.feature.scanner.scan.model.BubbleResult
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.MatOfPoint2f
@@ -15,10 +16,10 @@ object OpenCvUtils {
         points: List<AnchorPoint>? = null,
         bubbles: List<Bubble>? = null,
         bubbles2DArray: List<List<Bubble>>? = null,
-        bubblesWithColor: List<Pair<AnchorPoint, Boolean>>? = null,
+        bubblesWithColor: List<BubbleResult>? = null,
         fillColor: Scalar = Scalar(255.0, 0.0, 0.0),
         textColor: Scalar = Scalar(255.0, 255.0, 0.0),
-        radius: Int? = 10
+        radius: Int? = 10,
     ): Mat {
         val out = src.clone()
 
@@ -62,14 +63,17 @@ object OpenCvUtils {
         // 3) Draw flat bubble list
         bubbles?.forEachIndexed { i, b -> draw(Point(b.x, b.y), "$i") }
 
-        bubblesWithColor?.forEachIndexed { i, b ->
+        bubblesWithColor?.forEach { (anchorPoint, isCorrect) ->
             draw(
-                Point(b.first.x, b.first.y),
+                Point(anchorPoint.x, anchorPoint.y),
                 pointRadius = 15,
-                filledColor = if (b.second) Scalar(0.0, 255.0, 0.0) else Scalar(0.0, 0.0, 255.0)
+                filledColor = if (isCorrect) {
+                    Scalar(0.0, 255.0, 0.0) // Green for correct
+                } else {
+                    Scalar(0.0, 0.0, 255.0) // Red for incorrect
+                }
             )
         }
-
         return out
     }
 
