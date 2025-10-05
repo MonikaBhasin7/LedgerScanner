@@ -10,6 +10,7 @@ import kotlinx.android.parcel.Parcelize
 import kotlinx.android.parcel.RawValue
 import org.opencv.core.Point
 import java.io.FileNotFoundException
+import kotlin.math.roundToInt
 
 @Parcelize
 data class Template(
@@ -42,24 +43,17 @@ data class Template(
         )
     }
 
-    companion object {
+    fun getAverageRadius(): Int {
+        val allRadii = questions
+            .flatMap { it.options }
+            .map { it.r }
 
-        fun loadOmrTemplateSafe(
-            context: Context,
-            type: OmrTemplateType
-        ): OperationResult<Template> {
-            return try {
-                return OperationResult.Success(
-                    AssetUtils.loadJsonFromAssets<Template>(context, type.fileName)
-                )
-            } catch (e: FileNotFoundException) {
-                OperationResult.Error(OmrTemplateErrors.TEMPLATE_NOT_FOUND)
-            } catch (e: JsonSyntaxException) {
-                OperationResult.Error(OmrTemplateErrors.TEMPLATE_DECODE_FAILED)
-            } catch (e: Exception) {
-                OperationResult.Error(OmrTemplateErrors.TEMPLATE_LOAD_UNKNOWN_ERROR)
-            }
-        }
+        if (allRadii.isEmpty()) return 0
+
+        return allRadii.average().roundToInt()
+    }
+
+    companion object {
 
         fun loadOmrTemplateSafe(
             context: Context,

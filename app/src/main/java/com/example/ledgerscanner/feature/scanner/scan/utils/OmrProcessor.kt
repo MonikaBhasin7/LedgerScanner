@@ -221,6 +221,7 @@ class OmrProcessor @Inject constructor() {
 
                 val (isFilled, confidence) = isBubbleFilled(
                     srcMat = warped,
+                    radius = omrTemplate.getAverageRadius(),
                     cx = cx.toLong(),
                     cy = cy.toLong()
                 )
@@ -253,7 +254,7 @@ class OmrProcessor @Inject constructor() {
         srcMat: Mat,
         cx: Long,
         cy: Long,
-        radius: Int = 12,
+        radius: Int,
         binarizeThreshold: Double = 127.0,
         fillFractionThreshold: Double = 0.5 // not used for returned confidence; caller will threshold
     ): Pair<Boolean, Double> {

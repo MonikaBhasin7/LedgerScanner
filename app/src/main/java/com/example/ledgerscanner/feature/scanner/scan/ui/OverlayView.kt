@@ -25,7 +25,7 @@ class OverlayView @JvmOverloads constructor(
     var templateProcessor = TemplateProcessor()
     var omrProcessor = OmrProcessor()
 
-    val side = 60f
+    val side = 100f
 
     // template image size used when coordinates were measured
     private var templateWidth = 0.0
@@ -109,26 +109,41 @@ class OverlayView @JvmOverloads constructor(
             val viewX = offsetX + a.x.toFloat() * scale
             val viewY = offsetY + a.y.toFloat() * scale
 
-            // available space around the center INSIDE previewRect
-            val availLeft   = viewX - previewRect.left
-            val availRight  = previewRect.right - viewX
-            val availTop    = viewY - previewRect.top
-            val availBottom = previewRect.bottom - viewY
+            // fallback if previewRect is too small to hold a full requested square:
+            val maxHalfX = previewRect.width() / 2f
+            val maxHalfY = previewRect.height() / 2f
+            val halfLimit = minOf(maxHalfX, maxHalfY)
+            val half = if (requestedHalf <= halfLimit) requestedHalf else halfLimit
 
-            // If anchor is well inside previewRect, keep requestedHalf.
-            // Only shrink if it would overflow (prevents tiny bottom squares unless the anchor truly sits near edge).
-            val half = minOf(
-                requestedHalf,
-                availLeft.coerceAtLeast(1f),
-                availRight.coerceAtLeast(1f),
-                availTop.coerceAtLeast(1f),
-                availBottom.coerceAtLeast(1f)
-            )
+            // initial rect centered at (viewX, viewY)
+            var left = viewX - half
+            var right = viewX + half
+            var top = viewY - half
+            var bottom = viewY + half
 
-            val left   = (viewX - half).coerceAtLeast(previewRect.left)
-            val top    = (viewY - half).coerceAtLeast(previewRect.top)
-            val right  = (viewX + half).coerceAtMost(previewRect.right)
-            val bottom = (viewY + half).coerceAtMost(previewRect.bottom)
+            // compute horizontal shift needed to bring rect fully inside previewRect
+            var dx = 0f
+            if (left < previewRect.left) dx = previewRect.left - left
+            else if (right > previewRect.right) dx = previewRect.right - right
+
+            // apply horizontal shift
+            left += dx
+            right += dx
+
+            // compute vertical shift needed to bring rect fully inside previewRect
+            var dy = 0f
+            if (top < previewRect.top) dy = previewRect.top - top
+            else if (bottom > previewRect.bottom) dy = previewRect.bottom - bottom
+
+            // apply vertical shift
+            top += dy
+            bottom += dy
+
+            // final safety clamp (in case previewRect smaller than double-half)
+            left = left.coerceAtLeast(previewRect.left)
+            top = top.coerceAtLeast(previewRect.top)
+            right = right.coerceAtMost(previewRect.right)
+            bottom = bottom.coerceAtMost(previewRect.bottom)
 
             val rect = RectF(left, top, right, bottom)
             anchorsOnPreviewInRect.add(idx, rect)
