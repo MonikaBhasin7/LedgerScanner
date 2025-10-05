@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui.compose
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.RectF
@@ -13,6 +14,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -214,7 +216,7 @@ private fun CameraViewOrPermissionCard(
                 val container = FrameLayout(ctx)
 
                 val previewView = PreviewView(ctx).apply {
-                    this.scaleType = PreviewView.ScaleType.FILL_CENTER
+                    this.scaleType = PreviewView.ScaleType.FIT_CENTER
                 }
                 container.addView(
                     previewView,
@@ -257,6 +259,18 @@ private fun CameraViewOrPermissionCard(
 
                 analysisUseCase.setAnalyzer(cameraExecutor, { imageProxy ->
                     scope.launch(Dispatchers.Main) {
+                        val displayed = computeDisplayedImageRect(
+                            previewView.width.toFloat(),
+                            previewView.height.toFloat(),
+                            imageProxy.width,
+                            imageProxy.height,
+                            imageProxy.imageInfo.rotationDegrees,
+                            useFill = (previewView.scaleType == PreviewView.ScaleType.FILL_CENTER)
+                        )
+
+                        overlay.setPreviewRect(displayed)
+                        overlay.invalidate()
+
                         val (omrImageProcessResult, centers) = omrScannerViewModel.processOmrFrame(
                             imageProxy,
                             omrTemplate,
@@ -302,6 +316,73 @@ private fun CameraViewOrPermissionCard(
             onEnableClick = { takePermissionCallback() }
         )
     }
+}
+
+/**
+ * Compute the rectangle (in view coordinates) where the camera image buffer is actually
+ * drawn inside the PreviewView when using FIT_CENTER or FILL_CENTER (letterbox/crop).
+ *
+ * @param viewW view width in px (PreviewView.width)
+ * @param viewH view height in px (PreviewView.height)
+ * @param bufferW image buffer width in px (ImageProxy.width)
+ * @param bufferH image buffer height in px (ImageProxy.height)
+ * @param rotationDegrees imageInfo.rotationDegrees from the ImageProxy
+ * @param useFill true if PreviewView.ScaleType == FILL_CENTER (image is scaled to fill & cropped),
+ *                false if FIT_CENTER (image is letterboxed)
+ */
+fun computeDisplayedImageRect(
+    viewW: Float,
+    viewH: Float,
+    bufferW: Int,
+    bufferH: Int,
+    rotationDegrees: Int,
+    useFill: Boolean
+): RectF {
+    // defensive
+    if (viewW <= 0f || viewH <= 0f || bufferW <= 0 || bufferH <= 0) {
+        return RectF(0f, 0f, viewW.coerceAtLeast(0f), viewH.coerceAtLeast(0f))
+    }
+
+    // 1) Determine the logical image width/height taking rotation into account.
+    //    Image proxy buffer is given in sensor orientation; rotationDegrees tells how it's rotated to display.
+    val (imgWf, imgHf) = if (rotationDegrees % 180 == 0) {
+        bufferW.toFloat() to bufferH.toFloat()
+    } else {
+        // swap dims for 90/270
+        bufferH.toFloat() to bufferW.toFloat()
+    }
+
+    // 2) Compute scale used by PreviewView
+    val scale = if (useFill) {
+        // fill = crop (scale up until both dimensions >= view)
+        maxOf(viewW / imgWf, viewH / imgHf)
+    } else {
+        // fit = letterbox (scale down until both dimensions <= view)
+        minOf(viewW / imgWf, viewH / imgHf)
+    }
+
+    // 3) Compute displayed image size
+    val dispW = imgWf * scale
+    val dispH = imgHf * scale
+
+    // 4) center the displayed image inside the view
+    val left = (viewW - dispW) / 2f
+    val top = (viewH - dispH) / 2f
+    val right = left + dispW
+    val bottom = top + dispH
+
+    // 5) sanity clamp to view rect (avoid tiny float inaccuracies)
+    val l = left.coerceAtLeast(0f).coerceAtMost(viewW)
+    val t = top.coerceAtLeast(0f).coerceAtMost(viewH)
+    val r = right.coerceAtLeast(l).coerceAtMost(viewW)
+    val b = bottom.coerceAtLeast(t).coerceAtMost(viewH)
+
+    // quick sanity: if result degenerate, fallback to full view
+    if ((r - l) < 1f || (b - t) < 1f) {
+        return RectF(0f, 0f, viewW, viewH)
+    }
+
+    return RectF(l, t, r, b)
 }
 
 @Composable

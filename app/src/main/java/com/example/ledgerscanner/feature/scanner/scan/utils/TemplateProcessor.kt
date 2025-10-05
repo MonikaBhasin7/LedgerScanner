@@ -248,7 +248,7 @@ class TemplateProcessor @Inject constructor() {
 
         // 4. Blur
         val blurred = Mat()
-        Imgproc.GaussianBlur(masked, blurred, Size(9.0, 9.0), 2.0)
+        Imgproc.GaussianBlur(masked, blurred, Size(5.0, 5.0), 1.5)
 
         // 5. Detect circles
         val circles = Mat()
@@ -259,9 +259,9 @@ class TemplateProcessor @Inject constructor() {
             1.0,
             20.0,
             100.0,
-            30.0,
+            45.0,
             8,
-            20
+            50
         )
 
         val centers = mutableListOf<Bubble>()

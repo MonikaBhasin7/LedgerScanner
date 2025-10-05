@@ -88,39 +88,56 @@ class OverlayView @JvmOverloads constructor(
         if (templateWidth <= 0.0 || templateHeight <= 0.0) return
         if (anchorsTemplate.isEmpty()) return
 
-        val cornerRadius = 4f  // set 0f for sharp corners
+        val cornerRadius = 4f
         anchorsOnPreviewInRect.clear()
 
-        val halfPreviewWidth = previewRect.width() / 2
-        val halfPreviewHeight = previewRect.height() / 2
-        val templateAnchorWidth = (anchorsTemplate[1].x - anchorsTemplate[0].x) / 2
-        val templateAnchorHeight = (anchorsTemplate[3].y - anchorsTemplate[0].y) / 2
+        // compute uniform scale (preserve aspect) and center offset inside previewRect
+        val scaleX = previewRect.width() / templateWidth.toFloat()
+        val scaleY = previewRect.height() / templateHeight.toFloat()
+        val scale = minOf(scaleX, scaleY) // IMPORTANT: uniform scale
+
+        val displayedImgW = templateWidth.toFloat() * scale
+        val displayedImgH = templateHeight.toFloat() * scale
+
+        val offsetX = previewRect.left + (previewRect.width() - displayedImgW) / 2f
+        val offsetY = previewRect.top  + (previewRect.height() - displayedImgH) / 2f
+
+        val requestedHalf = side // desired half-side in view px
 
         anchorsTemplate.forEachIndexed { idx, a ->
-            var left: Float = if (a.x < halfPreviewWidth) {
-                (halfPreviewWidth - templateAnchorWidth).toFloat()
-            } else {
-                (halfPreviewWidth + templateAnchorWidth).toFloat()
-            }
-            left = left - side
-            val right = left + 2 * side
+            // map template pixel -> view pixel inside the displayed image area
+            val viewX = offsetX + a.x.toFloat() * scale
+            val viewY = offsetY + a.y.toFloat() * scale
 
-            var top: Float = if (a.y < halfPreviewHeight) {
-                (halfPreviewHeight - templateAnchorHeight).toFloat()
-            } else {
-                (halfPreviewHeight + templateAnchorHeight).toFloat()
-            }
-            top = top - side
-            val bottom = top + 2 * side
+            // available space around the center INSIDE previewRect
+            val availLeft   = viewX - previewRect.left
+            val availRight  = previewRect.right - viewX
+            val availTop    = viewY - previewRect.top
+            val availBottom = previewRect.bottom - viewY
+
+            // If anchor is well inside previewRect, keep requestedHalf.
+            // Only shrink if it would overflow (prevents tiny bottom squares unless the anchor truly sits near edge).
+            val half = minOf(
+                requestedHalf,
+                availLeft.coerceAtLeast(1f),
+                availRight.coerceAtLeast(1f),
+                availTop.coerceAtLeast(1f),
+                availBottom.coerceAtLeast(1f)
+            )
+
+            val left   = (viewX - half).coerceAtLeast(previewRect.left)
+            val top    = (viewY - half).coerceAtLeast(previewRect.top)
+            val right  = (viewX + half).coerceAtMost(previewRect.right)
+            val bottom = (viewY + half).coerceAtMost(previewRect.bottom)
+
             val rect = RectF(left, top, right, bottom)
             anchorsOnPreviewInRect.add(idx, rect)
-            canvas.apply {
-                drawRoundRect(rect, cornerRadius, cornerRadius, pointFill)
-                drawRoundRect(rect, cornerRadius, cornerRadius, framePaint)
-//                drawText("#$idx", right + 8f, top - 8f, labelPaint)
-            }
+
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, pointFill)
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, framePaint)
         }
 
+        // progress arc (unchanged)
         val bounding = RectF()
         anchorsOnPreviewInRect.forEach { rect -> bounding.union(rect) }
         val centerX = bounding.centerX()
@@ -131,7 +148,6 @@ class OverlayView @JvmOverloads constructor(
             0f, sweepAngle.toFloat(),
             false, progressIndicatorPaint
         )
-        // Invalidate again for animation
         postInvalidateOnAnimation()
     }
 

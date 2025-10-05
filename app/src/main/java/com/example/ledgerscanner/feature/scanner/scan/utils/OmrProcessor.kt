@@ -143,9 +143,13 @@ class OmrProcessor @Inject constructor() {
     ): Boolean {
         var allFound = true
 
-        for ((index, screenRect) in overlayRects.withIndex()) {
+        for ((index, overlayRect) in overlayRects.withIndex()) {
             // map screen overlay square -> Mat rect (same logic)
-            val matRect = ImageConversionUtils.screenRectToMatRect(screenRect, previewRect, gray)
+            val matRect = ImageConversionUtils.screenRectToMatRect(
+                overlayRect,
+                previewRect,
+                gray
+            )
 
             // Crop ROI directly with that rect
             val roi = Mat(gray, matRect)

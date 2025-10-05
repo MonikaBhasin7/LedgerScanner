@@ -31,7 +31,7 @@ android {
             buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "false")
         }
         debug {
-            buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "false")
+            buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "true")
         }
     }
     compileOptions {
