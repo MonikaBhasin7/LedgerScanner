@@ -22,10 +22,7 @@ class OverlayView @JvmOverloads constructor(
         const val TAG = "OverlayView"
     }
 
-    var templateProcessor = TemplateProcessor()
-    var omrProcessor = OmrProcessor()
-
-    val side = 100f
+    val side = 50f
 
     // template image size used when coordinates were measured
     private var templateWidth = 0.0
@@ -100,7 +97,7 @@ class OverlayView @JvmOverloads constructor(
         val displayedImgH = templateHeight.toFloat() * scale
 
         val offsetX = previewRect.left + (previewRect.width() - displayedImgW) / 2f
-        val offsetY = previewRect.top  + (previewRect.height() - displayedImgH) / 2f
+        val offsetY = previewRect.top + (previewRect.height() - displayedImgH) / 2f
 
         val requestedHalf = side // desired half-side in view px
 

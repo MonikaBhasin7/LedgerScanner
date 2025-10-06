@@ -147,6 +147,7 @@ class CreateTemplateActivity : BaseActivity() {
         clearResult: () -> Unit,
         modifier: Modifier
     ) {
+        var showDebuggableDialog by remember { mutableStateOf(true) }
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             when {
                 result != null && result.success && result.finalBitmap != null -> {
@@ -158,14 +159,13 @@ class CreateTemplateActivity : BaseActivity() {
                             .padding(16.dp),
                         filterQuality = FilterQuality.High
                     )
-                }
 
-                result != null && BuildConfig.ENABLE_IMAGE_LOGS -> {
-                    WarpedImageDialog(
-                        warpedBitmap = result.finalBitmap,
-                        intermediateBitmaps = result.debugBitmaps,
-                        onDismiss = { clearResult() }
-                    )
+                    if (BuildConfig.ENABLE_IMAGE_LOGS && showDebuggableDialog)
+                        WarpedImageDialog(
+                            warpedBitmap = result.finalBitmap,
+                            intermediateBitmaps = result.debugBitmaps,
+                            onDismiss = { showDebuggableDialog = false }
+                        )
                 }
 
                 selectedBitmap != null -> {
