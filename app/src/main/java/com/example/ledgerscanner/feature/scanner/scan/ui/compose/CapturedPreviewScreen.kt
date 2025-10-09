@@ -27,6 +27,7 @@ import androidx.navigation.NavHostController
 import com.example.ledgerscanner.BuildConfig
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
+import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
@@ -79,7 +80,7 @@ fun CapturedPreviewScreen(
                         ) {
                             Text(
                                 text = "No image available",
-                                style = MaterialTheme.typography.bodyLarge
+                                style = AppTypography.body1Regular
                             )
                         }
                     }
@@ -116,7 +117,7 @@ private fun InfoBanner(text: String) {
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
+            style = AppTypography.body2Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             textAlign = TextAlign.Center

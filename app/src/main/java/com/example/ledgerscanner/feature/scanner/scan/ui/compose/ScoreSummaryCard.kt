@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import com.example.ledgerscanner.base.ui.theme.AppTypography
 
 @Composable
 fun ScoreSummaryCard(
@@ -53,7 +53,7 @@ fun ScoreSummaryCard(
             // Title
             Text(
                 text = "Score Summary",
-                style = MaterialTheme.typography.labelLarge,
+                style = AppTypography.label1Medium,
                 color = Color.Black
             )
 
@@ -71,7 +71,7 @@ fun ScoreSummaryCard(
             // Final Score + percent
             Text(
                 text = "🎯 Final Score: $correctAnswers / $totalQuestions  •  $percent%",
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                style = AppTypography.body1Regular.copy(fontWeight = FontWeight.SemiBold),
                 color = scoreColor
             )
         }
@@ -86,12 +86,12 @@ private fun ScoreRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = AppTypography.body2Medium,
             color = Color.Gray
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+            style = AppTypography.body2Medium.copy(fontWeight = FontWeight.Medium),
             color = Color.Black
         )
     }

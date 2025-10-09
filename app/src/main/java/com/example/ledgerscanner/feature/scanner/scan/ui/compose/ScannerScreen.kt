@@ -47,6 +47,7 @@ import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
+import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
@@ -129,7 +130,7 @@ fun ScanningTipsCard() {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.body3Regular,
                 color = Color.Gray
             )
         }
@@ -151,7 +152,7 @@ fun ScanningTipsCard() {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Scanning tips",
-                style = MaterialTheme.typography.labelMedium,
+                style = AppTypography.label2Medium,
                 color = Color.Black
             )
 
@@ -413,7 +414,7 @@ private fun PermissionPlaceholderCard(onEnableClick: () -> Unit) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     "We need access to your camera\nto scan OMR sheets.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.body3Regular,
                     color = Grey500,
                     textAlign = TextAlign.Center
                 )
