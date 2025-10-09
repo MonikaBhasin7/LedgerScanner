@@ -57,8 +57,8 @@ fun LedgerScannerTheme(
         else -> LightColorScheme
     }
 
-   val view = LocalView.current
-    if(!view.isInEditMode) {
+    val view = LocalView.current
+    if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = Color.Transparent.toArgb()
@@ -68,7 +68,7 @@ fun LedgerScannerTheme(
 
     MaterialTheme(
         colorScheme = LightColorScheme,
-        typography = Typography,
+        typography = AppMaterialTypography(),
         content = content
     )
 }

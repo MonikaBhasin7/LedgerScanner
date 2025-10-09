@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
@@ -40,7 +41,11 @@ fun GenericToolbar(title: String, onBackClick: (() -> Unit)? = null) {
                 .fillMaxWidth()
                 .background(color = Grey100)
                 .padding(end = 16.dp),
-            title = { Text(title, style = MaterialTheme.typography.labelLarge, color = Black) },
+            title = {
+                Text(
+                    title, style = AppTypography.h3Bold, color = Black
+                )
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Grey100,
             ),

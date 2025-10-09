@@ -62,6 +62,7 @@ import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
+import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
@@ -265,6 +266,7 @@ class ExamListingActivity : ComponentActivity() {
                         Text(
                             text = item.title ?: "",
                             color = Black,
+                            style = AppTypography.body1Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -281,14 +283,16 @@ class ExamListingActivity : ComponentActivity() {
                         text = "${item.totalQuestions} questions \u2022 Created ${item.createdDate} \u2022 Sheets: ${item.sheetsCount}",
                         color = Grey500,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        style = AppTypography.body3Regular
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "Avg ${item.avgScorePercent}% \u2022 Top ${item.topScorePercent}% \u2022 Median ${item.medianScorePercent}%",
-                        color = Grey500
+                        color = Grey500,
+                        style = AppTypography.body4Medium
                     )
                 }
             }
@@ -314,7 +318,7 @@ class ExamListingActivity : ComponentActivity() {
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = status.name, color = Grey500)
+            Text(text = status.name, color = Grey500, style = AppTypography.label4Medium)
         }
     }
 
@@ -339,7 +343,11 @@ class ExamListingActivity : ComponentActivity() {
                             onSelect(filters[selectedIndex])
                         }
                     },
-                    label = { Text(filter?.name ?: "All") },
+                    label = {
+                        Text(
+                            filter?.name ?: "All", style = AppTypography.label3Medium
+                        )
+                    },
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = Blue100,
                         selectedContainerColor = Blue500,
@@ -360,6 +368,7 @@ class ExamListingActivity : ComponentActivity() {
 
         OutlinedTextField(
             value = text,
+            textStyle = AppTypography.body3Regular,
             onValueChange = { text = it },
             placeholder = { Text("Search by exam name") },
             leadingIcon = {
@@ -402,7 +411,8 @@ class ExamListingActivity : ComponentActivity() {
             // simple retry text button
             Text(
                 text = "Retry",
-                modifier = Modifier.clickable { onRetry() }
+                modifier = Modifier.clickable { onRetry() },
+                style = AppTypography.body2Medium
             )
         }
     }
