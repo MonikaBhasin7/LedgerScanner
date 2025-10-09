@@ -44,7 +44,7 @@ fun GenericButton(
         ),
         shape = shape,
         modifier = modifier,
-        contentPadding = PaddingValues(vertical = 15.dp, horizontal = 12.dp)
+        contentPadding = PaddingValues(vertical = 12.dp, horizontal = 12.dp)
     ) {
         if (icon != null) {
             Icon(

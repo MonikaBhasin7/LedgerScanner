@@ -243,13 +243,13 @@ class CreateTemplateActivity : BaseActivity() {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 "Pick Image from Gallery",
-                style = MaterialTheme.typography.bodyLarge,
+                style = AppTypography.body1Regular,
                 color = Black
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "Tap to choose the template image.\nMake sure the sheet fills the frame.",
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.body3Regular,
                 color = Grey500,
                 textAlign = TextAlign.Center
             )
@@ -276,7 +276,7 @@ class CreateTemplateActivity : BaseActivity() {
                 message,
                 color = Red500,
                 modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.labelLarge
+                style = AppTypography.label1Medium
             )
         }
     }
@@ -317,7 +317,7 @@ class CreateTemplateActivity : BaseActivity() {
                         .background(color)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = text, style = MaterialTheme.typography.bodySmall, color = color)
+                Text(text = text, style = AppTypography.body3Regular, color = color)
             }
         }
     }
