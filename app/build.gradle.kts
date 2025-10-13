@@ -96,4 +96,6 @@ dependencies {
 
     implementation("com.github.yalantis:ucrop:2.2.8")
     implementation(libs.accompanist.systemuicontroller)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.runtime.livedata)
 }

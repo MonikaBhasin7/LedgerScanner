@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.ui
+package com.example.ledgerscanner.feature.scanner.exam.ui.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -76,9 +76,8 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
-import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.TemplatePickerDialog
+import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -103,14 +102,14 @@ class ExamListingActivity : ComponentActivity() {
                             GenericButton(
                                 text = "Create Template",
                                 icon = Icons.Default.Addchart,
-                                modifier = Modifier
+                                modifier = Modifier.Companion
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                                     .fillMaxWidth(),
                                 onClick = {
                                     startActivity(
                                         Intent(
                                             context,
-                                            CreateTemplateActivity::class.java
+                                            CreateExamActivity::class.java
                                         )
                                     )
                                 }
@@ -121,7 +120,7 @@ class ExamListingActivity : ComponentActivity() {
                                     onDismiss = { showTemplatePicker = false },
                                     onSelect = { assetFile ->
                                         showTemplatePicker = false
-                                        Template.loadOmrTemplateSafe(
+                                        Template.Companion.loadOmrTemplateSafe(
                                             context,
                                             assetFile
                                         ).let {
@@ -152,7 +151,7 @@ class ExamListingActivity : ComponentActivity() {
                             GenericButton(
                                 text = "Create Exam",
                                 icon = Icons.Default.Add,
-                                modifier = Modifier
+                                modifier = Modifier.Companion
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                                     .fillMaxWidth(),
                                 onClick = {
@@ -161,10 +160,10 @@ class ExamListingActivity : ComponentActivity() {
                             )
                         }
                     },
-                    floatingActionButtonPosition = FabPosition.Center,
+                    floatingActionButtonPosition = FabPosition.Companion.Center,
                     content = { innerPadding ->
                         Column(
-                            modifier = Modifier
+                            modifier = Modifier.Companion
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
@@ -217,7 +216,7 @@ class ExamListingActivity : ComponentActivity() {
                 }
 
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.Companion.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -233,61 +232,68 @@ class ExamListingActivity : ComponentActivity() {
     @Composable
     private fun ExamCardRow(item: ExamEntity, onClick: (() -> Unit)? = null) {
         Box(
-            modifier = Modifier
+            modifier = Modifier.Companion
                 .clip(RoundedCornerShape(12.dp))
-                .border(width = 1.dp, color = Grey200, shape = RoundedCornerShape(12.dp))
-                .background(color = Grey100, shape = RoundedCornerShape(12.dp))
-                .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+                .border(
+                    width = 1.dp,
+                    color = Grey200,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                )
+                .background(
+                    color = Grey100,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                )
+                .then(if (onClick != null) Modifier.Companion.clickable { onClick() } else Modifier.Companion)
                 .padding(13.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.Companion.fillMaxWidth()) {
                 Box(
-                    modifier = Modifier
+                    modifier = Modifier.Companion
                         .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
                         .background(Blue100),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Companion.Center
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.DateRange,
                         contentDescription = "Exam Icon",
                         tint = Blue500,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.Companion.size(22.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.Companion.width(10.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.Companion.weight(1f)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.Companion.fillMaxWidth(),
+                        verticalAlignment = Alignment.Companion.CenterVertically
                     ) {
                         Text(
                             text = item.title ?: "",
                             color = Black,
                             style = AppTypography.body1Medium,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                            overflow = TextOverflow.Companion.Ellipsis,
+                            modifier = Modifier.Companion.weight(1f)
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.Companion.width(8.dp))
 
                         StatusBadge(status = item.status)
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.Companion.height(8.dp))
 
                     Text(
                         text = "${item.totalQuestions} questions \u2022 Created ${item.createdDate} \u2022 Sheets: ${item.sheetsCount}",
                         color = Grey500,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Companion.Ellipsis,
                         style = AppTypography.body3Regular
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.Companion.height(8.dp))
 
                     Text(
                         text = "Avg ${item.avgScorePercent}% \u2022 Top ${item.topScorePercent}% \u2022 Median ${item.medianScorePercent}%",
@@ -302,7 +308,7 @@ class ExamListingActivity : ComponentActivity() {
     @Composable
     private fun StatusBadge(status: ExamStatus?) {
         if (status == null) {
-            return Spacer(modifier = Modifier.width(0.dp))
+            return Spacer(modifier = Modifier.Companion.width(0.dp))
         }
 //        val (bg, textColor) = when (status) {
 //            ExamStatus.Processing -> Pair(Grey100, Blue500)
@@ -311,12 +317,12 @@ class ExamListingActivity : ComponentActivity() {
 //        }
 
         Box(
-            modifier = Modifier
+            modifier = Modifier.Companion
                 .height(28.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                 .background(Grey200)
                 .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Companion.Center
         ) {
             Text(text = status.name, color = Grey500, style = AppTypography.label4Medium)
         }
@@ -329,7 +335,7 @@ class ExamListingActivity : ComponentActivity() {
         var selectedIndex by remember { mutableIntStateOf(0) }
 
         Row(
-            modifier = Modifier
+            modifier = Modifier.Companion
                 .horizontalScroll(rememberScrollState())
                 .padding(start = 12.dp, top = 12.dp, end = 16.dp)
                 .fillMaxWidth()
@@ -354,9 +360,9 @@ class ExamListingActivity : ComponentActivity() {
                         labelColor = Blue500,
                         selectedLabelColor = White,
                     ),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
                     border = null,
-                    modifier = Modifier.padding(end = 8.dp),
+                    modifier = Modifier.Companion.padding(end = 8.dp),
                 )
             }
         }
@@ -378,10 +384,10 @@ class ExamListingActivity : ComponentActivity() {
                 if (text.text.isNotEmpty())
                     Icon(Icons.Filled.ArrowForward, contentDescription = null)
             },
-            modifier = Modifier
+            modifier = Modifier.Companion
                 .padding(horizontal = 16.dp)
                 .fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             colors = TextFieldDefaults.colors(
                 unfocusedContainerColor = Grey50,
                 focusedContainerColor = White,
@@ -400,18 +406,18 @@ class ExamListingActivity : ComponentActivity() {
     @Composable
     private fun ErrorScreen(message: String?, onRetry: () -> Unit) {
         Column(
-            modifier = Modifier
+            modifier = Modifier.Companion
                 .fillMaxSize()
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.Companion.CenterHorizontally
         ) {
             Text(text = message ?: "Something went wrong")
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.Companion.height(12.dp))
             // simple retry text button
             Text(
                 text = "Retry",
-                modifier = Modifier.clickable { onRetry() },
+                modifier = Modifier.Companion.clickable { onRetry() },
                 style = AppTypography.body2Medium
             )
         }

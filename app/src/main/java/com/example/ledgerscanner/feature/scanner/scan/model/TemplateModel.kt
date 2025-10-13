@@ -14,6 +14,8 @@ import kotlin.math.roundToInt
 
 @Parcelize
 data class Template(
+    val name: String? = null,
+    val imageUrl: String? = null,
     val version: String? = "1.0",
     val notes: String? = null,
     val sheet_width: Double = 0.0,

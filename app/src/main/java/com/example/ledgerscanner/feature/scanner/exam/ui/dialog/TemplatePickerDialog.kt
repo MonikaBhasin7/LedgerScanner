@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui.dialog
+package com.example.ledgerscanner.feature.scanner.exam.ui.dialog
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -53,12 +53,12 @@ fun TemplatePickerDialog(
                             onClick = { selected = name }
                         )
                         Text(
-                            name.removeSuffix(".json")             // drop extension
-                            .replace(
-                                "_",
-                                " "
-                            )                 // replace underscores with spaces
-                            .replaceFirstChar { it.uppercase() },
+                            name.removeSuffix(".json")
+                                .replace(
+                                    "_",
+                                    " "
+                                )                 // replace underscores with spaces
+                                .replaceFirstChar { it.uppercase() },
                             modifier = Modifier.padding(start = 8.dp)
                         )
                     }

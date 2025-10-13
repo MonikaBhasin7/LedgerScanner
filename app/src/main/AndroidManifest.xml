@@ -21,6 +21,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LedgerScanner">
         <activity
+            android:name=".feature.scanner.exam.ui.activity.CreateExamActivity"
+            android:theme="@style/Theme.LedgerScanner" />
+        <activity
             android:name=".SplashActivity"
             android:exported="true"
             android:theme="@style/SplashTheme">
@@ -31,21 +34,17 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".feature.scanner.exam.ui.ExamListingActivity"
+            android:name=".feature.scanner.exam.ui.activity.ExamListingActivity"
             android:theme="@style/Theme.LedgerScanner" />
-
         <activity
             android:name=".feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity"
             android:theme="@style/Theme.LedgerScanner" />
-
         <activity
             android:name=".feature.scanner.scan.ui.activity.PreviewImageActivity"
             android:theme="@style/Theme.LedgerScanner" />
-
         <activity
             android:name=".feature.scanner.scan.ui.activity.CreateTemplateActivity"
             android:theme="@style/Theme.LedgerScanner" />
-
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:exported="false"
