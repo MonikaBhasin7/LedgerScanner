@@ -98,4 +98,11 @@ dependencies {
     implementation(libs.accompanist.systemuicontroller)
     implementation(libs.coil.compose)
     implementation(libs.androidx.runtime.livedata)
+
+    // Hilt core
+    implementation(libs.hilt.android.v252)
+    kapt(libs.hilt.compiler.v252)
+
+    // Hilt for Jetpack Compose navigation
+    implementation(libs.androidx.hilt.navigation.compose.v120)
 }

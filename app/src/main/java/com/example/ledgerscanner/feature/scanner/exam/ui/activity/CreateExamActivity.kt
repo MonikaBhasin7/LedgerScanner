@@ -5,12 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,7 +52,9 @@ import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.SelectTemplateScreen
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class CreateExamActivity : ComponentActivity() {
 
     companion object {
@@ -147,7 +152,32 @@ class CreateExamActivity : ComponentActivity() {
                     value = examDescription,
                     placeholder = "Short description or instructions",
                     onValueChange = { examDescription = it },
-                    modifier = Modifier.Companion.fillMaxWidth()
+                    modifier = Modifier.Companion
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 120.dp),
+                    singleLine = false,
+                    maxLines = 5,
+                )
+
+                Spacer(modifier = Modifier.Companion.height(12.dp))
+
+                GenericTextField(
+                    label = "Exam to be conducted on which answer sheet",
+                    value = selectedTemplateName,
+                    placeholder = "No Sheet Selected",
+                    prefix = {
+                        Icon(
+                            imageVector = Icons.Default.Photo,
+                            contentDescription = null,
+                            tint = Grey500,
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false,
+                    onValueChange = {},
+                    onClick = {
+                        navController.navigate(ROUTE_SELECT_TEMPLATE)
+                    }
                 )
 
                 Spacer(modifier = Modifier.Companion.height(12.dp))
@@ -168,38 +198,6 @@ class CreateExamActivity : ComponentActivity() {
                 val numberOfQuestions: Int? = numberOfQuestionsText.toIntOrNull()
                 Spacer(modifier = Modifier.Companion.height(12.dp))
 
-                //            GenericTextField(
-                //                label = "Sheet Template",
-                //                value = selectedTemplateName,
-                //                placeholder = "No Template Selected",
-                //                prefix = { Text("#", color = Grey500) },
-                //                modifier = Modifier
-                //                    .fillMaxWidth()
-                //                    .clickable {
-                //                        navController.navigate(ROUTE_SELECT_TEMPLATE)
-                //                    },
-                //                readOnly = true,
-                //                onValueChange = {},
-                //            )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            navController.navigate(ROUTE_SELECT_TEMPLATE)
-                        }
-                ) {
-                    GenericTextField(
-                        label = "Sheet Template",
-                        value = selectedTemplateName,
-                        placeholder = "No Template Selected",
-                        prefix = { Text("#", color = Grey500) },
-                        modifier = Modifier.fillMaxWidth(),
-                        readOnly = true,
-                        enabled = false,
-                        onValueChange = {}
-                    )
-                }
             }
         }
     }

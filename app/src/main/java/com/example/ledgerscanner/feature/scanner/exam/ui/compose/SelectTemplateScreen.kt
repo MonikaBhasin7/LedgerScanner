@@ -21,59 +21,38 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.example.ledgerscanner.R
-import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.ui.components.GenericErrorState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.White
-import com.example.ledgerscanner.base.utils.AssetUtils
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
+import com.example.ledgerscanner.feature.scanner.exam.viewmodel.TemplateSelectionViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 
 @Composable
 fun SelectTemplateScreen(navController: NavHostController) {
+    val viewModel: TemplateSelectionViewModel = hiltViewModel()
+    val templateData by viewModel.templateData.collectAsState()
 
-    val context = LocalContext.current
-    var templateList by remember {
-        mutableStateOf<UiState<MutableList<Template>>>(UiState.Loading())
-    }
-    LaunchedEffect(templateList) {
-        if (templateList !is UiState.Loading) return@LaunchedEffect
-        val templateNamesList = AssetUtils.listJsonAssets(context)
-        val tempList = mutableListOf<Template>()
-        templateNamesList.forEachIndexed { index, item ->
-            val template = Template.Companion.loadOmrTemplateSafe(
-                context,
-                item
-            )
-            when (template) {
-                is OperationResult.Error -> {}
-                is OperationResult.Success -> template.data?.let {
-                    tempList.add(
-                        it
-                    )
-                }
-            }
-        }
-        templateList = UiState.Success(tempList)
+    LaunchedEffect(Unit) {
+        viewModel.loadTemplates()
     }
 
     Scaffold(
@@ -83,40 +62,62 @@ fun SelectTemplateScreen(navController: NavHostController) {
             })
         }
     ) { innerPadding ->
-        when (templateList) {
-            is UiState.Error -> {}
+        when (val state = templateData) {
             is UiState.Loading -> {
-                GenericLoader()
+                GenericLoader(modifier = Modifier.padding(innerPadding))
+            }
+
+            is UiState.Error -> {
+
             }
 
             is UiState.Success -> {
-                val templateData =
-                    (templateList as UiState.Success<MutableList<Template>>).data ?: mutableListOf()
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    itemsIndexed(
-                        items = templateData,
-                        key = { index, template -> "${template.name}::$index" }
-                    ) { index, template ->
-                        TemplateCard(template) {
-                            navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.set(CreateExamActivity.SELECTED_TEMPLATE, template)
-                            navController.popBackStack()
-                        }
-                    }
-                }
+                TemplateGrid(
+                    templates = state.data ?: listOf(),
+                    onSelect = { template ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(CreateExamActivity.SELECTED_TEMPLATE, template)
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier.padding(innerPadding)
+                )
             }
         }
     }
 }
+
+@Composable
+fun TemplateGrid(
+    templates: List<Template>,
+    modifier: Modifier = Modifier,
+    columns: Int = 2,
+    onSelect: (Template) -> Unit
+) {
+    if (templates.isEmpty()) {
+        GenericErrorState(message = "No templates found", modifier = modifier)
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columns),
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier.fillMaxSize()
+    ) {
+        itemsIndexed(
+            items = templates,
+            key = { index, template ->
+                // prefer stable id if available, else use name+index
+                template.name ?: "${template.name}::$index"
+            }
+        ) { _, template ->
+            TemplateCard(template = template, onClick = { onSelect(template) })
+        }
+    }
+}
+
 
 @Composable
 private fun TemplateCard(template: Template, onClick: () -> Unit) {
@@ -153,7 +154,7 @@ private fun TemplateCard(template: Template, onClick: () -> Unit) {
 
             Text(
                 text = template.name ?: "",
-                style = AppTypography.body2Medium,
+                style = AppTypography.h4Medium,
                 color = Grey500,
                 maxLines = 1
             )

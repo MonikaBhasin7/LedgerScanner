@@ -78,6 +78,7 @@ import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewMode
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
 import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -100,7 +101,7 @@ class ExamListingActivity : ComponentActivity() {
                         var showTemplatePicker by remember { mutableStateOf(false) }
                         Column {
                             GenericButton(
-                                text = "Create Template",
+                                text = "Create Exam",
                                 icon = Icons.Default.Addchart,
                                 modifier = Modifier.Companion
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -149,13 +150,29 @@ class ExamListingActivity : ComponentActivity() {
                             }
 
                             GenericButton(
-                                text = "Create Exam",
+                                text = "Select Exam",
                                 icon = Icons.Default.Add,
                                 modifier = Modifier.Companion
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                                     .fillMaxWidth(),
                                 onClick = {
                                     showTemplatePicker = true
+                                }
+                            )
+
+                            GenericButton(
+                                text = "Create Template",
+                                icon = Icons.Default.Addchart,
+                                modifier = Modifier.Companion
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .fillMaxWidth(),
+                                onClick = {
+                                    startActivity(
+                                        Intent(
+                                            context,
+                                            CreateTemplateActivity::class.java
+                                        )
+                                    )
                                 }
                             )
                         }

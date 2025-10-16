@@ -250,7 +250,7 @@ class TemplateProcessor @Inject constructor() {
         val blurred = Mat()
         Imgproc.GaussianBlur(masked, blurred, Size(5.0, 5.0), 1.5)
 
-        // 5. Detect circles
+//         5. Detect circles
         val circles = Mat()
         Imgproc.HoughCircles(
             blurred,
@@ -263,6 +263,19 @@ class TemplateProcessor @Inject constructor() {
             8,
             50
         )
+
+//        val circles = Mat()
+//        Imgproc.HoughCircles(
+//            blurred,
+//            circles,
+//            Imgproc.HOUGH_GRADIENT,
+//            1.0,     // dp — inverse ratio of accumulator to image resolution
+//            20.0,    // minDist — distance between circle centers
+//            100.0,   // param1 — higher Canny threshold (80–150 works well)
+//            45.0,    // param2 — accumulator threshold (lower = more sensitive)
+//            8,      // minRadius (depends on your DPI, 8–12 typical)
+//            50       // maxRadius (depends on your bubble size)
+//        )
 
         val centers = mutableListOf<Bubble>()
         for (i in 0 until circles.cols()) {
