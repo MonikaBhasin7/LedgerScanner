@@ -7,7 +7,6 @@ import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.utils.AssetUtils
 import com.google.gson.JsonSyntaxException
 import kotlinx.android.parcel.Parcelize
-import kotlinx.android.parcel.RawValue
 import org.opencv.core.Point
 import java.io.FileNotFoundException
 import kotlin.math.roundToInt
@@ -34,6 +33,10 @@ data class Template(
             totalBubbles = questions.size * 4 //todo monika make it generic in future
         }
         return totalBubbles
+    }
+
+    fun getTotalQuestions(): Int {
+        return questions.size
     }
 
     fun getAnchorListClockwise(): List<AnchorPoint> {

@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -115,6 +116,12 @@ class CreateExamActivity : ComponentActivity() {
 
         val selectedTemplateName = selectedTemplate?.value?.name ?: ""
 
+        LaunchedEffect(selectedTemplate) {
+            if(selectedTemplate != null) {
+                numberOfQuestionsText = ""
+            }
+        }
+
 
         Scaffold(topBar = {
             GenericToolbar(title = "Create Exam", onBackClick = {
@@ -127,8 +134,6 @@ class CreateExamActivity : ComponentActivity() {
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp)
             ) {
-                Spacer(modifier = Modifier.Companion.height(8.dp))
-
                 StepListWidget(
                     steps = steps,
                     currentStep = currentStep,
@@ -189,9 +194,21 @@ class CreateExamActivity : ComponentActivity() {
                     prefix = { Text("#", color = Grey500) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Companion.Number),
                     onValueChange = { input ->
+                        val totalQues =
+                            selectedTemplate?.value?.getTotalQuestions() ?: Int.MAX_VALUE
+
+                        // Allow only digits
                         val filtered = input.filter { it.isDigit() }
-                        numberOfQuestionsText = filtered
+
+                        // Parse number safely
+                        val enteredValue = filtered.toIntOrNull() ?: 0
+
+                        // Validate against total questions
+                        if (enteredValue <= totalQues) {
+                            numberOfQuestionsText = filtered
+                        }
                     },
+                    readOnly = (selectedTemplate?.value == null),
                     modifier = Modifier.Companion.fillMaxWidth()
                 )
 
