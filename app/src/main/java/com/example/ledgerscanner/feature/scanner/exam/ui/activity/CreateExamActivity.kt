@@ -50,6 +50,7 @@ import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
+import com.example.ledgerscanner.base.ui.theme.Red500
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.SelectTemplateScreen
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
@@ -80,9 +81,7 @@ class CreateExamActivity : ComponentActivity() {
                         composable(ROUTE_CREATE_EXAM) {
                             CreateExamScreen(
                                 navController,
-                                modifier = Modifier.Companion.padding(
-                                    innerPadding
-                                )
+                                modifier = Modifier
                             )
                         }
                         composable(ROUTE_SELECT_TEMPLATE) {
@@ -100,7 +99,7 @@ class CreateExamActivity : ComponentActivity() {
     @Composable
     private fun CreateExamScreen(
         navController: NavHostController,
-        modifier: Modifier = Modifier.Companion
+        modifier: Modifier = Modifier
     ) {
         val steps = listOf("Basic\nInfo", "Answer\nKey", "Marking", "Review")
         var currentStep by rememberSaveable { mutableIntStateOf(0) }
@@ -108,6 +107,7 @@ class CreateExamActivity : ComponentActivity() {
         var examName by rememberSaveable { mutableStateOf("") }
         var examDescription by rememberSaveable { mutableStateOf("") }
         var numberOfQuestionsText by rememberSaveable { mutableStateOf("") }
+        var numberOfQuestions: Int? = null
 
         val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
         val selectedTemplate = savedStateHandle
@@ -117,9 +117,13 @@ class CreateExamActivity : ComponentActivity() {
         val selectedTemplateName = selectedTemplate?.value?.name ?: ""
 
         LaunchedEffect(selectedTemplate) {
-            if(selectedTemplate != null) {
+            if (selectedTemplate != null) {
                 numberOfQuestionsText = ""
             }
+        }
+
+        LaunchedEffect(numberOfQuestionsText) {
+            numberOfQuestions = numberOfQuestionsText.toIntOrNull()
         }
 
 
@@ -130,8 +134,8 @@ class CreateExamActivity : ComponentActivity() {
         }) { innerPadding ->
             Column(
                 modifier = modifier
-                    .fillMaxSize()
                     .padding(innerPadding)
+                    .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
                 StepListWidget(
@@ -212,7 +216,6 @@ class CreateExamActivity : ComponentActivity() {
                     modifier = Modifier.Companion.fillMaxWidth()
                 )
 
-                val numberOfQuestions: Int? = numberOfQuestionsText.toIntOrNull()
                 Spacer(modifier = Modifier.Companion.height(12.dp))
 
             }
