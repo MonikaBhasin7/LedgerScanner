@@ -161,3 +161,4 @@ private fun TemplateCard(template: Template, onClick: () -> Unit) {
         }
     }
 }
+

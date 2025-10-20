@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.base.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -18,8 +19,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
+import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
+import com.example.ledgerscanner.base.ui.theme.White
 
 @Composable
 fun GenericButton(
@@ -28,23 +31,36 @@ fun GenericButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    type: ButtonType = ButtonType.PRIMARY,
     backgroundColor: Color = MaterialTheme.colorScheme.primary,
-    contentColor: Color = Color.White,
     shape: Shape = RoundedCornerShape(24.dp),
     textStyle: TextStyle = AppTypography.label2SemiBold,
 ) {
+    val (bgColor, contentColor) = when (type) {
+        ButtonType.PRIMARY -> MaterialTheme.colorScheme.primary to White
+        ButtonType.SECONDARY -> Color.Transparent to MaterialTheme.colorScheme.primary
+        ButtonType.TERTIARY -> Grey100 to Grey100
+    }
+
+    val border = when (type) {
+        ButtonType.SECONDARY -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        else -> null
+    }
+
+
     Button(
         onClick = onClick,
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor,
+            containerColor = bgColor,
             contentColor = contentColor,
             disabledContainerColor = Grey200,
             disabledContentColor = Grey500
         ),
         shape = shape,
+        border = border,
         modifier = modifier,
-        contentPadding = PaddingValues(vertical = 12.dp, horizontal = 12.dp)
+        contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp)
     ) {
         if (icon != null) {
             Icon(
@@ -56,4 +72,10 @@ fun GenericButton(
         }
         Text(text = text, style = textStyle)
     }
+}
+
+enum class ButtonType {
+    PRIMARY,
+    SECONDARY,
+    TERTIARY
 }
