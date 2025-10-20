@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExamDao {
-    @Query("SELECT * FROM exams ORDER BY createdDate DESC")
+    @Query("SELECT * FROM exams ORDER BY createdAt DESC")
     fun getAllExamsFlow(): Flow<List<ExamEntity>>
 
     @Query("SELECT * FROM exams WHERE id = :id LIMIT 1")

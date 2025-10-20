@@ -287,7 +287,7 @@ class ExamListingActivity : ComponentActivity() {
                         verticalAlignment = Alignment.Companion.CenterVertically
                     ) {
                         Text(
-                            text = item.title ?: "",
+                            text = item.examName ?: "",
                             color = Black,
                             style = AppTypography.body1Medium,
                             maxLines = 1,
@@ -303,7 +303,7 @@ class ExamListingActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.Companion.height(8.dp))
 
                     Text(
-                        text = "${item.totalQuestions} questions \u2022 Created ${item.createdDate} \u2022 Sheets: ${item.sheetsCount}",
+                        text = "${item.totalQuestions} questions \u2022 Created ${item.createdAt} \u2022 Sheets: ${item.sheetsCount}",
                         color = Grey500,
                         maxLines = 1,
                         overflow = TextOverflow.Companion.Ellipsis,

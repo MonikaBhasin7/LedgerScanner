@@ -20,7 +20,6 @@ data class Template(
     val sheet_width: Double = 0.0,
     val sheet_height: Double = 0.0,
     val options_per_question: Int,
-    val grid: Grid?,
     val questions: List<Question>,
     val anchor_top_left: AnchorPoint,
     val anchor_top_right: AnchorPoint,
