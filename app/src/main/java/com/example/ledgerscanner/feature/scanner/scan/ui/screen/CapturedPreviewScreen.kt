@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui.compose
+package com.example.ledgerscanner.feature.scanner.scan.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,10 +25,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.BuildConfig
-import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.White
+import com.example.ledgerscanner.feature.scanner.scan.ui.compose.ScoreSummaryCard
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 

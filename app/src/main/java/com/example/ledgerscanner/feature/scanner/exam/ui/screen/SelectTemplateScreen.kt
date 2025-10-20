@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.ui.compose
+package com.example.ledgerscanner.feature.scanner.exam.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

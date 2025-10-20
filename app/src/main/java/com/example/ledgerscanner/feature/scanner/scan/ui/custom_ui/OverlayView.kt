@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui
+package com.example.ledgerscanner.feature.scanner.scan.ui.custom_ui
 
 
 import android.content.Context

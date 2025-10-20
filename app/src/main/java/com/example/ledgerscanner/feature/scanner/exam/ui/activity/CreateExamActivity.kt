@@ -50,9 +50,8 @@ import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
-import com.example.ledgerscanner.base.ui.theme.Red500
 import com.example.ledgerscanner.base.utils.ui.genericClick
-import com.example.ledgerscanner.feature.scanner.exam.ui.compose.SelectTemplateScreen
+import com.example.ledgerscanner.feature.scanner.exam.ui.screen.SelectTemplateScreen
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import dagger.hilt.android.AndroidEntryPoint
 
