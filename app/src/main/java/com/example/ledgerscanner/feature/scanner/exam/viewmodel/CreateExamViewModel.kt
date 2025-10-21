@@ -4,9 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamDraft
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
-import com.example.ledgerscanner.feature.scanner.exam.model.TemplateSummary
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,8 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : ViewModel() {
 
-    private val _draft = MutableStateFlow<ExamDraft?>(null)
-    val draft: StateFlow<ExamDraft?> = _draft.asStateFlow()
+    private val _examEntity = MutableStateFlow<ExamEntity?>(null)
+    val examEntity: StateFlow<ExamEntity?> = _examEntity.asStateFlow()
 
     companion object {
         const val TAG = "CreateExamViewModel"
@@ -35,20 +33,14 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
     ) {
         viewModelScope.launch {
             try {
-                val rowId =
-                    repository.saveBasicInfo(examName, description, template, numberOfQuestions)
-                _draft.value = ExamDraft(
-                    examId = rowId,
-                    examName = examName,
-                    description = description,
-                    numberOfQuestions = numberOfQuestions,
-                    templateSummary = TemplateSummary(
-                        template.name,
-                        template.sheet_width,
-                        template.sheet_height,
-                        template.options_per_question
+                _examEntity.value =
+                    repository.saveBasicInfo(
+                        examName,
+                        description,
+                        template,
+                        numberOfQuestions,
+                        saveInDb
                     )
-                )
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving basic info: ${e.message}")
             }

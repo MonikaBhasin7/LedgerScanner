@@ -24,24 +24,25 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         examName: String,
         description: String?,
         template: Template,
-        numberOfQuestions: Int
-    ): Long {
+        numberOfQuestions: Int,
+        saveInDb: Boolean
+    ): ExamEntity {
+        val now = System.currentTimeMillis()
         val exam = ExamEntity(
             id = 0,
             examName = examName,
             status = ExamStatus.DRAFT,
             totalQuestions = numberOfQuestions,
             template = template,
-            answerKey = emptyMap(), // answer key not yet added
-            marksPerCorrect = 1f,
-            marksPerWrong = 0f,
-            createdAt = System.currentTimeMillis(),
-            sheetsCount = 0,
-            avgScorePercent = null,
-            topScorePercent = null,
-            medianScorePercent = null
+            createdAt = now,
         )
 
-        return dao.insertExam(exam)
+        return if (saveInDb) {
+            val rowId: Long = dao.insertExam(exam)
+            val newId = if (rowId >= 0L) rowId.toInt() else 0
+            exam.copy(id = newId)
+        } else {
+            exam
+        }
     }
 }

@@ -90,21 +90,21 @@ fun BasicInfoScreen(
             navController.popBackStack()
         })
     }, bottomBar = {
-        SaveAndNextBarWidget(onNext = {
+        val saveExam: (Boolean) -> Unit = { saveInDb ->
             createExamViewModel.saveBasicInfo(
-                examName,
-                examDescription,
-                selectedTemplate?.value!!,
-                numberOfQuestions!!, false
+                examName = examName,
+                description = examDescription,
+                template = selectedTemplate?.value!!,
+                numberOfQuestions = numberOfQuestions!!,
+                saveInDb = saveInDb,
             )
-        }, onSaveDraft = {
-            createExamViewModel.saveBasicInfo(
-                examName,
-                examDescription,
-                selectedTemplate?.value!!,
-                numberOfQuestions!!, true
-            )
-        }, enabled = enabled)
+        }
+
+        SaveAndNextBarWidget(
+            onNext = { saveExam(false) },
+            onSaveDraft = { saveExam(true) },
+            enabled = enabled
+        )
     }) { innerPadding ->
         Column(
             modifier = modifier
