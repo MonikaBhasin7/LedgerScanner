@@ -393,7 +393,6 @@ class TemplateProcessor @Inject constructor() {
             sheet_width = size.width,
             sheet_height = size.height,
             options_per_question = 4,
-            grid = null,       // skip if not using grid
             questions = questions,
             anchor_top_left = anchors[0],
             anchor_top_right = anchors[1],

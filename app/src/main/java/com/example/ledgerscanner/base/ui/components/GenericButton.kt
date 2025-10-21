@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
+import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.White
 
@@ -43,7 +44,15 @@ fun GenericButton(
     }
 
     val border = when (type) {
-        ButtonType.SECONDARY -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        ButtonType.SECONDARY -> {
+            val borderColor = if (enabled) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                Grey400
+            }
+            BorderStroke(1.dp, borderColor)
+        }
+
         else -> null
     }
 

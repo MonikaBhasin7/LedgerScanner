@@ -28,12 +28,3 @@ class AppDiModule {
     @Singleton
     fun provideExamDao(db: AppDatabase): ExamDao = db.examDao()
 }
-
-
-@Module
-@InstallIn(ActivityComponent::class)
-class ActivityDiModule {
-
-    @Provides
-    fun provideExamRepository(dao: ExamDao): ExamRepository = ExamRepository(dao)
-}

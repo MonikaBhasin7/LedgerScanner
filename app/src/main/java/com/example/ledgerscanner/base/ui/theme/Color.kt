@@ -7,21 +7,27 @@ val Blue50 = Color(0xFFF5F7FF)
 val Blue500 = Color(0xFF277EFF)   // Primary Blue
 val Blue100 = Color(0xFFDBE7FB)   // Light Blue background
 
-// Grey Palette
-val Grey500 = Color(0xFF949494)   // Darker grey
-val Grey200 = Color(0xFFE8E8E8)   // Light grey
-
 // Neutral / White Palette
-val White = Color(0xFFFFFFFF)     // Pure White
-val Grey50 = Color(0xFFF8F8F7)    // Off White
+val White = Color(0xFFFFFFFF)   // Pure White
+val Grey50 = Color(0xFFF8F8F7)   // Off White
 val Grey100 = Color(0xFFFBFAF9)   // Cream White
+
+// Grey Scale
+val Grey200 = Color(0xFFE8E8E8)   // Light Grey
+val Grey300 = Color(0xFFD6D6D6)   // Soft Grey
+val Grey400 = Color(0xFFBFBFBF)   // Medium Grey
+val Grey500 = Color(0xFF949494)   // Neutral Grey
+val Grey600 = Color(0xFF767676)   // Dark Grey
+val Grey700 = Color(0xFF5E5E5E)   // Dim Grey
+val Grey800 = Color(0xFF3C3C3C)   // Deep Grey
+val Grey900 = Color(0xFF1E1E1E)   // Almost Black
+
 
 val Green50 = Color(0xFFEFFBF3)
 val Green500 = Color(0xFF00C48C)
 
 // Black
 val Black = Color(0xFF000000)
-
 
 
 //Red

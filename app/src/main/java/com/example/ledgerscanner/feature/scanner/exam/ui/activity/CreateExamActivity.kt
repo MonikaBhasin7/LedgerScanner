@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -12,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.BasicInfoScreen
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.SelectTemplateScreen
+import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -23,6 +25,7 @@ class CreateExamActivity : ComponentActivity() {
         const val SELECTED_TEMPLATE = "selected_template"
     }
 
+    private val createExamViewModel: CreateExamViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -39,6 +42,7 @@ class CreateExamActivity : ComponentActivity() {
                         composable(ROUTE_CREATE_EXAM) {
                             BasicInfoScreen(
                                 navController,
+                                createExamViewModel,
                                 modifier = Modifier
                             )
                         }

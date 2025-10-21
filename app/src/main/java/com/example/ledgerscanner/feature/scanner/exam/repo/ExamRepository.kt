@@ -3,6 +3,7 @@ package com.example.ledgerscanner.feature.scanner.exam.repo
 import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -19,4 +20,28 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
     suspend fun saveExams(exams: List<ExamEntity>) = dao.insertAll(exams)
 
     suspend fun clear() = dao.clearAll()
+    suspend fun saveBasicInfo(
+        examName: String,
+        description: String?,
+        template: Template,
+        numberOfQuestions: Int
+    ): Long {
+        val exam = ExamEntity(
+            id = 0,
+            examName = examName,
+            status = ExamStatus.DRAFT,
+            totalQuestions = numberOfQuestions,
+            template = template,
+            answerKey = emptyMap(), // answer key not yet added
+            marksPerCorrect = 1f,
+            marksPerWrong = 0f,
+            createdAt = System.currentTimeMillis(),
+            sheetsCount = 0,
+            avgScorePercent = null,
+            topScorePercent = null,
+            medianScorePercent = null
+        )
+
+        return dao.insertExam(exam)
+    }
 }

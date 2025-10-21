@@ -45,12 +45,14 @@ import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.SaveAndNextBarWidget
+import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BasicInfoScreen(
     navController: NavHostController,
+    createExamViewModel: CreateExamViewModel,
     modifier: Modifier = Modifier
 ) {
     val steps = listOf("Basic\nInfo", "Answer\nKey", "Marking", "Review")
@@ -74,17 +76,35 @@ fun BasicInfoScreen(
         }
     }
 
-    LaunchedEffect(numberOfQuestionsText) {
+    var enabled by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(examName, examDescription, selectedTemplate, numberOfQuestionsText) {
         numberOfQuestions = numberOfQuestionsText.toIntOrNull()
+        enabled = examName.isNotBlank() &&
+                examDescription.isNotBlank() &&
+                selectedTemplate != null &&
+                numberOfQuestions != null && numberOfQuestions!! > 0
     }
-
 
     Scaffold(topBar = {
         GenericToolbar(title = "Create Exam", onBackClick = {
             navController.popBackStack()
         })
     }, bottomBar = {
-        SaveAndNextBarWidget(onNext = {}, onSaveDraft = {})
+        SaveAndNextBarWidget(onNext = {
+            createExamViewModel.saveBasicInfo(
+                examName,
+                examDescription,
+                selectedTemplate?.value!!,
+                numberOfQuestions!!, false
+            )
+        }, onSaveDraft = {
+            createExamViewModel.saveBasicInfo(
+                examName,
+                examDescription,
+                selectedTemplate?.value!!,
+                numberOfQuestions!!, true
+            )
+        }, enabled = enabled)
     }) { innerPadding ->
         Column(
             modifier = modifier

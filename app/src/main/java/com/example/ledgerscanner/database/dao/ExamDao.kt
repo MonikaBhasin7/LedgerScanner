@@ -17,7 +17,7 @@ interface ExamDao {
     suspend fun getExamById(id: String): ExamEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertExam(exam: ExamEntity)
+    suspend fun insertExam(exam: ExamEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(exams: List<ExamEntity>)
