@@ -11,3 +11,10 @@ sealed class OperationResult<T> {
     data class Error<T>(val message: String, val throwable: Throwable? = null) :
         OperationResult<T>()
 }
+
+sealed class OperationState {
+    object Idle : OperationState()
+    object Loading : OperationState()
+    object Success : OperationState()
+    data class Error(val message: String) : OperationState()
+}

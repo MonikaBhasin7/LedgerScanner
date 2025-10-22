@@ -1,13 +1,15 @@
 package com.example.ledgerscanner.feature.scanner.exam.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,9 +21,16 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
 
     private val _examEntity = MutableStateFlow<ExamEntity?>(null)
     val examEntity: StateFlow<ExamEntity?> = _examEntity.asStateFlow()
+    private val _perStepState: MutableStateFlow<Pair<ExamStep, OperationState>> =
+        MutableStateFlow(Pair(ExamStep.BASIC_INFO, OperationState.Idle))
+    val perStepState: StateFlow<Pair<ExamStep, OperationState>> = _perStepState.asStateFlow()
 
     companion object {
         const val TAG = "CreateExamViewModel"
+    }
+
+    fun updateStepState(step: ExamStep, state: OperationState) {
+        _perStepState.value = step to state
     }
 
     fun saveBasicInfo(
@@ -31,7 +40,10 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
         numberOfQuestions: Int,
         saveInDb: Boolean
     ) {
+        val step = ExamStep.BASIC_INFO
         viewModelScope.launch {
+            updateStepState(step, OperationState.Loading)
+            delay(3000) //todo monika remove
             try {
                 _examEntity.value =
                     repository.saveBasicInfo(
@@ -41,8 +53,12 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
                         numberOfQuestions,
                         saveInDb
                     )
+                updateStepState(step, OperationState.Success)
             } catch (e: Exception) {
-                Log.e(TAG, "Error saving basic info: ${e.message}")
+                updateStepState(
+                    step,
+                    OperationState.Error("Error saving basic info: ${e.message}")
+                )
             }
         }
     }
