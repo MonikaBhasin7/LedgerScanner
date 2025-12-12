@@ -19,14 +19,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,34 +44,48 @@ import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewMo
 fun AnswerKeyScreen(
     navController: NavHostController,
     createExamViewModel: CreateExamViewModel,
-    modifier: Modifier.Companion
+    modifier: Modifier = Modifier
 ) {
-    val examEntity by createExamViewModel.examEntity.collectAsState()
-    var selectedLabel by rememberSaveable { mutableStateOf<AnswerKeyBulkFillType?>(null) }
+    var selectedBulkFill by remember { mutableStateOf<AnswerKeyBulkFillType?>(null) }
+
     val answerKeys = remember {
         MutableList<Int?>(10) { null }.toMutableStateList()
     }
-    Scaffold() { innerPadding ->
-        Column {
+
+    Scaffold { padding ->
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+        ) {
             Spacer(modifier = Modifier.height(6.dp))
+
             BulkFillWidget(
-                selectedLabel = selectedLabel,
-                onSelect = {
-                    selectedLabel = it
+                selectedLabel = selectedBulkFill,
+                onSelect = { selectedBulkFill = it }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AnswerKeyWidget(
+                answerKeys = answerKeys,
+                onSelectAnswer = { index, answer ->
+                    answerKeys[index] = answer
                 }
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            AnswerKeyWidget(answerKeys) { index, selectedAnswer ->
-                answerKeys[index] = selectedAnswer
-            }
         }
     }
 }
 
 @Composable
-fun AnswerKeyWidget(answerKeys: SnapshotStateList<Int?>, onSelectAnswer: (Int, Int) -> Unit) {
+fun AnswerKeyWidget(
+    answerKeys: List<Int?>,
+    onSelectAnswer: (Int, Int) -> Unit
+) {
     Column {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Text("Answer Key", style = AppTypography.body2Regular, color = Grey500)
             Text(
                 "Tap a choice to mark correct",
@@ -83,13 +93,18 @@ fun AnswerKeyWidget(answerKeys: SnapshotStateList<Int?>, onSelectAnswer: (Int, I
                 color = Grey500
             )
         }
+
         Spacer(modifier = Modifier.height(6.dp))
+
         AnswerKeyGrid(answerKeys, onSelectAnswer)
     }
 }
 
 @Composable
-fun AnswerKeyGrid(answerKeys: SnapshotStateList<Int?>, onSelectAnswer: (Int, Int) -> Unit) {
+fun AnswerKeyGrid(
+    answerKeys: List<Int?>,
+    onSelectAnswer: (Int, Int) -> Unit
+) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -102,13 +117,18 @@ fun AnswerKeyGrid(answerKeys: SnapshotStateList<Int?>, onSelectAnswer: (Int, Int
             QuestionCard(
                 questionNumber = index + 1,
                 answerItemSelected = answer,
-                onSelectAnswer = { it ->
-                    onSelectAnswer(index, it)
+                onSelectAnswer = { selected ->
+                    onSelectAnswer(index, selected)
                 }
             )
         }
     }
 }
+
+private const val OPTION_A = 1
+private const val OPTION_B = 2
+private const val OPTION_C = 3
+private const val OPTION_D = 4
 
 @Composable
 fun QuestionCard(
@@ -124,49 +144,26 @@ fun QuestionCard(
             .background(Grey100)
             .padding(12.dp)
     ) {
-        Text(
-            text = "Q${questionNumber}",
-            style = AppTypography.label1SemiBold
-        )
+        Text("Q$questionNumber", style = AppTypography.label1SemiBold)
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OptionButton(
-                    text = "A",
-                    selected = answerItemSelected == 1,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        onSelectAnswer(1)
-                    }
-                )
-                OptionButton(
-                    text = "B",
-                    selected = answerItemSelected == 2,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        onSelectAnswer(2)
-                    }
-                )
+                OptionButton("A", answerItemSelected == OPTION_A, Modifier.weight(1f)) {
+                    onSelectAnswer(OPTION_A)
+                }
+                OptionButton("B", answerItemSelected == OPTION_B, Modifier.weight(1f)) {
+                    onSelectAnswer(OPTION_B)
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OptionButton(
-                    text = "C",
-                    selected = answerItemSelected == 3,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        onSelectAnswer(3)
-                    }
-                )
-                OptionButton(
-                    text = "D",
-                    selected = answerItemSelected == 4,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        onSelectAnswer(4)
-                    }
-                )
+                OptionButton("C", answerItemSelected == OPTION_C, Modifier.weight(1f)) {
+                    onSelectAnswer(OPTION_C)
+                }
+                OptionButton("D", answerItemSelected == OPTION_D, Modifier.weight(1f)) {
+                    onSelectAnswer(OPTION_D)
+                }
             }
         }
     }
@@ -205,25 +202,25 @@ fun BulkFillWidget(
     onSelect: (AnswerKeyBulkFillType) -> Unit,
     selectedLabel: AnswerKeyBulkFillType?
 ) {
-    val labels = AnswerKeyBulkFillType.entries
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Text("Bulk fill", style = AppTypography.body2Regular, color = Grey500)
             Text("Quickly set patterns", style = AppTypography.body2Regular, color = Grey500)
         }
+
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            labels.forEach { label ->
+            AnswerKeyBulkFillType.entries.forEach { type ->
                 GenericFilterChip(
-                    label.label,
-                    selected = selectedLabel == label,
+                    label = type.label,
+                    selected = selectedLabel == type,
                     modifier = Modifier.weight(1f),
-                    onClick = {
-                        onSelect(label)
-                    }
+                    onClick = { onSelect(type) }
                 )
             }
         }
