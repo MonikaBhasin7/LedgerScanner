@@ -29,8 +29,12 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
         const val TAG = "CreateExamViewModel"
     }
 
-    fun updateStepState(step: ExamStep, state: OperationState) {
+    private fun updateStepState(step: ExamStep, state: OperationState) {
         _perStepState.value = step to state
+    }
+
+    fun moveToNextStepWithIdleState() {
+        updateStepState(_perStepState.value.first.next(), OperationState.Idle)
     }
 
     fun saveBasicInfo(
