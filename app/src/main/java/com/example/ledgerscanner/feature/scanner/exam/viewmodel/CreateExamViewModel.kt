@@ -22,7 +22,7 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
     private val _examEntity = MutableStateFlow<ExamEntity?>(null)
     val examEntity: StateFlow<ExamEntity?> = _examEntity.asStateFlow()
     private val _perStepState: MutableStateFlow<Pair<ExamStep, OperationState>> =
-        MutableStateFlow(Pair(ExamStep.BASIC_INFO, OperationState.Idle))
+        MutableStateFlow(Pair(ExamStep.ANSWER_KEY, OperationState.Idle))
     val perStepState: StateFlow<Pair<ExamStep, OperationState>> = _perStepState.asStateFlow()
 
     companion object {

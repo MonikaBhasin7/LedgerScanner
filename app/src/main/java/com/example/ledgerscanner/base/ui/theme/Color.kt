@@ -22,10 +22,6 @@ val Grey700 = Color(0xFF5E5E5E)   // Dim Grey
 val Grey800 = Color(0xFF3C3C3C)   // Deep Grey
 val Grey900 = Color(0xFF1E1E1E)   // Almost Black
 
-
-val Green50 = Color(0xFFEFFBF3)
-val Green500 = Color(0xFF00C48C)
-
 // Black
 val Black = Color(0xFF000000)
 
@@ -59,3 +55,19 @@ val AccentRed = RedA400
 // Optional gradient tones (for backgrounds / buttons)
 val RedGradientStart = Color(0xFFFF6B6B)
 val RedGradientEnd = Color(0xFFC81D25)
+
+// Light shades (backgrounds, chips, highlights)
+val Green50  = Color(0xFFE6F9EA)
+val Green100 = Color(0xFFBFF0C7)
+val Green200 = Color(0xFF99E8A5)
+val Green300 = Color(0xFF66DB7A)
+val Green400 = Color(0xFF33CF50)
+
+// Base
+val Green500 = Color(0xFF00C417)
+
+// Dark shades (text, icons, pressed states)
+val Green600 = Color(0xFF00AE14)
+val Green700 = Color(0xFF009611)
+val Green800 = Color(0xFF007D0E)
+val Green900 = Color(0xFF005C09)

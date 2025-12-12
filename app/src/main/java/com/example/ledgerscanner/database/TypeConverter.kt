@@ -44,14 +44,15 @@ class TypeConverter {
 
     // ---------------- Answer Key Map<Int, String> ----------------
     @TypeConverter
-    fun fromAnswerKey(map: Map<Int, String>?): String {
-        return Gson().toJson(map)
+    fun fromAnswerKey(map: Map<Int, Int>?): String {
+        return Gson().toJson(map ?: emptyMap<Int, Int>())
     }
 
     @TypeConverter
-    fun toAnswerKey(json: String?): Map<Int, String> {
+    fun toAnswerKey(json: String?): Map<Int, Int> {
         if (json.isNullOrEmpty()) return emptyMap()
-        val type = object : TypeToken<Map<Int, String>>() {}.type
+
+        val type = object : TypeToken<Map<Int, Int>>() {}.type
         return Gson().fromJson(json, type)
     }
 }

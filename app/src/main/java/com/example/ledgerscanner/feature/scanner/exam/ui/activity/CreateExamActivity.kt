@@ -30,7 +30,6 @@ import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.StepListWidget
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.AnswerKeyScreen
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.BasicInfoScreen
-import com.example.ledgerscanner.feature.scanner.exam.ui.screen.SelectTemplateScreen
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -85,7 +84,7 @@ class CreateExamActivity : ComponentActivity() {
 
                             NavHost(
                                 navController = navController,
-                                startDestination = ExamStep.BASIC_INFO.title
+                                startDestination = ExamStep.ANSWER_KEY.title
                             ) {
                                 composable(ExamStep.BASIC_INFO.title) {
                                     BasicInfoScreen(

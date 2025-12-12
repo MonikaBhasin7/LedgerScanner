@@ -12,7 +12,7 @@ data class ExamEntity(
     val status: ExamStatus,
     val totalQuestions: Int,
     val template: Template,
-    val answerKey: Map<Int, String>? = null,
+    val answerKey: Map<Int, Int>? = null,
     val marksPerCorrect: Float? = null,
     val marksPerWrong: Float? = null,
     val createdAt: Long,
