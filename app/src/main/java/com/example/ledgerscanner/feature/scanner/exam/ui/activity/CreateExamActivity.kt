@@ -36,16 +36,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class CreateExamActivity : ComponentActivity() {
-
-    companion object {
-        const val ROUTE_SELECT_TEMPLATE = "select_template_route"
-        const val ROUTE_BASIC_INFO = "basic_info_route"
-        const val ROUTE_ANSWER_KEY = "answer_key_route"
-        const val SELECTED_TEMPLATE = "selected_template"
-    }
-
     private val createExamViewModel: CreateExamViewModel by viewModels()
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,17 +48,15 @@ class CreateExamActivity : ComponentActivity() {
             val perStepState by createExamViewModel.perStepState.collectAsState()
 
             LaunchedEffect(perStepState) {
-                when(perStepState.second) {
+                when (val state = perStepState.second) {
                     is OperationState.Error -> {
-                        val errMsg = (perStepState.second as OperationState.Error).message
-                        Toast.makeText(
-                            context,
-                            errMsg,
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        val errMsg = state.message
+                        Toast.makeText(context, errMsg, Toast.LENGTH_SHORT).show()
                     }
-                    OperationState.Idle -> {}
-                    OperationState.Loading -> {}
+                    OperationState.Idle -> {
+                    }
+                    OperationState.Loading -> {
+                    }
                     OperationState.Success -> {
                         navController.navigate(perStepState.first.next().title)
                         createExamViewModel.moveToNextStepWithIdleState()
@@ -77,9 +66,7 @@ class CreateExamActivity : ComponentActivity() {
 
             LedgerScannerTheme {
                 Scaffold(topBar = {
-                    GenericToolbar(title = "Create Exam", onBackClick = {
-                        finish()
-                    })
+                    GenericToolbar(title = "Create Exam", onBackClick = { finish() })
                 }) { innerPadding ->
                     Box {
                         Column(
@@ -94,37 +81,39 @@ class CreateExamActivity : ComponentActivity() {
                                 onStepSelected = {}
                             )
 
-                            Spacer(modifier = Modifier.Companion.height(12.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             NavHost(
-                                navController,
+                                navController = navController,
                                 startDestination = ExamStep.BASIC_INFO.title
                             ) {
                                 composable(ExamStep.BASIC_INFO.title) {
                                     BasicInfoScreen(
-                                        navController,
-                                        createExamViewModel,
-                                        modifier = Modifier,
-                                    )
-                                }
-                                composable(ExamStep.ANSWER_KEY.title) {
-                                    AnswerKeyScreen(
-                                        navController,
-                                        createExamViewModel,
+                                        navController = navController,
+                                        createExamViewModel = createExamViewModel,
                                         modifier = Modifier
                                     )
                                 }
-                                composable(ExamStep.MARKING.title) {
 
+                                composable(ExamStep.ANSWER_KEY.title) {
+                                    AnswerKeyScreen(
+                                        navController = navController,
+                                        createExamViewModel = createExamViewModel,
+                                        modifier = Modifier
+                                    )
                                 }
-                                composable(ExamStep.REVIEW.title) {
 
+                                composable(ExamStep.MARKING.title) {
+                                }
+
+                                composable(ExamStep.REVIEW.title) {
                                 }
                             }
                         }
 
-                        if (perStepState.second is OperationState.Loading)
+                        if (perStepState.second is OperationState.Loading) {
                             GenericRectangularLoader()
+                        }
                     }
                 }
             }

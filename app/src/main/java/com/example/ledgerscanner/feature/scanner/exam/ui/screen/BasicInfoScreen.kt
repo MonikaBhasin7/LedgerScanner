@@ -41,16 +41,17 @@ fun BasicInfoScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
     var examName by rememberSaveable { mutableStateOf("") }
     var examDescription by rememberSaveable { mutableStateOf("") }
     var numberOfQuestionsText by rememberSaveable { mutableStateOf("") }
     var numberOfQuestions: Int? = null
+
     var showSelectTemplate by rememberSaveable { mutableStateOf(false) }
-
     var selectedTemplate by rememberSaveable { mutableStateOf<Template?>(null) }
-
     val selectedTemplateName = selectedTemplate?.name ?: ""
 
+    // When a template is selected, clear numberOfQuestionsText so user re-enters
     LaunchedEffect(selectedTemplate) {
         if (selectedTemplate != null) {
             numberOfQuestionsText = ""
@@ -58,12 +59,14 @@ fun BasicInfoScreen(
     }
 
     var enabled by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(examName, examDescription, selectedTemplate, numberOfQuestionsText) {
         numberOfQuestions = numberOfQuestionsText.toIntOrNull()
-        enabled = examName.isNotBlank() &&
-                examDescription.isNotBlank() &&
-                selectedTemplate != null &&
-                numberOfQuestions != null && numberOfQuestions!! > 0
+        enabled = examName.isNotBlank()
+                && examDescription.isNotBlank()
+                && selectedTemplate != null
+                && numberOfQuestions != null
+                && numberOfQuestions!! > 0
     }
 
     Scaffold(bottomBar = {
@@ -88,30 +91,31 @@ fun BasicInfoScreen(
                 modifier = modifier
                     .padding(bottom = innerPadding.calculateBottomPadding())
                     .fillMaxSize()
+                    .padding(horizontal = 16.dp)
             ) {
                 GenericTextField(
                     label = "Exam Name",
                     value = examName,
                     placeholder = "e.g., Physics Midterm",
                     onValueChange = { examName = it },
-                    modifier = Modifier.Companion.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.Companion.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 GenericTextField(
                     label = "Description (optional)",
                     value = examDescription,
                     placeholder = "Short description or instructions",
                     onValueChange = { examDescription = it },
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 120.dp),
                     singleLine = false,
                     maxLines = 5,
                 )
 
-                Spacer(modifier = Modifier.Companion.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 GenericTextField(
                     label = "Exam to be conducted on which answer sheet",
@@ -127,22 +131,19 @@ fun BasicInfoScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = false,
                     onValueChange = {},
-                    onClick = {
-                        showSelectTemplate = true
-                    }
+                    onClick = { showSelectTemplate = true }
                 )
 
-                Spacer(modifier = Modifier.Companion.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 GenericTextField(
                     label = "Number of questions",
                     value = numberOfQuestionsText,
                     placeholder = "e.g., 50",
                     prefix = { Text("# ", color = Grey500) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Companion.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     onValueChange = { input ->
-                        val totalQues =
-                            selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
+                        val totalQues = selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
 
                         // Allow only digits
                         val filtered = input.filter { it.isDigit() }
@@ -155,12 +156,13 @@ fun BasicInfoScreen(
                             numberOfQuestionsText = filtered
                         }
                     },
-                    readOnly = (selectedTemplate == null),
-                    modifier = Modifier.Companion.fillMaxWidth()
+                    readOnly = selectedTemplate == null,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.Companion.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
+
             if (showSelectTemplate) {
                 GenericDialog {
                     SelectTemplateScreen { template ->
