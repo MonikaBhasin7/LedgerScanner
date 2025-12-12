@@ -40,6 +40,11 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.feature.scanner.exam.model.AnswerKeyBulkFillType
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 
+private const val OPTION_A = 1
+private const val OPTION_B = 2
+private const val OPTION_C = 3
+private const val OPTION_D = 4
+
 @Composable
 fun AnswerKeyScreen(
     navController: NavHostController,
@@ -52,6 +57,34 @@ fun AnswerKeyScreen(
         MutableList<Int?>(10) { null }.toMutableStateList()
     }
 
+    fun setAnswerKey() {
+        when (selectedBulkFill) {
+
+            AnswerKeyBulkFillType.ALL_A ->
+                answerKeys.indices.forEach { index ->
+                    answerKeys[index] = OPTION_A
+                }
+
+            AnswerKeyBulkFillType.ALL_B ->
+                answerKeys.indices.forEach { index ->
+                    answerKeys[index] = OPTION_B
+                }
+
+            AnswerKeyBulkFillType.AB_ALT ->
+                answerKeys.forEachIndexed { index, _ ->
+                    answerKeys[index] =
+                        if (index % 2 == 0) OPTION_A else OPTION_B
+                }
+
+            AnswerKeyBulkFillType.CLEAR ->
+                answerKeys.indices.forEach { index ->
+                    answerKeys[index] = null
+                }
+
+            null -> Unit
+        }
+    }
+
     Scaffold { padding ->
         Column(
             modifier = modifier
@@ -61,7 +94,10 @@ fun AnswerKeyScreen(
 
             BulkFillWidget(
                 selectedLabel = selectedBulkFill,
-                onSelect = { selectedBulkFill = it }
+                onSelect = {
+                    selectedBulkFill = it
+                    setAnswerKey()
+                }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -69,7 +105,10 @@ fun AnswerKeyScreen(
             AnswerKeyWidget(
                 answerKeys = answerKeys,
                 onSelectAnswer = { index, answer ->
-                    answerKeys[index] = answer
+                    if (answerKeys[index] != answer) {
+                        answerKeys[index] = answer
+                        if (selectedBulkFill != null) selectedBulkFill = null
+                    }
                 }
             )
         }
@@ -124,11 +163,6 @@ fun AnswerKeyGrid(
         }
     }
 }
-
-private const val OPTION_A = 1
-private const val OPTION_B = 2
-private const val OPTION_C = 3
-private const val OPTION_D = 4
 
 @Composable
 fun QuestionCard(
