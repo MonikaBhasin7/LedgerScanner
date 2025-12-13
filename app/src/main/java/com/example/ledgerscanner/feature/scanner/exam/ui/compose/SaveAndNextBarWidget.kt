@@ -14,7 +14,8 @@ import com.example.ledgerscanner.base.ui.components.GenericButton
 @Composable
 fun SaveAndNextBarWidget(
     onNext: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    buttonText: String = "Next"
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -24,7 +25,7 @@ fun SaveAndNextBarWidget(
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
         GenericButton(
-            text = "Next",
+            text = buttonText,
             onClick = onNext,
             type = ButtonType.PRIMARY,
             modifier = Modifier.weight(1f),

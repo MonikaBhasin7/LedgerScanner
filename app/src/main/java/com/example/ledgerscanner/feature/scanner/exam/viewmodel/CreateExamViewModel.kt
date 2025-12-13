@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
@@ -109,6 +110,25 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
                 changeOperationState(OperationState.Success)
             } catch (e: Exception) {
                 changeOperationState(OperationState.Error("Error saving marking scheme: ${e.message}"))
+            }
+        }
+    }
+
+    fun finalizeExam() {
+        viewModelScope.launch {
+            try {
+                changeOperationState(OperationState.Loading)
+
+                val exam = _examEntity.value
+                    ?: throw IllegalStateException("Exam entity not found")
+
+                val finalizedExam = exam.copy(status = ExamStatus.ACTIVE)
+                repository.saveExam(finalizedExam)
+                _examEntity.value = finalizedExam
+
+                changeOperationState(OperationState.Success)
+            } catch (e: Exception) {
+                changeOperationState(OperationState.Error("Error creating exam: ${e.message}"))
             }
         }
     }

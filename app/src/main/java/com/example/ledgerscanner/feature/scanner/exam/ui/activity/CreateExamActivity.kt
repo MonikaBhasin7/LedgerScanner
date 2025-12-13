@@ -36,6 +36,7 @@ import com.example.ledgerscanner.feature.scanner.exam.ui.compose.StepListWidget
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.AnswerKeyScreen
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.BasicInfoScreen
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.MarkingDefaultsScreen
+import com.example.ledgerscanner.feature.scanner.exam.ui.screen.ReviewScreen
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -79,6 +80,7 @@ class CreateExamActivity : ComponentActivity() {
                 }, bottomBar = {
                     SaveAndNextBarWidget(
                         enabled = bottomBarConfig.enabled,
+                        buttonText = bottomBarConfig.buttonText,
                         onNext = {
                             bottomBarConfig.onNext()
                         },
@@ -136,6 +138,18 @@ class CreateExamActivity : ComponentActivity() {
                                 }
 
                                 composable(ExamStep.REVIEW.title) {
+                                    ReviewScreen(
+                                        createExamViewModel = createExamViewModel,
+                                        updateBottomBar = { config ->
+                                            bottomBarConfig = config
+                                        },
+                                        onEditStep = { step ->
+                                            navController.navigate(step.title) {
+                                                popUpTo(step.title) { inclusive = true }
+                                            }
+                                        },
+                                        modifier = Modifier
+                                    )
                                 }
                             }
                         }
