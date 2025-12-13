@@ -7,13 +7,11 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pages
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -93,89 +91,86 @@ fun BasicInfoScreen(
         )
     }
 
-    Scaffold { innerPadding ->
-        Box {
-            Column(
-                modifier = modifier
-                    .padding(bottom = innerPadding.calculateBottomPadding())
-                    .fillMaxSize()
-            ) {
-                GenericTextField(
-                    label = "Exam Name",
-                    value = examName,
-                    placeholder = "e.g., Physics Midterm",
-                    onValueChange = { examName = it },
-                    modifier = Modifier.fillMaxWidth()
-                )
+    Box {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+        ) {
+            GenericTextField(
+                label = "Exam Name",
+                value = examName,
+                placeholder = "e.g., Physics Midterm",
+                onValueChange = { examName = it },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                GenericTextField(
-                    label = "Description (optional)",
-                    value = examDescription,
-                    placeholder = "Short description or instructions",
-                    onValueChange = { examDescription = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 120.dp),
-                    singleLine = false,
-                    maxLines = 5,
-                )
+            GenericTextField(
+                label = "Description (optional)",
+                value = examDescription,
+                placeholder = "Short description or instructions",
+                onValueChange = { examDescription = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 120.dp),
+                singleLine = false,
+                maxLines = 5,
+            )
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                GenericTextField(
-                    label = "Exam to be conducted on which answer sheet",
-                    value = selectedTemplateName,
-                    placeholder = "No Sheet Selected",
-                    prefix = {
-                        Icon(
-                            imageVector = Icons.Default.Pages,
-                            contentDescription = null,
-                            tint = Grey500,
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = false,
-                    onValueChange = {},
-                    onClick = { showSelectTemplate = true }
-                )
+            GenericTextField(
+                label = "Exam to be conducted on which answer sheet",
+                value = selectedTemplateName,
+                placeholder = "No Sheet Selected",
+                prefix = {
+                    Icon(
+                        imageVector = Icons.Default.Pages,
+                        contentDescription = null,
+                        tint = Grey500,
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false,
+                onValueChange = {},
+                onClick = { showSelectTemplate = true }
+            )
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                GenericTextField(
-                    label = "Number of questions",
-                    value = numberOfQuestionsText,
-                    placeholder = "e.g., 50",
-                    prefix = { Text("# ", color = Grey500) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    onValueChange = { input ->
-                        val totalQues = selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
+            GenericTextField(
+                label = "Number of questions",
+                value = numberOfQuestionsText,
+                placeholder = "e.g., 50",
+                prefix = { Text("# ", color = Grey500) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                onValueChange = { input ->
+                    val totalQues = selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
 
-                        // Allow only digits
-                        val filtered = input.filter { it.isDigit() }
+                    // Allow only digits
+                    val filtered = input.filter { it.isDigit() }
 
-                        // Parse number safely
-                        val enteredValue = filtered.toIntOrNull() ?: 0
+                    // Parse number safely
+                    val enteredValue = filtered.toIntOrNull() ?: 0
 
-                        // Validate against total questions
-                        if (enteredValue <= totalQues) {
-                            numberOfQuestionsText = filtered
-                        }
-                    },
-                    readOnly = selectedTemplate == null,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            if (showSelectTemplate) {
-                GenericDialog {
-                    SelectTemplateScreen { template ->
-                        selectedTemplate = template
-                        showSelectTemplate = false
+                    // Validate against total questions
+                    if (enteredValue <= totalQues) {
+                        numberOfQuestionsText = filtered
                     }
+                },
+                readOnly = selectedTemplate == null,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        if (showSelectTemplate) {
+            GenericDialog {
+                SelectTemplateScreen { template ->
+                    selectedTemplate = template
+                    showSelectTemplate = false
                 }
             }
         }

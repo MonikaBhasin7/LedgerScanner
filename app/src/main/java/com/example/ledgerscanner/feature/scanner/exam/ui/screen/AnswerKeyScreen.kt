@@ -16,10 +16,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,9 +56,10 @@ fun AnswerKeyScreen(
     updateBottomBar: (BottomBarConfig) -> Unit
 ) {
     var selectedBulkFill by remember { mutableStateOf<AnswerKeyBulkFillType?>(null) }
-
+    val examEntity by createExamViewModel.examEntity.collectAsState()
+    val questionCount = examEntity?.totalQuestions ?: 0
     val answerKeys = remember {
-        MutableList<Int?>(10) { null }.toMutableStateList()
+        MutableList<Int?>(questionCount) { null }.toMutableStateList()
     }
 
     val allAnswered by remember {
@@ -67,7 +68,7 @@ fun AnswerKeyScreen(
         }
     }
 
-    LaunchedEffect(allAnswered) {
+    LaunchedEffect(allAnswered, answerKeys.toList()) {
         updateBottomBar(
             BottomBarConfig(
                 enabled = allAnswered,
@@ -109,33 +110,31 @@ fun AnswerKeyScreen(
         }
     }
 
-    Scaffold { padding ->
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-        ) {
-            Spacer(modifier = Modifier.height(6.dp))
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+    ) {
+        Spacer(modifier = Modifier.height(6.dp))
 
-            BulkFillWidget(
-                selectedLabel = selectedBulkFill,
-                onSelect = {
-                    selectedBulkFill = it
-                    setAnswerKey()
+        BulkFillWidget(
+            selectedLabel = selectedBulkFill,
+            onSelect = {
+                selectedBulkFill = it
+                setAnswerKey()
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AnswerKeyWidget(
+            answerKeys = answerKeys,
+            onSelectAnswer = { index, answer ->
+                if (answerKeys[index] != answer) {
+                    answerKeys[index] = answer
+                    if (selectedBulkFill != null) selectedBulkFill = null
                 }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            AnswerKeyWidget(
-                answerKeys = answerKeys,
-                onSelectAnswer = { index, answer ->
-                    if (answerKeys[index] != answer) {
-                        answerKeys[index] = answer
-                        if (selectedBulkFill != null) selectedBulkFill = null
-                    }
-                }
-            )
-        }
+            }
+        )
     }
 }
 

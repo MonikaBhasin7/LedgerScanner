@@ -62,7 +62,7 @@ fun MarkingDefaultsScreen(
         }
     }
 
-    LaunchedEffect(isValid) {
+    LaunchedEffect(isValid, marksPerCorrect, marksPerWrong, negativeMarking) {
         updateBottomBar(
             BottomBarConfig(
                 enabled = isValid,
@@ -110,8 +110,8 @@ fun MarkingDefaultsScreen(
                                 .background(White)
                                 .border(1.dp, Grey300, CircleShape)
                                 .genericClick {
-                                    val current = marksPerWrong.toFloatOrNull() ?: -0.25f
-                                    marksPerWrong = (current - 0.25f).toString()
+                                    val current = marksPerCorrect.toFloatOrNull() ?: 1f
+                                    marksPerCorrect = (current + 1f).toString()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
