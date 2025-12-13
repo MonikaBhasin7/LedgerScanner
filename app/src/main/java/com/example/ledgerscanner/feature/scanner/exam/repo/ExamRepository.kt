@@ -45,4 +45,21 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
             exam
         }
     }
+
+    suspend fun saveAnswerKey(
+        examEntity: ExamEntity,
+        answerKeys: Map<Int, Int>,
+        saveInDb: Boolean
+    ): ExamEntity {
+        val updatedEntity = examEntity.copy(
+            answerKey = answerKeys,
+            status = if (saveInDb) ExamStatus.DRAFT else examEntity.status
+        )
+
+        if (saveInDb) {
+            dao.updateAnswerKey(examEntity.id, answerKeys)
+        }
+
+        return updatedEntity
+    }
 }

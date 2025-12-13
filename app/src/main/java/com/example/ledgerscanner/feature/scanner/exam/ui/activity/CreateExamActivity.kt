@@ -16,6 +16,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -26,7 +29,9 @@ import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.base.ui.components.GenericRectangularLoader
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
+import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
+import com.example.ledgerscanner.feature.scanner.exam.ui.compose.SaveAndNextBarWidget
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.StepListWidget
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.AnswerKeyScreen
 import com.example.ledgerscanner.feature.scanner.exam.ui.screen.BasicInfoScreen
@@ -45,6 +50,7 @@ class CreateExamActivity : ComponentActivity() {
             val context = LocalContext.current
             val navController = rememberNavController()
             val perStepState by createExamViewModel.perStepState.collectAsState()
+            var bottomBarConfig by remember { mutableStateOf(BottomBarConfig()) }
 
             LaunchedEffect(perStepState) {
                 when (val state = perStepState.second) {
@@ -52,10 +58,13 @@ class CreateExamActivity : ComponentActivity() {
                         val errMsg = state.message
                         Toast.makeText(context, errMsg, Toast.LENGTH_SHORT).show()
                     }
+
                     OperationState.Idle -> {
                     }
+
                     OperationState.Loading -> {
                     }
+
                     OperationState.Success -> {
                         navController.navigate(perStepState.first.next().title)
                         createExamViewModel.moveToNextStepWithIdleState()
@@ -66,6 +75,16 @@ class CreateExamActivity : ComponentActivity() {
             LedgerScannerTheme {
                 Scaffold(topBar = {
                     GenericToolbar(title = "Create Exam", onBackClick = { finish() })
+                }, bottomBar = {
+                    SaveAndNextBarWidget(
+                        onSaveDraft = {
+                            bottomBarConfig.onSaveDraft()
+                        },
+                        onNext = {
+                            bottomBarConfig.onNext()
+                        },
+                        enabled = bottomBarConfig.enabled
+                    )
                 }) { innerPadding ->
                     Box {
                         Column(
@@ -84,12 +103,15 @@ class CreateExamActivity : ComponentActivity() {
 
                             NavHost(
                                 navController = navController,
-                                startDestination = ExamStep.ANSWER_KEY.title
+                                startDestination = ExamStep.BASIC_INFO.title
                             ) {
                                 composable(ExamStep.BASIC_INFO.title) {
                                     BasicInfoScreen(
                                         navController = navController,
                                         createExamViewModel = createExamViewModel,
+                                        updateBottomBar = {it ->
+                                            bottomBarConfig = it
+                                        },
                                         modifier = Modifier
                                     )
                                 }
@@ -98,6 +120,9 @@ class CreateExamActivity : ComponentActivity() {
                                     AnswerKeyScreen(
                                         navController = navController,
                                         createExamViewModel = createExamViewModel,
+                                        updateBottomBar = {it ->
+                                            bottomBarConfig = it
+                                        },
                                         modifier = Modifier
                                     )
                                 }

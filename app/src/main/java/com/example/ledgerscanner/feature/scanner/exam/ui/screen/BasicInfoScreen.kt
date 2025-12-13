@@ -17,8 +17,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -29,7 +31,7 @@ import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.ui.components.GenericDialog
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.Grey500
-import com.example.ledgerscanner.feature.scanner.exam.ui.compose.SaveAndNextBarWidget
+import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 
@@ -38,14 +40,14 @@ import com.example.ledgerscanner.feature.scanner.scan.model.Template
 fun BasicInfoScreen(
     navController: NavHostController,
     createExamViewModel: CreateExamViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    updateBottomBar: (BottomBarConfig) -> Unit
 ) {
     val context = LocalContext.current
 
     var examName by rememberSaveable { mutableStateOf("") }
     var examDescription by rememberSaveable { mutableStateOf("") }
     var numberOfQuestionsText by rememberSaveable { mutableStateOf("") }
-    var numberOfQuestions: Int? = null
 
     var showSelectTemplate by rememberSaveable { mutableStateOf(false) }
     var selectedTemplate by rememberSaveable { mutableStateOf<Template?>(null) }
@@ -58,40 +60,46 @@ fun BasicInfoScreen(
         }
     }
 
-    var enabled by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(examName, examDescription, selectedTemplate, numberOfQuestionsText) {
-        numberOfQuestions = numberOfQuestionsText.toIntOrNull()
-        enabled = examName.isNotBlank()
-                && examDescription.isNotBlank()
-                && selectedTemplate != null
-                && numberOfQuestions != null
-                && numberOfQuestions!! > 0
+    val numberOfQuestions by remember {
+        derivedStateOf { numberOfQuestionsText.toIntOrNull() }
     }
 
-    Scaffold(bottomBar = {
-        val saveExam: (Boolean) -> Unit = { saveInDb ->
-            createExamViewModel.saveBasicInfo(
-                examName = examName,
-                description = examDescription,
-                template = selectedTemplate!!,
-                numberOfQuestions = numberOfQuestions!!,
-                saveInDb = saveInDb,
-            )
+    val enabled by remember {
+        derivedStateOf {
+            examName.isNotBlank()
+                    && examDescription.isNotBlank()
+                    && selectedTemplate != null
+                    && numberOfQuestions != null
+                    && numberOfQuestions!! > 0
         }
+    }
 
-        SaveAndNextBarWidget(
-            onNext = { saveExam(false) },
-            onSaveDraft = { saveExam(true) },
-            enabled = enabled
+    val saveExam: (Boolean) -> Unit = { saveInDb ->
+        createExamViewModel.saveBasicInfo(
+            examName = examName,
+            description = examDescription,
+            template = selectedTemplate!!,
+            numberOfQuestions = numberOfQuestions!!,
+            saveInDb = saveInDb,
         )
-    }) { innerPadding ->
+    }
+
+    LaunchedEffect(enabled) {
+        updateBottomBar(
+            BottomBarConfig(
+                enabled = enabled,
+                onNext = { saveExam(false) },
+                onSaveDraft = { saveExam(true) }
+            )
+        )
+    }
+
+    Scaffold { innerPadding ->
         Box {
             Column(
                 modifier = modifier
                     .padding(bottom = innerPadding.calculateBottomPadding())
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp)
             ) {
                 GenericTextField(
                     label = "Exam Name",

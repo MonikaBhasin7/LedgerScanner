@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.database.dao
 
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -28,4 +29,7 @@ interface ExamDao {
 
     @Query("SELECT * FROM exams WHERE status = :status")
     fun getExamByStatus(status: ExamStatus?): Flow<List<ExamEntity>>
+
+    @Query("UPDATE exams SET answerKey = :answerKey WHERE id = :examId")
+    suspend fun updateAnswerKey(examId: Int, answerKey: Map<Int, Int>)
 }

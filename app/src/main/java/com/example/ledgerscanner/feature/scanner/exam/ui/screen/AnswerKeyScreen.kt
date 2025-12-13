@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +40,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.feature.scanner.exam.model.AnswerKeyBulkFillType
+import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 
 private const val OPTION_A = 1
@@ -49,12 +52,39 @@ private const val OPTION_D = 4
 fun AnswerKeyScreen(
     navController: NavHostController,
     createExamViewModel: CreateExamViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    updateBottomBar: (BottomBarConfig) -> Unit
 ) {
     var selectedBulkFill by remember { mutableStateOf<AnswerKeyBulkFillType?>(null) }
 
     val answerKeys = remember {
         MutableList<Int?>(10) { null }.toMutableStateList()
+    }
+
+    val allAnswered by remember {
+        derivedStateOf {
+            answerKeys.all { it != null }
+        }
+    }
+
+    LaunchedEffect(allAnswered) {
+        updateBottomBar(
+            BottomBarConfig(
+                enabled = allAnswered,
+                onNext = {
+                    createExamViewModel.saveAnswerKey(
+                        answerKeys = answerKeys.toList() as List<Int>,
+                        saveInDb = false
+                    )
+                },
+                onSaveDraft = {
+                    createExamViewModel.saveAnswerKey(
+                        answerKeys = answerKeys.toList() as List<Int>,
+                        saveInDb = true
+                    )
+                }
+            )
+        )
     }
 
     fun setAnswerKey() {
