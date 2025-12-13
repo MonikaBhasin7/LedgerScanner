@@ -1,6 +1,5 @@
 package com.example.ledgerscanner.database.dao
 
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -32,4 +31,6 @@ interface ExamDao {
 
     @Query("UPDATE exams SET answerKey = :answerKey WHERE id = :examId")
     suspend fun updateAnswerKey(examId: Int, answerKey: Map<Int, Int>)
+    @Query("UPDATE exams SET marksPerCorrect=:marksPerCorrect, marksPerWrong=:marksPerWrong WHERE id = :examId")
+    suspend fun updateMarkingScheme(examId: Int, marksPerCorrect: Float?, marksPerWrong: Float?)
 }

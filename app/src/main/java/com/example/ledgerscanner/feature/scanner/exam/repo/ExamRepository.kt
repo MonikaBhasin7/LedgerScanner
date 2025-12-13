@@ -25,7 +25,6 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         description: String?,
         template: Template,
         numberOfQuestions: Int,
-        saveInDb: Boolean
     ): ExamEntity {
         val now = System.currentTimeMillis()
         val exam = ExamEntity(
@@ -37,28 +36,40 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
             createdAt = now,
         )
 
-        return if (saveInDb) {
-            val rowId: Long = dao.insertExam(exam)
-            val newId = if (rowId >= 0L) rowId.toInt() else 0
-            exam.copy(id = newId)
-        } else {
-            exam
-        }
+        val rowId: Long = dao.insertExam(exam)
+        val newId = if (rowId >= 0L) rowId.toInt() else 0
+        return exam.copy(id = newId)
     }
 
     suspend fun saveAnswerKey(
         examEntity: ExamEntity,
         answerKeys: Map<Int, Int>,
-        saveInDb: Boolean
     ): ExamEntity {
         val updatedEntity = examEntity.copy(
             answerKey = answerKeys,
-            status = if (saveInDb) ExamStatus.DRAFT else examEntity.status
         )
 
-        if (saveInDb) {
-            dao.updateAnswerKey(examEntity.id, answerKeys)
-        }
+        dao.updateAnswerKey(examEntity.id, answerKeys)
+
+        return updatedEntity
+    }
+
+    suspend fun saveMarkingScheme(
+        examEntity: ExamEntity,
+        marksPerCorrect: Float,
+        marksPerWrong: Float,
+        negativeMarking: Boolean
+    ): ExamEntity {
+        val updatedEntity = examEntity.copy(
+            marksPerCorrect = marksPerCorrect,
+            marksPerWrong = if (negativeMarking) marksPerWrong else 0f
+        )
+
+        dao.updateMarkingScheme(
+            examEntity.id,
+            updatedEntity.marksPerCorrect,
+            updatedEntity.marksPerWrong
+        )
 
         return updatedEntity
     }

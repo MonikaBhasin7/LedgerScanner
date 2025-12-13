@@ -13,15 +13,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,13 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.components.GenericSwitch
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.AppTypography
-import com.example.ledgerscanner.base.ui.theme.Black
-import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey300
 import com.example.ledgerscanner.base.ui.theme.Grey500
@@ -54,8 +51,31 @@ fun MarkingDefaultsScreen(
     updateBottomBar: (BottomBarConfig) -> Unit
 ) {
     var marksPerCorrect by remember { mutableStateOf("1") }
-    var marksPerWrong by remember { mutableStateOf("-0.25") }
+    var marksPerWrong by remember { mutableStateOf("0.25") }
     var negativeMarking by remember { mutableStateOf(true) }
+
+    val isValid by remember {
+        derivedStateOf {
+            val marksPerCorrect = marksPerCorrect.toFloatOrNull()
+            val marksPerWrong = marksPerWrong.toFloatOrNull()
+            marksPerCorrect != null && marksPerCorrect > 0 && (marksPerWrong != null || !negativeMarking)
+        }
+    }
+
+    LaunchedEffect(isValid) {
+        updateBottomBar(
+            BottomBarConfig(
+                enabled = isValid,
+                onNext = {
+                    createExamViewModel.saveMarkingScheme(
+                        marksPerCorrect,
+                        marksPerWrong,
+                        negativeMarking
+                    )
+                }
+            )
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -124,29 +144,36 @@ fun MarkingDefaultsScreen(
                             marksPerWrong = it
                         }
                     },
-                    placeholder = "-0.25",
+                    placeholder = "0.25",
                     label = "Marks per wrong",
+                    enabled = negativeMarking,
                     labelStyle = AppTypography.body3Medium,
                     prefix = {
-                        Box(
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(White)
-                                .border(1.dp, Grey300, CircleShape)
-                                .genericClick {
-                                    val current = marksPerWrong.toFloatOrNull() ?: -0.25f
-                                    marksPerWrong = (current - 0.25f).toString()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Remove,
-                                contentDescription = "Decrement",
-                                tint = Grey600,
-                                modifier = Modifier.size(16.dp)
-                            )
+                        Row {
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(White)
+                                    .border(1.dp, Grey300, CircleShape)
+                                    .genericClick {
+                                        if (negativeMarking) {
+                                            val current = marksPerWrong.toFloatOrNull() ?: -0.25f
+                                            marksPerWrong = (current - 0.25f).toString()
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = "Decrement",
+                                    tint = Grey600,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            Text("-")
                         }
                     },
                     suffix = {
@@ -176,7 +203,7 @@ fun MarkingDefaultsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Grey100)
+                    .background(White)
                     .border(1.dp, Grey200, RoundedCornerShape(12.dp))
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -190,66 +217,11 @@ fun MarkingDefaultsScreen(
 
                 GenericSwitch(
                     checked = negativeMarking,
-                    onCheckedChange = { negativeMarking = it }
+                    onCheckedChange = {
+                        negativeMarking = it
+                    }
                 )
             }
         }
-    }
-}
-
-@Composable
-fun MarksInputField(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit,
-    isPositive: Boolean
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Grey100)
-            .border(1.dp, Grey200, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Increment/Decrement Button
-        IconButton(
-            onClick = if (isPositive) onIncrement else onDecrement,
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(White)
-                .border(1.dp, Grey300, CircleShape)
-        ) {
-            Icon(
-                imageVector = if (isPositive) Icons.Default.Add else Icons.Default.Remove,
-                contentDescription = null,
-                tint = Grey600,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        // Value Input
-        BasicTextField(
-            value = value.toString(),
-            onValueChange = {
-                it.toFloatOrNull()?.let { newValue -> onValueChange(newValue) }
-            },
-            textStyle = AppTypography.label2SemiBold.copy(
-                textAlign = TextAlign.Center,
-                color = Black
-            ),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.weight(1f)
-        )
-
-        Text(
-            text = "points",
-            style = AppTypography.body2Regular,
-            color = Grey500
-        )
     }
 }

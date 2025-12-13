@@ -1,6 +1,5 @@
 package com.example.ledgerscanner.feature.scanner.exam.viewmodel
 
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.OperationState
@@ -21,7 +20,7 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
     private val _examEntity = MutableStateFlow<ExamEntity?>(null)
     val examEntity: StateFlow<ExamEntity?> = _examEntity.asStateFlow()
     private val _perStepState: MutableStateFlow<Pair<ExamStep, OperationState>> =
-        MutableStateFlow(Pair(ExamStep.MARKING, OperationState.Idle))
+        MutableStateFlow(Pair(ExamStep.BASIC_INFO, OperationState.Idle))
     val perStepState: StateFlow<Pair<ExamStep, OperationState>> = _perStepState.asStateFlow()
 
     companion object {
@@ -56,7 +55,6 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
                         description,
                         template,
                         numberOfQuestions,
-                        saveInDb
                     )
                 changeOperationState(OperationState.Success)
             } catch (e: Exception) {
@@ -76,11 +74,41 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
                     examEntity = _examEntity.value
                         ?: throw IllegalStateException("Exam entity not found"),
                     answerKeys = answerKeyMap,
-                    saveInDb = saveInDb
                 )
                 changeOperationState(OperationState.Success)
             } catch (e: Exception) {
-                changeOperationState(OperationState.Error("Error saving basic info: ${e.message}"))
+                changeOperationState(OperationState.Error("Error saving answer key: ${e.message}"))
+            }
+        }
+    }
+
+    fun saveMarkingScheme(
+        marksPerCorrect: String,
+        marksPerWrong: String,
+        negativeMarking: Boolean
+    ) {
+        viewModelScope.launch {
+            try {
+                changeOperationState(OperationState.Loading)
+
+                val correctMarks = marksPerCorrect.toFloatOrNull()
+                val wrongMarks = marksPerWrong.toFloatOrNull()
+
+                if (correctMarks == null || wrongMarks == null) {
+                    changeOperationState(OperationState.Error("Invalid marks value"))
+                    return@launch
+                }
+
+                _examEntity.value = repository.saveMarkingScheme(
+                    examEntity = _examEntity.value
+                        ?: throw IllegalStateException("Exam entity not found"),
+                    marksPerCorrect = correctMarks,
+                    marksPerWrong = wrongMarks,
+                    negativeMarking = negativeMarking
+                )
+                changeOperationState(OperationState.Success)
+            } catch (e: Exception) {
+                changeOperationState(OperationState.Error("Error saving marking scheme: ${e.message}"))
             }
         }
     }

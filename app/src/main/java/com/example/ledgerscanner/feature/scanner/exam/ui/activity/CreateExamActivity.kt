@@ -78,13 +78,10 @@ class CreateExamActivity : ComponentActivity() {
                     GenericToolbar(title = "Create Exam", onBackClick = { finish() })
                 }, bottomBar = {
                     SaveAndNextBarWidget(
-                        onSaveDraft = {
-                            bottomBarConfig.onSaveDraft()
-                        },
+                        enabled = bottomBarConfig.enabled,
                         onNext = {
                             bottomBarConfig.onNext()
                         },
-                        enabled = bottomBarConfig.enabled
                     )
                 }) { innerPadding ->
                     Box {
@@ -104,13 +101,13 @@ class CreateExamActivity : ComponentActivity() {
 
                             NavHost(
                                 navController = navController,
-                                startDestination = ExamStep.MARKING.title
+                                startDestination = ExamStep.BASIC_INFO.title
                             ) {
                                 composable(ExamStep.BASIC_INFO.title) {
                                     BasicInfoScreen(
                                         navController = navController,
                                         createExamViewModel = createExamViewModel,
-                                        updateBottomBar = {it ->
+                                        updateBottomBar = { it ->
                                             bottomBarConfig = it
                                         },
                                         modifier = Modifier
@@ -121,7 +118,7 @@ class CreateExamActivity : ComponentActivity() {
                                     AnswerKeyScreen(
                                         navController = navController,
                                         createExamViewModel = createExamViewModel,
-                                        updateBottomBar = {it ->
+                                        updateBottomBar = { it ->
                                             bottomBarConfig = it
                                         },
                                         modifier = Modifier
@@ -131,7 +128,7 @@ class CreateExamActivity : ComponentActivity() {
                                 composable(ExamStep.MARKING.title) {
                                     MarkingDefaultsScreen(
                                         createExamViewModel = createExamViewModel,
-                                        updateBottomBar = {it ->
+                                        updateBottomBar = { it ->
                                             bottomBarConfig = it
                                         },
                                         modifier = Modifier

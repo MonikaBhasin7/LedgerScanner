@@ -77,12 +77,6 @@ fun AnswerKeyScreen(
                         saveInDb = false
                     )
                 },
-                onSaveDraft = {
-                    createExamViewModel.saveAnswerKey(
-                        answerKeys = answerKeys.toList() as List<Int>,
-                        saveInDb = true
-                    )
-                }
             )
         )
     }

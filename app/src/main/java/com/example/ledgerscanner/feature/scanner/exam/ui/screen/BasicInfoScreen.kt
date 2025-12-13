@@ -89,7 +89,6 @@ fun BasicInfoScreen(
             BottomBarConfig(
                 enabled = enabled,
                 onNext = { saveExam(false) },
-                onSaveDraft = { saveExam(true) }
             )
         )
     }
