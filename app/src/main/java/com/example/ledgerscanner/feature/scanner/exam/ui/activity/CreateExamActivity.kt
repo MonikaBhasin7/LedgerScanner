@@ -68,6 +68,10 @@ class CreateExamActivity : ComponentActivity() {
                     }
 
                     OperationState.Success -> {
+                        if (perStepState.first == ExamStep.REVIEW) {
+                            finish()
+                            return@LaunchedEffect
+                        }
                         navController.navigate(perStepState.first.next().title)
                         createExamViewModel.moveToNextStepWithIdleState()
                     }
