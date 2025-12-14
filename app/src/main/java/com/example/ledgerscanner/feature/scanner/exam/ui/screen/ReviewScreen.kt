@@ -23,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue500
@@ -50,7 +49,7 @@ fun ReviewScreen(
         updateBottomBar(
             BottomBarConfig(
                 enabled = true,
-                buttonText = "Create Exam",  // Final step button text
+                buttonText = "Save & Publish",
                 onNext = {
                     createExamViewModel.finalizeExam()
                 }

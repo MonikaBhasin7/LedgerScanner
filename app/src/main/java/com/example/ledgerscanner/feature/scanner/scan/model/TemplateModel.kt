@@ -6,7 +6,7 @@ import com.example.ledgerscanner.base.errors.OmrTemplateErrors
 import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.utils.AssetUtils
 import com.google.gson.JsonSyntaxException
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 import org.opencv.core.Point
 import java.io.FileNotFoundException
 import kotlin.math.roundToInt

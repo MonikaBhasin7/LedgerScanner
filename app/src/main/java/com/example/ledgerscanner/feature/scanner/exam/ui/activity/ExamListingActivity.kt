@@ -74,11 +74,11 @@ import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
-import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -189,7 +189,6 @@ class ExamListingActivity : ComponentActivity() {
 
                             SearchBar()
 
-                            // Disable chips while loading
                             val isLoading = examListResponse is UiState.Loading
                             FilterChips(disableClicking = isLoading) { selectedFilter ->
                                 examFilter = selectedFilter
@@ -205,7 +204,7 @@ class ExamListingActivity : ComponentActivity() {
 
     @Composable
     private fun ExamList(examFilter: ExamStatus?, examListResponse: UiState<List<ExamEntity>>) {
-        // load whenever filter changes
+        val context = LocalContext.current
         LaunchedEffect(examFilter) {
             examListViewModel.getExamList(examFilter)
         }
@@ -239,6 +238,9 @@ class ExamListingActivity : ComponentActivity() {
                 ) {
                     itemsIndexed(items, key = { _, item -> item.id }) { _, item ->
                         ExamCardRow(item = item) {
+                            startActivity(Intent(context, CreateExamActivity::class.java).apply {
+                                putExtra(CreateExamActivity.EXAM_ENTITY, item)
+                            })
                         }
                     }
                 }
@@ -431,7 +433,6 @@ class ExamListingActivity : ComponentActivity() {
         ) {
             Text(text = message ?: "Something went wrong")
             Spacer(modifier = Modifier.Companion.height(12.dp))
-            // simple retry text button
             Text(
                 text = "Retry",
                 modifier = Modifier.Companion.clickable { onRetry() },

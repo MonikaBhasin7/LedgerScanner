@@ -57,7 +57,7 @@ fun TemplatePickerDialog(
                                 .replace(
                                     "_",
                                     " "
-                                )                 // replace underscores with spaces
+                                )
                                 .replaceFirstChar { it.uppercase() },
                             modifier = Modifier.padding(start = 8.dp)
                         )

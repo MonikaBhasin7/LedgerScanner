@@ -30,6 +30,7 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         val exam = ExamEntity(
             id = 0,
             examName = examName,
+            description= description,
             status = ExamStatus.DRAFT,
             totalQuestions = numberOfQuestions,
             template = template,

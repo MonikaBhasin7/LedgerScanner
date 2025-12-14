@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.base.ui.components.GenericDialog
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.Grey500
@@ -50,10 +52,23 @@ fun BasicInfoScreen(
     var showSelectTemplate by rememberSaveable { mutableStateOf(false) }
     var selectedTemplate by rememberSaveable { mutableStateOf<Template?>(null) }
     val selectedTemplateName = selectedTemplate?.name ?: ""
+    var autofill by remember { mutableStateOf(false) }
+
+    val examEntity by createExamViewModel.examEntity.collectAsState()
+
+    LaunchedEffect(Unit) {
+        examEntity?.let {
+            autofill = true
+            examName = it.examName
+            examDescription = it.description ?: ""
+            numberOfQuestionsText = it.totalQuestions.toString()
+            selectedTemplate = it.template
+        }
+    }
 
     // When a template is selected, clear numberOfQuestionsText so user re-enters
     LaunchedEffect(selectedTemplate) {
-        if (selectedTemplate != null) {
+        if (selectedTemplate != null && !autofill) {
             numberOfQuestionsText = ""
         }
     }
@@ -72,21 +87,36 @@ fun BasicInfoScreen(
         }
     }
 
-    val saveExam: (Boolean) -> Unit = { saveInDb ->
-        createExamViewModel.saveBasicInfo(
-            examName = examName,
-            description = examDescription,
-            template = selectedTemplate!!,
-            numberOfQuestions = numberOfQuestions!!,
-            saveInDb = saveInDb,
-        )
-    }
 
     LaunchedEffect(enabled) {
         updateBottomBar(
             BottomBarConfig(
                 enabled = enabled,
-                onNext = { saveExam(false) },
+                onNext = {
+                    if (autofill && examEntity != null) {
+                        if (examEntity?.examName != examName
+                            || examEntity?.description != examDescription
+                            || examEntity?.template != selectedTemplate
+                            || examEntity?.totalQuestions != numberOfQuestions
+                        ) {
+                            createExamViewModel.saveBasicInfo(
+                                examName = examName,
+                                description = examDescription,
+                                template = selectedTemplate!!,
+                                numberOfQuestions = numberOfQuestions!!,
+                            )
+                        } else {
+                            createExamViewModel.changeOperationState(OperationState.Success)
+                        }
+                    } else {
+                        createExamViewModel.saveBasicInfo(
+                            examName = examName,
+                            description = examDescription,
+                            template = selectedTemplate!!,
+                            numberOfQuestions = numberOfQuestions!!,
+                        )
+                    }
+                },
             )
         )
     }

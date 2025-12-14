@@ -32,7 +32,7 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
         _perStepState.value = step to state
     }
 
-    private fun changeOperationState(state: OperationState) {
+    fun changeOperationState(state: OperationState) {
         _perStepState.value = _perStepState.value.first to state
     }
 
@@ -40,12 +40,15 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
         updateStepState(_perStepState.value.first.next(), OperationState.Idle)
     }
 
+    fun setExamEntity(examEntity: ExamEntity) {
+        _examEntity.value = examEntity
+    }
+
     fun saveBasicInfo(
         examName: String,
         description: String?,
         template: Template,
-        numberOfQuestions: Int,
-        saveInDb: Boolean
+        numberOfQuestions: Int
     ) {
         viewModelScope.launch {
             try {

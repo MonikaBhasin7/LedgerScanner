@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.exam.ui.activity
 
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -29,6 +30,7 @@ import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.base.ui.components.GenericRectangularLoader
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
+import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.SaveAndNextBarWidget
@@ -44,9 +46,22 @@ import dagger.hilt.android.AndroidEntryPoint
 class CreateExamActivity : ComponentActivity() {
     private val createExamViewModel: CreateExamViewModel by viewModels()
 
+    companion object {
+        const val EXAM_ENTITY = "exam_entity"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val examEntity = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXAM_ENTITY, ExamEntity::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(EXAM_ENTITY)
+        }
+
+        examEntity?.let { createExamViewModel.setExamEntity(it) }
 
         setContent {
             val context = LocalContext.current
