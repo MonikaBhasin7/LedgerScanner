@@ -35,6 +35,9 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ReviewScreen(
@@ -124,10 +127,46 @@ private fun ExamSummaryCard(
 
         SummaryDivider()
 
+        // Description
+        if (!exam.description.isNullOrBlank()) {
+            SummaryRow(
+                label = "Description",
+                value = exam.description,
+                onEdit = onEditBasicInfo
+            )
+            SummaryDivider()
+        }
+
+        // Template
+        SummaryRow(
+            label = "Answer sheet template",
+            value = "${exam.template.getTotalQuestions()} Questions Sheet",
+            onEdit = onEditBasicInfo
+        )
+
+        SummaryDivider()
+
         // Total Questions
         SummaryRow(
             label = "Total questions",
             value = exam.totalQuestions.toString(),
+            onEdit = onEditBasicInfo
+        )
+
+        SummaryDivider()
+
+        // Answer Key Status
+        val answerKeyStatus = if (exam.answerKey != null && exam.answerKey.size == exam.totalQuestions) {
+            "Configured for all ${exam.totalQuestions} questions"
+        } else if (exam.answerKey != null) {
+            "Configured for ${exam.answerKey.size} of ${exam.totalQuestions} questions"
+        } else {
+            "Not configured"
+        }
+
+        SummaryRow(
+            label = "Answer key",
+            value = answerKeyStatus,
             onEdit = onEditAnswerKey
         )
 
@@ -143,6 +182,29 @@ private fun ExamSummaryCard(
             value = markingText,
             onEdit = onEditMarking
         )
+
+        SummaryDivider()
+
+        // Created Date (no edit button)
+        val dateFormat = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
+        val createdDate = dateFormat.format(Date(exam.createdAt))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Text(
+                text = "Created on",
+                style = AppTypography.body3Regular,
+                color = Grey500
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = createdDate,
+                style = AppTypography.body1Medium
+            )
+        }
     }
 }
 
@@ -237,19 +299,21 @@ private fun buildMarkingSchemeText(
     val correct = marksPerCorrect ?: 0f
     val wrong = marksPerWrong ?: 0f
 
-    val correctText = if (correct == correct.toInt().toFloat()) {
+    val correctText = if (correct % 1 == 0f) {
         "+${correct.toInt()}"
     } else {
         "+$correct"
     }
 
-    val wrongText = if (wrong == wrong.toInt().toFloat()) {
+    val wrongText = if (wrong % 1 == 0f) {
         wrong.toInt().toString()
     } else {
         wrong.toString()
     }
 
-    val negativeMarkingStatus = if (wrong < 0f) "on" else "off"
-
-    return "$correctText correct, $wrongText wrong (negative marking $negativeMarkingStatus)"
+    return if (wrong > 0f) {
+        "Correct: $correctText | Wrong: -$wrongText"
+    } else {
+        "Correct: $correctText"
+    }
 }

@@ -28,7 +28,7 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
         const val TAG = "CreateExamViewModel"
     }
 
-    private fun updateStepState(step: ExamStep, state: OperationState) {
+    fun updateStepState(step: ExamStep, state: OperationState) {
         _perStepState.value = step to state
     }
 

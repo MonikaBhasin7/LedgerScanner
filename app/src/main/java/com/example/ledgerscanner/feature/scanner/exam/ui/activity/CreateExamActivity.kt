@@ -163,6 +163,10 @@ class CreateExamActivity : ComponentActivity() {
                                         },
                                         onEditStep = { step ->
                                             navController.navigate(step.title) {
+                                                createExamViewModel.updateStepState(
+                                                    step,
+                                                    OperationState.Idle
+                                                )
                                                 popUpTo(step.title) { inclusive = true }
                                             }
                                         },

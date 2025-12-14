@@ -184,8 +184,8 @@ fun MarkingDefaultsScreen(
                                     .border(1.dp, Grey300, CircleShape)
                                     .genericClick {
                                         if (negativeMarking) {
-                                            val current = marksPerWrong.toFloatOrNull() ?: -0.25f
-                                            marksPerWrong = (current - 0.25f).toString()
+                                            val current = marksPerWrong.toFloatOrNull() ?: 0.25f
+                                            marksPerWrong = (current + 0.25f).toString()
                                         }
                                     },
                                 contentAlignment = Alignment.Center
