@@ -137,7 +137,6 @@ class CreateExamActivity : ComponentActivity() {
 
                                 composable(ExamStep.ANSWER_KEY.title) {
                                     AnswerKeyScreen(
-                                        navController = navController,
                                         createExamViewModel = createExamViewModel,
                                         updateBottomBar = { it ->
                                             bottomBarConfig = it

@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
+import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Green500
@@ -50,7 +50,6 @@ private const val OPTION_D = 4
 
 @Composable
 fun AnswerKeyScreen(
-    navController: NavHostController,
     createExamViewModel: CreateExamViewModel,
     modifier: Modifier = Modifier,
     updateBottomBar: (BottomBarConfig) -> Unit
@@ -60,6 +59,18 @@ fun AnswerKeyScreen(
     val questionCount = examEntity?.totalQuestions ?: 0
     val answerKeys = remember {
         MutableList<Int?>(questionCount) { null }.toMutableStateList()
+    }
+
+    LaunchedEffect(Unit) {
+        examEntity?.answerKey?.let { ak ->
+            if (ak.isNotEmpty()) {
+                ak.forEach { (key, value) ->
+                    if (key > 0 && key <= answerKeys.size) {
+                        answerKeys[key - 1] = value
+                    }
+                }
+            }
+        }
     }
 
     val allAnswered by remember {
@@ -73,10 +84,18 @@ fun AnswerKeyScreen(
             BottomBarConfig(
                 enabled = allAnswered,
                 onNext = {
-                    createExamViewModel.saveAnswerKey(
-                        answerKeys = answerKeys.toList() as List<Int>,
-                        saveInDb = false
-                    )
+                    val hasChanges = answerKeys.indices.any { index ->
+                        answerKeys[index] != examEntity?.answerKey?.get(index + 1)
+                    }
+
+                    if (hasChanges) {
+                        createExamViewModel.saveAnswerKey(
+                            answerKeys = answerKeys.toList() as List<Int>,
+                            saveInDb = false
+                        )
+                    } else {
+                        createExamViewModel.changeOperationState(OperationState.Success)
+                    }
                 },
             )
         )
