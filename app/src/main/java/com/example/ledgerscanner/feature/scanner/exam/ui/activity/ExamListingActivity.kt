@@ -33,14 +33,11 @@ import androidx.compose.material.icons.filled.Addchart
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.network.OperationResult
@@ -61,6 +57,7 @@ import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
+import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
@@ -68,7 +65,6 @@ import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
-import com.example.ledgerscanner.base.ui.theme.Grey50
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
@@ -80,10 +76,18 @@ import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
 import dagger.hilt.android.AndroidEntryPoint
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @AndroidEntryPoint
 class ExamListingActivity : ComponentActivity() {
+
     private val examListViewModel: ExamListViewModel by viewModels()
+
+    companion object {
+        private const val EXTRA_TEMPLATE = "template"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,140 +95,135 @@ class ExamListingActivity : ComponentActivity() {
 
         setContent {
             LedgerScannerTheme {
-                Scaffold(
-                    containerColor = White,
-                    topBar = {
-                        GenericToolbar(title = "Exams")
-                    },
-                    floatingActionButton = {
-                        val context = LocalContext.current
-                        var showTemplatePicker by remember { mutableStateOf(false) }
-                        Column {
-                            GenericButton(
-                                text = "Create Exam",
-                                icon = Icons.Default.Addchart,
-                                modifier = Modifier.Companion
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .fillMaxWidth(),
-                                onClick = {
-                                    startActivity(
-                                        Intent(
-                                            context,
-                                            CreateExamActivity::class.java
-                                        )
-                                    )
-                                }
-                            )
-
-                            if (showTemplatePicker) {
-                                TemplatePickerDialog(
-                                    onDismiss = { showTemplatePicker = false },
-                                    onSelect = { assetFile ->
-                                        showTemplatePicker = false
-                                        Template.Companion.loadOmrTemplateSafe(
-                                            context,
-                                            assetFile
-                                        ).let {
-                                            when (it) {
-                                                is OperationResult.Error -> Toast.makeText(
-                                                    context, it.message,
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-
-                                                is OperationResult.Success -> {
-                                                    context.startActivity(
-                                                        Intent(
-                                                            context,
-                                                            ScanOmrWithCameraActivity::class.java
-                                                        ).apply {
-                                                            putExtra(
-                                                                "template", it.data
-                                                            )
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                )
-                            }
-
-                            GenericButton(
-                                text = "Select Exam",
-                                icon = Icons.Default.Add,
-                                modifier = Modifier.Companion
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .fillMaxWidth(),
-                                onClick = {
-                                    showTemplatePicker = true
-                                }
-                            )
-
-                            GenericButton(
-                                text = "Create Template",
-                                icon = Icons.Default.Addchart,
-                                modifier = Modifier.Companion
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .fillMaxWidth(),
-                                onClick = {
-                                    startActivity(
-                                        Intent(
-                                            context,
-                                            CreateTemplateActivity::class.java
-                                        )
-                                    )
-                                }
-                            )
-                        }
-                    },
-                    floatingActionButtonPosition = FabPosition.Companion.Center,
-                    content = { innerPadding ->
-                        Column(
-                            modifier = Modifier.Companion
-                                .fillMaxSize()
-                                .padding(innerPadding)
-                        ) {
-                            var examFilter by remember { mutableStateOf<ExamStatus?>(null) }
-                            val examListResponse by examListViewModel.examList.collectAsState()
-
-                            SearchBar()
-
-                            val isLoading = examListResponse is UiState.Loading
-                            FilterChips(disableClicking = isLoading) { selectedFilter ->
-                                examFilter = selectedFilter
-                            }
-
-                            ExamList(examFilter, examListResponse)
-                        }
-                    }
-                )
+                ExamListingScreen(examListViewModel)
             }
         }
     }
 
     @Composable
-    private fun ExamList(examFilter: ExamStatus?, examListResponse: UiState<List<ExamEntity>>) {
+    private fun ExamListingScreen(viewModel: ExamListViewModel) {
         val context = LocalContext.current
+        var showTemplatePicker by remember { mutableStateOf(false) }
+        var examFilter by remember { mutableStateOf<ExamStatus?>(null) }
+        val examListResponse by viewModel.examList.collectAsState()
+
+        Scaffold(
+            containerColor = White,
+            topBar = {
+                GenericToolbar(title = "Exams")
+            },
+            bottomBar = {
+                BottomActionBar(
+                    onCreateExam = {
+                        startActivity(Intent(context, CreateExamActivity::class.java))
+                    },
+                    onCreateTemplate = {
+                        startActivity(Intent(context, CreateTemplateActivity::class.java))
+                    },
+                    onSelectExam = {
+                        showTemplatePicker = true
+                    }
+                )
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                SearchBar()
+
+                val isLoading = examListResponse is UiState.Loading
+                FilterChips(
+                    disableClicking = isLoading,
+                    onSelect = { selectedFilter ->
+                        examFilter = selectedFilter
+                    }
+                )
+
+                ExamList(
+                    examFilter = examFilter,
+                    examListResponse = examListResponse,
+                    onExamClick = { exam ->
+                        startActivity(
+                            Intent(context, CreateExamActivity::class.java).apply {
+                                putExtra(CreateExamActivity.EXAM_ENTITY, exam)
+                            }
+                        )
+                    }
+                )
+            }
+        }
+
+        if (showTemplatePicker) {
+            TemplatePickerDialog(
+                onDismiss = { showTemplatePicker = false },
+                onSelect = { assetFile ->
+                    showTemplatePicker = false
+                    handleTemplateSelection(assetFile)
+                }
+            )
+        }
+    }
+
+    @Composable
+    private fun BottomActionBar(
+        onCreateExam: () -> Unit,
+        onCreateTemplate: () -> Unit,
+        onSelectExam: () -> Unit
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            GenericButton(
+                text = "Create Exam",
+                icon = Icons.Default.Addchart,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onCreateExam
+            )
+
+            GenericButton(
+                text = "Create Template",
+                icon = Icons.Default.Addchart,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onCreateTemplate
+            )
+
+            GenericButton(
+                text = "Select Exam",
+                icon = Icons.Default.Add,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onSelectExam
+            )
+        }
+    }
+
+    @Composable
+    private fun ExamList(
+        examFilter: ExamStatus?,
+        examListResponse: UiState<List<ExamEntity>>,
+        onExamClick: (ExamEntity) -> Unit
+    ) {
         LaunchedEffect(examFilter) {
             examListViewModel.getExamList(examFilter)
         }
 
-        val state = examListResponse
-
-        when (state) {
+        when (examListResponse) {
             is UiState.Loading -> {
                 GenericLoader()
             }
 
             is UiState.Error -> {
                 ErrorScreen(
-                    message = (state as UiState.Error).message,
+                    message = examListResponse.message,
                     onRetry = { examListViewModel.getExamList(examFilter) }
                 )
             }
 
-            is UiState.Success<*> -> {
-                val items = (state as UiState.Success<List<ExamEntity>>).data ?: emptyList()
+            is UiState.Success -> {
+                val items = examListResponse.data ?: emptyList()
 
                 if (items.isEmpty()) {
                     GenericEmptyState(text = "No exams found")
@@ -232,16 +231,18 @@ class ExamListingActivity : ComponentActivity() {
                 }
 
                 LazyColumn(
-                    modifier = Modifier.Companion.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(items, key = { _, item -> item.id }) { _, item ->
-                        ExamCardRow(item = item) {
-                            startActivity(Intent(context, CreateExamActivity::class.java).apply {
-                                putExtra(CreateExamActivity.EXAM_ENTITY, item)
-                            })
-                        }
+                    itemsIndexed(
+                        items = items,
+                        key = { _, item -> item.id }
+                    ) { _, item ->
+                        ExamCardRow(
+                            item = item,
+                            onClick = { onExamClick(item) }
+                        )
                     }
                 }
             }
@@ -249,128 +250,182 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ExamCardRow(item: ExamEntity, onClick: (() -> Unit)? = null) {
+    private fun ExamCardRow(
+        item: ExamEntity,
+        onClick: () -> Unit
+    ) {
         Box(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
                 .border(
                     width = 1.dp,
                     color = Grey200,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp)
                 )
-                .background(
-                    color = Grey100,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                )
-                .then(if (onClick != null) Modifier.Companion.clickable { onClick() } else Modifier.Companion)
+                .background(Grey100)
+                .clickable { onClick() }
                 .padding(13.dp)
         ) {
-            Row(modifier = Modifier.Companion.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier.Companion
-                        .size(40.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
-                        .background(Blue100),
-                    contentAlignment = Alignment.Companion.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.DateRange,
-                        contentDescription = "Exam Icon",
-                        tint = Blue500,
-                        modifier = Modifier.Companion.size(22.dp)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                ExamIcon()
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    ExamHeader(
+                        examName = item.examName,
+                        status = item.status
                     )
-                }
 
-                Spacer(modifier = Modifier.Companion.width(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                Column(modifier = Modifier.Companion.weight(1f)) {
-                    Row(
-                        modifier = Modifier.Companion.fillMaxWidth(),
-                        verticalAlignment = Alignment.Companion.CenterVertically
-                    ) {
-                        Text(
-                            text = item.examName ?: "",
-                            color = Black,
-                            style = AppTypography.body1Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Companion.Ellipsis,
-                            modifier = Modifier.Companion.weight(1f)
+                    ExamMetadata(
+                        totalQuestions = item.totalQuestions,
+                        createdAt = item.createdAt,
+                        sheetsCount = item.sheetsCount,
+                        status = item.status
+                    )
+
+                    // Only show stats if they exist (typically for ACTIVE/COMPLETED exams)
+                    if (hasStats(item)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ExamStats(
+                            avgScore = item.avgScorePercent,
+                            topScore = item.topScorePercent,
+                            medianScore = item.medianScorePercent
                         )
-
-                        Spacer(modifier = Modifier.Companion.width(8.dp))
-
-                        StatusBadge(status = item.status)
                     }
-
-                    Spacer(modifier = Modifier.Companion.height(8.dp))
-
-                    Text(
-                        text = "${item.totalQuestions} questions \u2022 Created ${item.createdAt} \u2022 Sheets: ${item.sheetsCount}",
-                        color = Grey500,
-                        maxLines = 1,
-                        overflow = TextOverflow.Companion.Ellipsis,
-                        style = AppTypography.body3Regular
-                    )
-
-                    Spacer(modifier = Modifier.Companion.height(8.dp))
-
-                    Text(
-                        text = "Avg ${item.avgScorePercent}% \u2022 Top ${item.topScorePercent}% \u2022 Median ${item.medianScorePercent}%",
-                        color = Grey500,
-                        style = AppTypography.body4Medium
-                    )
                 }
             }
         }
     }
 
     @Composable
-    private fun StatusBadge(status: ExamStatus?) {
-        if (status == null) {
-            return Spacer(modifier = Modifier.Companion.width(0.dp))
-        }
-//        val (bg, textColor) = when (status) {
-//            ExamStatus.Processing -> Pair(Grey100, Blue500)
-//            ExamStatus.Completed -> Pair(Grey100, /* green text - define in Color.kt if needed */ Blue500)
-//            ExamStatus.Draft -> Pair(Grey100, Grey500)
-//        }
-
+    private fun ExamIcon() {
         Box(
-            modifier = Modifier.Companion
-                .height(28.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                .background(Grey200)
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.Companion.Center
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Blue100),
+            contentAlignment = Alignment.Center
         ) {
-            Text(text = status.name, color = Grey500, style = AppTypography.label4Medium)
+            Icon(
+                imageVector = Icons.Outlined.DateRange,
+                contentDescription = "Exam Icon",
+                tint = Blue500,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 
     @Composable
-    private fun FilterChips(disableClicking: Boolean, onSelect: (ExamStatus?) -> Unit) {
-        val filters: MutableList<ExamStatus?> = ExamStatus.entries.toMutableList()
-        filters.add(0, null) // null represents "All"
+    private fun ExamHeader(
+        examName: String,
+        status: ExamStatus
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = examName,
+                color = Black,
+                style = AppTypography.body1Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            StatusBadge(status = status)
+        }
+    }
+
+    @Composable
+    private fun ExamMetadata(
+        totalQuestions: Int,
+        createdAt: Long,
+        sheetsCount: Int?,
+        status: ExamStatus
+    ) {
+        val formattedDate = formatTimestamp(createdAt)
+        val sheetsText = when {
+            status == ExamStatus.DRAFT -> "" // Don't show for drafts
+            sheetsCount != null && sheetsCount > 0 -> "$sheetsCount scanned"
+            else -> "No submissions"
+        }
+
+        Text(
+            text = "$totalQuestions questions • Created $formattedDate\nSheets: $sheetsText",
+            color = Grey500,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            style = AppTypography.body3Regular
+        )
+    }
+
+    @Composable
+    private fun ExamStats(
+        avgScore: Int?,
+        topScore: Int?,
+        medianScore: Int?
+    ) {
+        Text(
+            text = "Avg ${avgScore ?: 0}% • Top ${topScore ?: 0}% • Median ${medianScore ?: 0}%",
+            color = Grey500,
+            style = AppTypography.body4Medium
+        )
+    }
+
+    @Composable
+    private fun StatusBadge(status: ExamStatus) {
+        Box(
+            modifier = Modifier
+                .height(28.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Grey200)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = status.name,
+                color = Grey500,
+                style = AppTypography.label4Medium
+            )
+        }
+    }
+
+    @Composable
+    private fun FilterChips(
+        disableClicking: Boolean,
+        onSelect: (ExamStatus?) -> Unit
+    ) {
+        val filters = buildList {
+            add(null) // "All" option
+            addAll(ExamStatus.entries)
+        }
         var selectedIndex by remember { mutableIntStateOf(0) }
 
         Row(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .padding(start = 12.dp, top = 12.dp, end = 16.dp)
                 .fillMaxWidth()
         ) {
-            for ((i, filter) in filters.withIndex()) {
+            filters.forEachIndexed { index, filter ->
                 FilterChip(
-                    selected = (selectedIndex == i),
+                    selected = selectedIndex == index,
                     onClick = {
-                        if (!disableClicking && selectedIndex != i) {
-                            selectedIndex = i
-                            onSelect(filters[selectedIndex])
+                        if (!disableClicking && selectedIndex != index) {
+                            selectedIndex = index
+                            onSelect(filter)
                         }
                     },
                     label = {
                         Text(
-                            filter?.name ?: "All", style = AppTypography.label3Medium
+                            text = filter?.name ?: "All",
+                            style = AppTypography.label3Medium
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
@@ -379,9 +434,9 @@ class ExamListingActivity : ComponentActivity() {
                         labelColor = Blue500,
                         selectedLabelColor = White,
                     ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(24.dp),
                     border = null,
-                    modifier = Modifier.Companion.padding(end = 8.dp),
+                    modifier = Modifier.padding(end = 8.dp),
                 )
             }
         }
@@ -389,55 +444,86 @@ class ExamListingActivity : ComponentActivity() {
 
     @Composable
     private fun SearchBar() {
-        var text by remember { mutableStateOf(TextFieldValue("")) }
+        var searchText by remember { mutableStateOf("") }
 
-        OutlinedTextField(
-            value = text,
-            textStyle = AppTypography.body3Regular,
-            onValueChange = { text = it },
-            placeholder = { Text("Search by exam name") },
-            leadingIcon = {
-                Icon(Icons.Outlined.Search, contentDescription = "Search Icon")
+        GenericTextField(
+            value = searchText,
+            placeholder = "Search by exam name",
+            onValueChange = { searchText = it },
+            prefix = {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = "Search Icon",
+                    tint = Grey500
+                )
             },
-            trailingIcon = {
-                if (text.text.isNotEmpty())
-                    Icon(Icons.Filled.ArrowForward, contentDescription = null)
+            suffix = {
+                if (searchText.isNotEmpty()) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Grey500
+                    )
+                }
             },
-            modifier = Modifier.Companion
-                .padding(horizontal = 16.dp)
-                .fillMaxWidth(),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-            colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Grey50,
-                focusedContainerColor = White,
-                focusedLeadingIconColor = Grey500,
-                unfocusedLeadingIconColor = Grey500,
-                focusedIndicatorColor = Grey200,
-                unfocusedIndicatorColor = Grey200,
-                focusedTrailingIconColor = Grey500,
-                unfocusedTrailingIconColor = Grey500,
-                focusedPlaceholderColor = Grey500,
-                unfocusedPlaceholderColor = Grey500
-            )
+            modifier = Modifier
+                .fillMaxWidth().padding(horizontal = 8.dp)
         )
     }
 
     @Composable
-    private fun ErrorScreen(message: String?, onRetry: () -> Unit) {
+    private fun ErrorScreen(
+        message: String?,
+        onRetry: () -> Unit
+    ) {
         Column(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Companion.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = message ?: "Something went wrong")
-            Spacer(modifier = Modifier.Companion.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Retry",
-                modifier = Modifier.Companion.clickable { onRetry() },
-                style = AppTypography.body2Medium
+                modifier = Modifier.clickable { onRetry() },
+                style = AppTypography.body2Medium,
+                color = Blue500
             )
         }
+    }
+
+    private fun handleTemplateSelection(assetFile: String) {
+        Template.loadOmrTemplateSafe(this, assetFile).let { result ->
+            when (result) {
+                is OperationResult.Error -> {
+                    Toast.makeText(
+                        this,
+                        result.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                is OperationResult.Success -> {
+                    startActivity(
+                        Intent(this, ScanOmrWithCameraActivity::class.java).apply {
+                            putExtra(EXTRA_TEMPLATE, result.data)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun formatTimestamp(timestamp: Long): String {
+        val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        return sdf.format(Date(timestamp))
+    }
+
+    private fun hasStats(exam: ExamEntity): Boolean {
+        return exam.avgScorePercent != null ||
+                exam.topScorePercent != null ||
+                exam.medianScorePercent != null
     }
 }
