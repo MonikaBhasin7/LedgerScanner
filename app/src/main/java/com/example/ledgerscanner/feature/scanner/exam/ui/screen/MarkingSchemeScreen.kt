@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.base.ui.components.GenericSwitch
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.AppTypography
@@ -53,6 +55,7 @@ fun MarkingDefaultsScreen(
     var marksPerCorrect by remember { mutableStateOf("1") }
     var marksPerWrong by remember { mutableStateOf("0.25") }
     var negativeMarking by remember { mutableStateOf(true) }
+    val examEntity by createExamViewModel.examEntity.collectAsState()
 
     val isValid by remember {
         derivedStateOf {
@@ -62,16 +65,38 @@ fun MarkingDefaultsScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        examEntity?.let {
+            if (it.marksPerCorrect != null) {
+                marksPerCorrect = it.marksPerCorrect.toString()
+            }
+            if (it.marksPerWrong != null) {
+                marksPerWrong = it.marksPerWrong.toString()
+                if (it.marksPerWrong > 0) {
+                    negativeMarking = true
+                } else {
+                    negativeMarking = false
+                }
+            }
+        }
+    }
+
     LaunchedEffect(isValid, marksPerCorrect, marksPerWrong, negativeMarking) {
         updateBottomBar(
             BottomBarConfig(
                 enabled = isValid,
                 onNext = {
-                    createExamViewModel.saveMarkingScheme(
-                        marksPerCorrect,
-                        marksPerWrong,
-                        negativeMarking
-                    )
+                    if (examEntity?.marksPerWrong.toString() != marksPerWrong
+                        || examEntity?.marksPerCorrect.toString() != marksPerCorrect
+                    ) {
+                        createExamViewModel.saveMarkingScheme(
+                            marksPerCorrect,
+                            marksPerWrong,
+                            negativeMarking
+                        )
+                    } else {
+                        createExamViewModel.changeOperationState(OperationState.Success)
+                    }
                 }
             )
         )
@@ -139,8 +164,8 @@ fun MarkingDefaultsScreen(
                 GenericTextField(
                     value = marksPerWrong,
                     onValueChange = {
-                        // Allow negative numbers and decimal point
-                        if (it.isEmpty() || it.matches(Regex("^-?\\d*\\.?\\d*$"))) {
+                        // Allow only positive numbers and decimal point
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
                             marksPerWrong = it
                         }
                     },
