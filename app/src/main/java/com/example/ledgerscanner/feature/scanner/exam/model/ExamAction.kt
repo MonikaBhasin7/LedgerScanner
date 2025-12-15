@@ -1,0 +1,28 @@
+package com.example.ledgerscanner.feature.scanner.exam.model
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.ui.graphics.vector.ImageVector
+
+sealed class ExamAction(
+    val label: String,
+    val icon: ImageVector,
+    val isDangerous: Boolean = false
+) {
+    data object ContinueSetup : ExamAction("Continue Setup", Icons.Default.Edit)
+    data object ScanSheets : ExamAction("Scan Sheets", Icons.Default.PhotoCamera)
+    data object ViewResults : ExamAction("View Results", Icons.Default.BarChart)
+    data object MarkCompleted : ExamAction("Mark as Completed", Icons.Default.CheckCircle)
+    data object EditExam : ExamAction("Edit Exam", Icons.Default.Edit)
+    data object Duplicate : ExamAction("Duplicate", Icons.Default.ContentCopy)
+    data object ExportResults : ExamAction("Export Results", Icons.Default.FileDownload)
+    data object Archive : ExamAction("Archive", Icons.Default.Archive)
+    data object Delete : ExamAction("Delete", Icons.Default.Delete, isDangerous = true)
+}

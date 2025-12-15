@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -66,6 +67,40 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
             } catch (e: Exception) {
                 _examList.value = UiState.Error(e.message ?: "Unknown error")
             }
+        }
+    }
+
+    fun getExamActionForStatus(
+        status: ExamStatus,
+        hasScannedSheets: Boolean = false
+    ): List<ExamAction> {
+        return when (status) {
+            ExamStatus.DRAFT -> listOf(
+                ExamAction.ContinueSetup,
+                ExamAction.Duplicate,
+                ExamAction.Delete
+            )
+
+            ExamStatus.ACTIVE -> buildList {
+                add(ExamAction.ScanSheets)
+                if (hasScannedSheets) {
+                    add(ExamAction.ViewResults)
+                }
+                add(ExamAction.MarkCompleted)
+                add(ExamAction.EditExam)
+                add(ExamAction.Duplicate)
+                add(ExamAction.Delete)
+            }
+
+            ExamStatus.COMPLETED -> listOf(
+                ExamAction.ViewResults,
+                ExamAction.ExportResults,
+                ExamAction.Duplicate,
+                ExamAction.Archive,
+                ExamAction.Delete
+            )
+
+            ExamStatus.ARCHIVED -> TODO()
         }
     }
 }

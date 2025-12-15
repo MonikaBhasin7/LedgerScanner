@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.exam.ui.activity
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -30,11 +31,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Addchart
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -68,7 +71,9 @@ import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionsPopup
 import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
@@ -164,6 +169,9 @@ class ExamListingActivity : ComponentActivity() {
                     },
                     onRetry = {
                         examListViewModel.getExamList(examFilter)
+                    },
+                    onActionClick = { examEntity, examAction ->
+                        handleExamAction(context, examEntity, examAction)
                     }
                 )
             }
@@ -180,11 +188,63 @@ class ExamListingActivity : ComponentActivity() {
         }
     }
 
+    private fun handleExamAction(
+        context: Context,
+        examEntity: ExamEntity,
+        examAction: ExamAction
+    ) {
+        when (examAction) {
+            ExamAction.ContinueSetup, ExamAction.EditExam -> {
+                context.startActivity(
+                    Intent(context, CreateExamActivity::class.java).apply {
+                        putExtra(CreateExamActivity.EXAM_ENTITY, examEntity)
+                    }
+                )
+            }
+
+            ExamAction.ScanSheets -> {
+                // TODO: Navigate to scan screen
+                Toast.makeText(context, "Scan Sheets - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+
+            ExamAction.ViewResults -> {
+                // TODO: Navigate to results screen
+                Toast.makeText(context, "View Results - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+
+            ExamAction.MarkCompleted -> {
+                // TODO: Show confirmation and update status
+                Toast.makeText(context, "Mark Completed - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+
+            ExamAction.Duplicate -> {
+                // TODO: Duplicate exam
+                Toast.makeText(context, "Duplicate - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+
+            ExamAction.ExportResults -> {
+                // TODO: Export results
+                Toast.makeText(context, "Export Results - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+
+            ExamAction.Archive -> {
+                // TODO: Archive exam
+                Toast.makeText(context, "Archive - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+
+            ExamAction.Delete -> {
+//                showDeleteDialog(exam)
+            }
+        }
+    }
+
+
     @Composable
     private fun ExamList(
         examListResponse: UiState<List<ExamEntity>>,
         onExamClick: (ExamEntity) -> Unit,
-        onRetry: () -> Unit
+        onRetry: () -> Unit,
+        onActionClick: (ExamEntity, ExamAction) -> Unit
     ) {
         when (examListResponse) {
             is UiState.Loading -> {
@@ -217,7 +277,10 @@ class ExamListingActivity : ComponentActivity() {
                     ) { _, item ->
                         ExamCardRow(
                             item = item,
-                            onClick = { onExamClick(item) }
+                            onClick = { onExamClick(item) },
+                            onActionClick = {
+                                onActionClick(item, it)
+                            }
                         )
                     }
                 }
@@ -260,56 +323,10 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ExamList(
-        examFilter: ExamStatus?,
-        examListResponse: UiState<List<ExamEntity>>,
-        onExamClick: (ExamEntity) -> Unit,
-        onRetry: () -> Unit
-    ) {
-
-        when (examListResponse) {
-            is UiState.Loading -> {
-                GenericLoader()
-            }
-
-            is UiState.Error -> {
-                ErrorScreen(
-                    message = examListResponse.message,
-                    onRetry = onRetry
-                )
-            }
-
-            is UiState.Success -> {
-                val items = examListResponse.data ?: emptyList()
-
-                if (items.isEmpty()) {
-                    GenericEmptyState(text = "No exams found")
-                    return
-                }
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    itemsIndexed(
-                        items = items,
-                        key = { _, item -> item.id }
-                    ) { _, item ->
-                        ExamCardRow(
-                            item = item,
-                            onClick = { onExamClick(item) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
     private fun ExamCardRow(
         item: ExamEntity,
-        onClick: () -> Unit
+        onClick: () -> Unit,
+        onActionClick: (ExamAction) -> Unit
     ) {
         Box(
             modifier = Modifier
@@ -320,18 +337,21 @@ class ExamListingActivity : ComponentActivity() {
                     shape = RoundedCornerShape(12.dp)
                 )
                 .background(Grey100)
-                .clickable { onClick() }
-                .padding(13.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onClick() }
+                    .padding(13.dp)
+            ) {
                 ExamIcon()
 
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     ExamHeader(
-                        examName = item.examName,
-                        status = item.status
+                        examEntity = item,
+                        onActionClick = onActionClick
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -343,7 +363,6 @@ class ExamListingActivity : ComponentActivity() {
                         status = item.status
                     )
 
-                    // Only show stats if they exist (typically for ACTIVE/COMPLETED exams)
                     if (hasStats(item)) {
                         Spacer(modifier = Modifier.height(8.dp))
                         ExamStats(
@@ -377,15 +396,16 @@ class ExamListingActivity : ComponentActivity() {
 
     @Composable
     private fun ExamHeader(
-        examName: String,
-        status: ExamStatus
+        examEntity: ExamEntity,
+        onActionClick: (ExamAction) -> Unit
     ) {
+        var showMenu by remember { mutableStateOf(false) }
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = examName,
+                text = examEntity.examName,
                 color = Black,
                 style = AppTypography.body1Medium,
                 maxLines = 1,
@@ -395,7 +415,30 @@ class ExamListingActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            StatusBadge(status = status)
+            StatusBadge(status = examEntity.status)
+
+            // Three-dot menu icon
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More actions",
+                    tint = Grey500
+                )
+            }
+
+            // Popup menu - now aligned to actual TopEnd of card
+            ExamActionsPopup(
+                expanded = showMenu,
+                examEntity = examEntity,
+                viewModel = examListViewModel,
+                onActionClick = { action ->
+                    onActionClick(action)
+                },
+                onDismiss = { showMenu = false },
+            )
         }
     }
 
