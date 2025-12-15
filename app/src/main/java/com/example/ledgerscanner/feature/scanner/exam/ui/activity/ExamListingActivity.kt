@@ -73,6 +73,7 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.ui.compose.DeleteConfirmationDialog
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionsPopup
 import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
@@ -112,6 +113,10 @@ class ExamListingActivity : ComponentActivity() {
         val examListResponse by viewModel.examList.collectAsState()
         var searchQuery by remember { mutableStateOf("") }
 
+        var showDeleteDialog by remember { mutableStateOf(false) }
+        var examToDelete by remember { mutableStateOf<ExamEntity?>(null) }
+        val deleteState by viewModel.deletedExamEntity.collectAsState()
+
         // Handle filter changes - starts collecting from DB
         LaunchedEffect(examFilter) {
             examListViewModel.getExamList(examFilter)
@@ -120,6 +125,24 @@ class ExamListingActivity : ComponentActivity() {
         // Handle search query changes
         LaunchedEffect(searchQuery) {
             examListViewModel.searchExam(searchQuery)
+        }
+
+        LaunchedEffect(deleteState) {
+            when (deleteState) {
+                is UiState.Success -> {
+                    Toast.makeText(context, "Exam deleted successfully", Toast.LENGTH_SHORT).show()
+                    examListViewModel.resetDeleteState()
+                }
+                is UiState.Error -> {
+                    Toast.makeText(
+                        context,
+                        (deleteState as UiState.Error).message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    examListViewModel.resetDeleteState()
+                }
+                else -> {}
+            }
         }
 
         Scaffold(
@@ -171,7 +194,15 @@ class ExamListingActivity : ComponentActivity() {
                         examListViewModel.getExamList(examFilter)
                     },
                     onActionClick = { examEntity, examAction ->
-                        handleExamAction(context, examEntity, examAction)
+                        handleExamAction(
+                            context,
+                            examEntity,
+                            examAction,
+                            showDeleteDialog = {
+                                showDeleteDialog = true
+                                examToDelete = it
+                            },
+                        )
                     }
                 )
             }
@@ -186,12 +217,31 @@ class ExamListingActivity : ComponentActivity() {
                 }
             )
         }
+
+        examToDelete?.let {
+            if (showDeleteDialog) {
+                DeleteConfirmationDialog(
+                    examName = it.examName,
+                    onConfirm = {
+                        examListViewModel.deleteExam(it.id)
+                        showDeleteDialog = false
+                        examToDelete = null
+                    },
+                    onDismiss = {
+                        showDeleteDialog = false
+                        examToDelete = null
+                    }
+                )
+            }
+        }
+
     }
 
     private fun handleExamAction(
         context: Context,
         examEntity: ExamEntity,
-        examAction: ExamAction
+        examAction: ExamAction,
+        showDeleteDialog: (ExamEntity) -> Unit
     ) {
         when (examAction) {
             ExamAction.ContinueSetup, ExamAction.EditExam -> {
@@ -233,7 +283,7 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             ExamAction.Delete -> {
-//                showDeleteDialog(exam)
+                showDeleteDialog(examEntity)
             }
         }
     }

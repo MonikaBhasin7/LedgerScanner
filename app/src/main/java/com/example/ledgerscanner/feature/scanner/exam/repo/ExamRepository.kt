@@ -74,4 +74,8 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
 
         return updatedEntity
     }
+
+    suspend fun deleteExam(examId: Int) {
+        dao.deleteExam(examId)
+    }
 }

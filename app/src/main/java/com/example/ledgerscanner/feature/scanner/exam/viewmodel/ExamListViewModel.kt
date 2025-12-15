@@ -10,6 +10,8 @@ import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -19,6 +21,9 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
 
     private val _examList = MutableStateFlow<UiState<List<ExamEntity>>>(UiState.Loading())
     val examList: MutableStateFlow<UiState<List<ExamEntity>>> = _examList
+
+    private val _deletedExamEntity = MutableStateFlow<UiState<Int>>(UiState.Loading())
+    val deletedExamEntity: StateFlow<UiState<Int>> = _deletedExamEntity.asStateFlow()
 
     private val _allExams = MutableStateFlow<List<ExamEntity>>(emptyList())
     private var currentSearchQuery: String = ""
@@ -68,6 +73,26 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
                 _examList.value = UiState.Error(e.message ?: "Unknown error")
             }
         }
+    }
+
+    fun deleteExam(examId: Int) {
+        viewModelScope.launch {
+            try {
+                _deletedExamEntity.value = UiState.Loading()
+
+                withContext(Dispatchers.IO) {
+                    repository.deleteExam(examId)
+                }
+
+                _deletedExamEntity.value = UiState.Success(examId)
+            } catch (e: Exception) {
+                _deletedExamEntity.value = UiState.Error(e.message ?: "Failed to delete exam")
+            }
+        }
+    }
+
+    fun resetDeleteState() {
+        _deletedExamEntity.value = UiState.Loading()
     }
 
     fun getExamActionForStatus(
