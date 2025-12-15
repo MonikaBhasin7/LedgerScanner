@@ -19,24 +19,52 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
     private val _examList = MutableStateFlow<UiState<List<ExamEntity>>>(UiState.Loading())
     val examList: MutableStateFlow<UiState<List<ExamEntity>>> = _examList
 
-    fun getExamList(examStatus: ExamStatus?) {
+    private val _allExams = MutableStateFlow<List<ExamEntity>>(emptyList())
+    private var currentSearchQuery: String = ""
+
+    fun getExamList(examStatus: ExamStatus? = null) {
         viewModelScope.launch {
             _examList.value = UiState.Loading()
 
             try {
                 withContext(Dispatchers.IO) {
                     if (examStatus == null) {
-                        repository.getAllExams().collect {
-                            _examList.value = UiState.Success(it)
+                        repository.getAllExams().collect { exams ->
+                            _allExams.value = exams
+                            applySearch(currentSearchQuery)
                         }
                     } else {
-                        repository.getExamByStatus(examStatus).collect {
-                            _examList.value = UiState.Success(it)
+                        repository.getExamByStatus(examStatus).collect { exams ->
+                            _allExams.value = exams
+                            applySearch(currentSearchQuery)
                         }
                     }
                 }
             } catch (e: Exception) {
                 _examList.value = UiState.Error(e.message ?: "Something went wrong")
+            }
+        }
+    }
+
+    fun searchExam(query: String) {
+        currentSearchQuery = query
+        applySearch(query)
+    }
+
+    private fun applySearch(query: String) {
+        viewModelScope.launch {
+            try {
+                if (query.isEmpty()) {
+                    _examList.value = UiState.Success(_allExams.value)
+                } else {
+                    val filteredList = _allExams.value.filter { item ->
+                        item.examName.contains(query, ignoreCase = true) ||
+                                item.description?.contains(query, ignoreCase = true) == true
+                    }
+                    _examList.value = UiState.Success(filteredList)
+                }
+            } catch (e: Exception) {
+                _examList.value = UiState.Error(e.message ?: "Unknown error")
             }
         }
     }

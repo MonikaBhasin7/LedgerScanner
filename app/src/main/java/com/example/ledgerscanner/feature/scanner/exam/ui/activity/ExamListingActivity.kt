@@ -30,7 +30,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Addchart
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
@@ -106,6 +105,17 @@ class ExamListingActivity : ComponentActivity() {
         var showTemplatePicker by remember { mutableStateOf(false) }
         var examFilter by remember { mutableStateOf<ExamStatus?>(null) }
         val examListResponse by viewModel.examList.collectAsState()
+        var searchQuery by remember { mutableStateOf("") }
+
+        // Handle filter changes - starts collecting from DB
+        LaunchedEffect(examFilter) {
+            examListViewModel.getExamList(examFilter)
+        }
+
+        // Handle search query changes
+        LaunchedEffect(searchQuery) {
+            examListViewModel.searchExam(searchQuery)
+        }
 
         Scaffold(
             containerColor = White,
@@ -131,7 +141,9 @@ class ExamListingActivity : ComponentActivity() {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                SearchBar()
+                SearchBar(searchQuery, onSearchQueryChange = {
+                    searchQuery = it
+                })
 
                 val isLoading = examListResponse is UiState.Loading
                 FilterChips(
@@ -142,7 +154,6 @@ class ExamListingActivity : ComponentActivity() {
                 )
 
                 ExamList(
-                    examFilter = examFilter,
                     examListResponse = examListResponse,
                     onExamClick = { exam ->
                         startActivity(
@@ -150,6 +161,9 @@ class ExamListingActivity : ComponentActivity() {
                                 putExtra(CreateExamActivity.EXAM_ENTITY, exam)
                             }
                         )
+                    },
+                    onRetry = {
+                        examListViewModel.getExamList(examFilter)
                     }
                 )
             }
@@ -163,6 +177,51 @@ class ExamListingActivity : ComponentActivity() {
                     handleTemplateSelection(assetFile)
                 }
             )
+        }
+    }
+
+    @Composable
+    private fun ExamList(
+        examListResponse: UiState<List<ExamEntity>>,
+        onExamClick: (ExamEntity) -> Unit,
+        onRetry: () -> Unit
+    ) {
+        when (examListResponse) {
+            is UiState.Loading -> {
+                GenericLoader()
+            }
+
+            is UiState.Error -> {
+                ErrorScreen(
+                    message = examListResponse.message,
+                    onRetry = onRetry
+                )
+            }
+
+            is UiState.Success -> {
+                val items = examListResponse.data ?: emptyList()
+
+                if (items.isEmpty()) {
+                    GenericEmptyState(text = "No exams found")
+                    return
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(
+                        items = items,
+                        key = { _, item -> item.id }
+                    ) { _, item ->
+                        ExamCardRow(
+                            item = item,
+                            onClick = { onExamClick(item) }
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -204,11 +263,9 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamList(
         examFilter: ExamStatus?,
         examListResponse: UiState<List<ExamEntity>>,
-        onExamClick: (ExamEntity) -> Unit
+        onExamClick: (ExamEntity) -> Unit,
+        onRetry: () -> Unit
     ) {
-        LaunchedEffect(examFilter) {
-            examListViewModel.getExamList(examFilter)
-        }
 
         when (examListResponse) {
             is UiState.Loading -> {
@@ -218,7 +275,7 @@ class ExamListingActivity : ComponentActivity() {
             is UiState.Error -> {
                 ErrorScreen(
                     message = examListResponse.message,
-                    onRetry = { examListViewModel.getExamList(examFilter) }
+                    onRetry = onRetry
                 )
             }
 
@@ -443,13 +500,12 @@ class ExamListingActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun SearchBar() {
-        var searchText by remember { mutableStateOf("") }
+    private fun SearchBar(searchQuery: String, onSearchQueryChange: (String) -> Unit) {
 
         GenericTextField(
-            value = searchText,
+            value = searchQuery,
             placeholder = "Search by exam name",
-            onValueChange = { searchText = it },
+            onValueChange = { onSearchQueryChange(it) },
             prefix = {
                 Icon(
                     imageVector = Icons.Outlined.Search,
@@ -457,17 +513,9 @@ class ExamListingActivity : ComponentActivity() {
                     tint = Grey500
                 )
             },
-            suffix = {
-                if (searchText.isNotEmpty()) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = Grey500
-                    )
-                }
-            },
             modifier = Modifier
-                .fillMaxWidth().padding(horizontal = 8.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
         )
     }
 
