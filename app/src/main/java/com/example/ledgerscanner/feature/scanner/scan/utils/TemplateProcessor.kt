@@ -8,11 +8,11 @@ import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.base.utils.image.toColoredWarped
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
 import com.example.ledgerscanner.feature.scanner.scan.model.Question
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.model.TemplatePair
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.google.gson.Gson
 import org.opencv.android.Utils
 import org.opencv.core.Core
@@ -25,7 +25,6 @@ import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import javax.inject.Inject
-import kotlin.jvm.Throws
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -41,7 +40,8 @@ class TemplateProcessor @Inject constructor() {
     @WorkerThread
     fun generateTemplateJson(
         inputBitmap: Bitmap,
-        debug: Boolean = true
+        debug: Boolean = true,
+        numberOfQuestionsInAColumn: Int
     ): OmrTemplateResult {
         val debugMap = hashMapOf<String, Bitmap>()
         var srcMat: Mat? = null
@@ -77,7 +77,8 @@ class TemplateProcessor @Inject constructor() {
             val bubbles = detectAndFetchBubblesWithinAnchors(
                 grayMat,
                 anchorPoints,
-                debug,
+                expectedQuestions = numberOfQuestionsInAColumn,
+                debug = debug,
                 debugMapAdditionCallback = { title, bitmap ->
                     debugMap[title] = bitmap
                 },
@@ -270,7 +271,10 @@ class TemplateProcessor @Inject constructor() {
             val maxRadius = min(60, (estimatedBubbleRadius * 1.8).roundToInt())
             val minDist = max(12.0, estimatedBubbleRadius * 1.0) // Reduced from 1.5
 
-            Log.d(TAG, "Bubble detection params: minR=$minRadius, maxR=$maxRadius, minDist=$minDist, estimatedR=$estimatedBubbleRadius")
+            Log.d(
+                TAG,
+                "Bubble detection params: minR=$minRadius, maxR=$maxRadius, minDist=$minDist, estimatedR=$estimatedBubbleRadius"
+            )
 
             // 5. Try multiple parameter sets
             circles = Mat()
@@ -323,6 +327,158 @@ class TemplateProcessor @Inject constructor() {
             centers.sortWith(compareBy({ it.y.roundToInt() }, { it.x }))
 
             Log.d(TAG, "Final bubble count: ${centers.size}")
+
+            return centers
+
+        } finally {
+            mask?.release()
+            masked?.release()
+            blurred?.release()
+            circles?.release()
+            anchorMat?.release()
+        }
+    }
+
+
+    private fun detectAndFetchBubblesWithinAnchors(
+        grayMat: Mat,
+        anchorPoints: List<AnchorPoint>,
+        expectedQuestions: Int,
+        optionsPerQuestion: Int = 4,
+        debug: Boolean = false,
+        debugMapAdditionCallback: (String, Bitmap) -> Unit,
+    ): List<Bubble> {
+        var mask: Mat? = null
+        var masked: Mat? = null
+        var blurred: Mat? = null
+        var circles: Mat? = null
+        var anchorMat: MatOfPoint? = null
+
+        try {
+            // 1. Make mask
+            mask = Mat.zeros(grayMat.size(), CvType.CV_8UC1)
+            anchorMat = MatOfPoint(*anchorPoints.map { Point(it.x, it.y) }.toTypedArray())
+            Imgproc.fillConvexPoly(mask, anchorMat, Scalar(255.0))
+
+            // 2. Apply mask
+            masked = Mat()
+            Core.bitwise_and(grayMat, mask, masked)
+            if (debug) debugMapAdditionCallback(
+                "4_masked_region",
+                masked.toBitmapSafe()
+            )
+
+            // 3. Calculate the ACTUAL area of the masked region
+            val maskedArea = Imgproc.contourArea(anchorMat)
+
+            // 4. Calculate expected bubbles and adaptive parameters
+            val expectedBubbles = expectedQuestions * optionsPerQuestion
+            val estimatedBubbleRadius = sqrt(maskedArea / (expectedBubbles * 10.0))
+
+            val minRadius = max(5, (estimatedBubbleRadius * 0.5).roundToInt())
+            val maxRadius = min(60, (estimatedBubbleRadius * 1.8).roundToInt())
+            val minDist = max(12.0, estimatedBubbleRadius * 1.0)
+
+            Log.d(
+                TAG,
+                "Masked area: ${maskedArea.toInt()} | Expected: EXACTLY $expectedBubbles bubbles | " +
+                        "Params: minR=$minRadius, maxR=$maxRadius, minDist=$minDist, estR=${estimatedBubbleRadius.roundToInt()}"
+            )
+
+            // 5. Blur
+            blurred = Mat()
+            Imgproc.GaussianBlur(masked, blurred, Size(5.0, 5.0), 1.5)
+
+            // 6. First attempt: Moderate sensitivity
+            circles = Mat()
+            Imgproc.HoughCircles(
+                blurred,
+                circles,
+                Imgproc.HOUGH_GRADIENT,
+                1.0,
+                minDist,
+                100.0,
+                30.0,
+                minRadius,
+                maxRadius
+            )
+
+            Log.d(TAG, "Attempt 1 (Moderate): ${circles.cols()} bubbles (target: $expectedBubbles)")
+
+            // 7. Check if we found EXACTLY the expected number
+            if (circles.cols() != expectedBubbles) {
+
+                when {
+                    // Too few - try aggressive
+                    circles.cols() < expectedBubbles -> {
+                        Log.d(TAG, "Too few (${circles.cols()} < $expectedBubbles). Trying aggressive...")
+
+                        circles.release()
+                        circles = Mat()
+
+                        Imgproc.HoughCircles(
+                            blurred,
+                            circles,
+                            Imgproc.HOUGH_GRADIENT,
+                            1.0,
+                            max(10.0, estimatedBubbleRadius * 0.8),
+                            100.0,
+                            25.0,
+                            max(4, (estimatedBubbleRadius * 0.4).roundToInt()),
+                            min(70, (estimatedBubbleRadius * 2.0).roundToInt())
+                        )
+
+                        Log.d(TAG, "Attempt 2 (Aggressive): ${circles.cols()} bubbles")
+                    }
+
+                    // Too many - try conservative
+                    circles.cols() > expectedBubbles -> {
+                        Log.d(TAG, "Too many (${circles.cols()} > $expectedBubbles). Trying conservative...")
+
+                        circles.release()
+                        circles = Mat()
+
+                        Imgproc.HoughCircles(
+                            blurred,
+                            circles,
+                            Imgproc.HOUGH_GRADIENT,
+                            1.0,
+                            max(15.0, estimatedBubbleRadius * 1.2),
+                            100.0,
+                            35.0,
+                            max(6, (estimatedBubbleRadius * 0.6).roundToInt()),
+                            min(55, (estimatedBubbleRadius * 1.6).roundToInt())
+                        )
+
+                        Log.d(TAG, "Attempt 2 (Conservative): ${circles.cols()} bubbles")
+                    }
+                }
+
+                // After second attempt, check again
+                if (circles.cols() != expectedBubbles) {
+                    Log.w(TAG, "⚠ Still not exact: ${circles.cols()} bubbles (expected $expectedBubbles)")
+                } else {
+                    Log.d(TAG, "✓ Second attempt successful! Found exactly $expectedBubbles bubbles")
+                }
+            } else {
+                Log.d(TAG, "✓ Perfect! Found exactly $expectedBubbles bubbles on first attempt")
+            }
+
+            // 8. Extract bubble centers
+            val centers = mutableListOf<Bubble>()
+            for (i in 0 until circles.cols()) {
+                val data = circles.get(0, i) ?: continue
+                val x = data[0]
+                val y = data[1]
+                val r = data[2]
+                if (r.isFinite() && r > 0) {
+                    centers.add(Bubble(x, y, r))
+                }
+            }
+
+            centers.sortWith(compareBy({ it.y.roundToInt() }, { it.x }))
+
+            Log.d(TAG, "Final: ${centers.size} bubbles (expected $expectedBubbles)")
 
             return centers
 

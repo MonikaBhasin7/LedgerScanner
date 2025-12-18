@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -45,6 +46,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -54,6 +56,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ledgerscanner.BuildConfig
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
+import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
@@ -147,9 +150,14 @@ class CreateTemplateActivity : BaseActivity() {
                         createTemplateViewModel.setTemplateResult(null)
                         createTemplateViewModel.setBitmap(null)
                     },
-                    onProcess = {
+                    onProcess = { numberOfQuestionsInAColumn ->
                         val result =
-                            selectedBitmap?.let { TemplateProcessor().generateTemplateJson(it) }
+                            selectedBitmap?.let {
+                                TemplateProcessor().generateTemplateJson(
+                                    it,
+                                    numberOfQuestionsInAColumn = numberOfQuestionsInAColumn
+                                )
+                            }
                         createTemplateViewModel.setTemplateResult(result)
                     },
                     onViewJson = { json ->
@@ -220,12 +228,15 @@ class CreateTemplateActivity : BaseActivity() {
 
     @Composable
     private fun TemplateButtonsSection(
-        selectedBitmap: android.graphics.Bitmap?,
-        result: com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult?,
+        selectedBitmap: Bitmap?,
+        result: OmrTemplateResult?,
         onReselect: () -> Unit,
-        onProcess: () -> Unit,
+        onProcess: (Int) -> Unit,
         onViewJson: (String) -> Unit
     ) {
+
+        var numberOfQuestions by remember { mutableStateOf<Int?>(null) }
+        var numberOfQuestionsError by remember { mutableStateOf<String?>(null) }
         result?.let {
             if (it.success && it.finalBitmap != null && !it.templateJson.isNullOrEmpty()) {
                 GenericButton(
@@ -239,13 +250,55 @@ class CreateTemplateActivity : BaseActivity() {
             }
         }
 
+
+        if (result == null && selectedBitmap != null)
+            GenericTextField(
+                label = "Number of Questions in one column",
+                value = (numberOfQuestions ?: "").toString(),
+                placeholder = "e.g., 50",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                onValueChange = { input ->
+                    val filtered = input.filter { it.isDigit() }
+                    numberOfQuestions = filtered.toIntOrNull()
+
+                    // Clear error when user starts typing
+                    if (numberOfQuestionsError != null && filtered.isNotEmpty()) {
+                        numberOfQuestionsError = null
+                    }
+                },
+                isError = numberOfQuestionsError != null,
+                supportingText = numberOfQuestionsError?.let {
+                    { Text(it) }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+
         GenericButton(
             text = if (result != null) "Reselect another Image" else "Process template",
             enabled = selectedBitmap != null,
             modifier = Modifier
                 .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                 .fillMaxWidth(),
-            onClick = { if (result != null) onReselect() else onProcess() }
+            onClick = {
+                if (result != null) onReselect() else {
+                    when {
+                        numberOfQuestions == null -> {
+                            numberOfQuestionsError = "Please enter number of questions"
+                        }
+
+                        numberOfQuestions!! <= 0 -> {
+                            numberOfQuestionsError = "Number of questions must be greater than 0"
+                        }
+
+                        else -> {
+                            numberOfQuestionsError = null
+                            onProcess(numberOfQuestions!!)
+                        }
+                    }
+                }
+            }
         )
     }
 
