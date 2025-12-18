@@ -4,7 +4,9 @@ import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class ExamRepository @Inject constructor(private val dao: ExamDao) {
@@ -30,7 +32,7 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         val exam = ExamEntity(
             id = 0,
             examName = examName,
-            description= description,
+            description = description,
             status = ExamStatus.DRAFT,
             totalQuestions = numberOfQuestions,
             template = template,
@@ -75,7 +77,16 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         return updatedEntity
     }
 
-    suspend fun deleteExam(examId: Int) {
+    suspend fun deleteExam(examId: Int) = withContext(Dispatchers.IO) {
         dao.deleteExam(examId)
+    }
+
+    suspend fun duplicateExam(examEntity: ExamEntity) = withContext(Dispatchers.IO) {
+        val newExamEntity = examEntity.copy(
+            id = 0,
+            examName = "${examEntity.examName} (Copy)",
+            createdAt = System.currentTimeMillis()
+        )
+        dao.insertExam(newExamEntity)
     }
 }

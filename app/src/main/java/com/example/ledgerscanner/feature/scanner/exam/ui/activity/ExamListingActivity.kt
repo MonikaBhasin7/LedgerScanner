@@ -73,8 +73,9 @@ import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionDialog
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
-import com.example.ledgerscanner.feature.scanner.exam.ui.compose.DeleteConfirmationDialog
+import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionConfirmationDialog
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionsPopup
 import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
@@ -114,9 +115,10 @@ class ExamListingActivity : ComponentActivity() {
         val examListResponse by viewModel.examList.collectAsState()
         var searchQuery by remember { mutableStateOf("") }
 
-        var showDeleteDialog by remember { mutableStateOf(false) }
-        var examToDelete by remember { mutableStateOf<ExamEntity?>(null) }
-        val deleteState by viewModel.deletedExamEntity.collectAsState()
+        var showDeleteAndDuplicateDialog by remember { mutableStateOf<ExamActionDialog?>(null) }
+        val deleteState by viewModel.deleteExamState.collectAsState()
+        val duplicateState by viewModel.duplicateExamState.collectAsState()
+
 
         // Handle filter changes - starts collecting from DB
         LaunchedEffect(examFilter) {
@@ -128,20 +130,37 @@ class ExamListingActivity : ComponentActivity() {
             examListViewModel.searchExam(searchQuery)
         }
 
+        // Handle delete state
         LaunchedEffect(deleteState) {
-            when (deleteState) {
+            when (val state = deleteState) {
                 is UiState.Success -> {
                     Toast.makeText(context, "Exam deleted successfully", Toast.LENGTH_SHORT).show()
-                    examListViewModel.resetDeleteState()
+                    viewModel.resetDeleteState()
                 }
+
                 is UiState.Error -> {
-                    Toast.makeText(
-                        context,
-                        (deleteState as UiState.Error).message,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    examListViewModel.resetDeleteState()
+                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    viewModel.resetDeleteState()
                 }
+
+                else -> {}
+            }
+        }
+
+        // Handle duplicate state
+        LaunchedEffect(duplicateState) {
+            when (val state = duplicateState) {
+                is UiState.Success -> {
+                    Toast.makeText(context, "Exam duplicated successfully", Toast.LENGTH_SHORT)
+                        .show()
+                    viewModel.resetDuplicateState()
+                }
+
+                is UiState.Error -> {
+                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    viewModel.resetDuplicateState()
+                }
+
                 else -> {}
             }
         }
@@ -200,9 +219,11 @@ class ExamListingActivity : ComponentActivity() {
                             examEntity,
                             examAction,
                             showDeleteDialog = {
-                                showDeleteDialog = true
-                                examToDelete = it
+                                showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
                             },
+                            showDuplicateDialog = {
+                                showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
+                            }
                         )
                     }
                 )
@@ -219,30 +240,51 @@ class ExamListingActivity : ComponentActivity() {
             )
         }
 
-        examToDelete?.let {
-            if (showDeleteDialog) {
-                DeleteConfirmationDialog(
-                    examName = it.examName,
-                    onConfirm = {
-                        examListViewModel.deleteExam(it.id)
-                        showDeleteDialog = false
-                        examToDelete = null
-                    },
-                    onDismiss = {
-                        showDeleteDialog = false
-                        examToDelete = null
-                    }
-                )
+        showDeleteAndDuplicateDialog?.let {
+            when (showDeleteAndDuplicateDialog) {
+                is ExamActionDialog.Delete -> {
+                    val examEntity = (it as ExamActionDialog.Delete).examEntity
+                    ExamActionConfirmationDialog(
+                        title = "Delete Exam",
+                        message = "Are you sure you want to delete \"${examEntity.examName}\"?",
+                        confirmText = "Delete",
+                        onConfirm = {
+                            examListViewModel.deleteExam(examEntity.id)
+                            showDeleteAndDuplicateDialog = null
+                        },
+                        onDismiss = {
+                            showDeleteAndDuplicateDialog = null
+                        }
+                    )
+                }
+
+                is ExamActionDialog.Duplicate -> {
+                    val examEntity = (it as ExamActionDialog.Duplicate).examEntity
+                    ExamActionConfirmationDialog(
+                        title = "Duplicate Exam",
+                        message = "Create a copy of \"${examEntity.examName}\"?",
+                        confirmText = "Duplicate",
+                        onConfirm = {
+                            examListViewModel.duplicateExam(examEntity)
+                            showDeleteAndDuplicateDialog = null
+                        },
+                        onDismiss = {
+                            showDeleteAndDuplicateDialog = null
+                        }
+                    )
+                }
+
+                null -> {}
             }
         }
-
     }
 
     private fun handleExamAction(
         context: Context,
         examEntity: ExamEntity,
         examAction: ExamAction,
-        showDeleteDialog: (ExamEntity) -> Unit
+        showDeleteDialog: (ExamEntity) -> Unit,
+        showDuplicateDialog: (ExamEntity) -> Unit
     ) {
         when (examAction) {
             ExamAction.ContinueSetup, ExamAction.EditExam -> {
@@ -269,8 +311,7 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             ExamAction.Duplicate -> {
-                // TODO: Duplicate exam
-                Toast.makeText(context, "Duplicate - Coming soon", Toast.LENGTH_SHORT).show()
+                showDuplicateDialog(examEntity)
             }
 
             ExamAction.ExportResults -> {

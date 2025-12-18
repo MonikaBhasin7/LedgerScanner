@@ -22,8 +22,11 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
     private val _examList = MutableStateFlow<UiState<List<ExamEntity>>>(UiState.Loading())
     val examList: MutableStateFlow<UiState<List<ExamEntity>>> = _examList
 
-    private val _deletedExamEntity = MutableStateFlow<UiState<Int>>(UiState.Loading())
-    val deletedExamEntity: StateFlow<UiState<Int>> = _deletedExamEntity.asStateFlow()
+    private val _deleteExamState = MutableStateFlow<UiState<Unit>>(UiState.Loading())
+    val deleteExamState = _deleteExamState.asStateFlow()
+
+    private val _duplicateExamState = MutableStateFlow<UiState<Unit>>(UiState.Loading())
+    val duplicateExamState = _duplicateExamState.asStateFlow()
 
     private val _allExams = MutableStateFlow<List<ExamEntity>>(emptyList())
     private var currentSearchQuery: String = ""
@@ -77,22 +80,34 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
 
     fun deleteExam(examId: Int) {
         viewModelScope.launch {
+            _deleteExamState.value = UiState.Loading()
             try {
-                _deletedExamEntity.value = UiState.Loading()
-
-                withContext(Dispatchers.IO) {
-                    repository.deleteExam(examId)
-                }
-
-                _deletedExamEntity.value = UiState.Success(examId)
+                repository.deleteExam(examId)
+                _deleteExamState.value = UiState.Success(Unit)
             } catch (e: Exception) {
-                _deletedExamEntity.value = UiState.Error(e.message ?: "Failed to delete exam")
+                _deleteExamState.value = UiState.Error(e.message ?: "Failed to delete exam")
+            }
+        }
+    }
+
+    fun duplicateExam(exam: ExamEntity) {
+        viewModelScope.launch {
+            _duplicateExamState.value = UiState.Loading()
+            try {
+                repository.duplicateExam(exam)
+                _duplicateExamState.value = UiState.Success(Unit)
+            } catch (e: Exception) {
+                _duplicateExamState.value = UiState.Error(e.message ?: "Failed to duplicate exam")
             }
         }
     }
 
     fun resetDeleteState() {
-        _deletedExamEntity.value = UiState.Loading()
+        _deleteExamState.value = UiState.Loading()
+    }
+
+    fun resetDuplicateState() {
+        _duplicateExamState.value = UiState.Loading()
     }
 
     fun getExamActionForStatus(

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.ledgerscanner.database.entity.ExamEntity
 
 sealed class ExamAction(
     val label: String,
@@ -25,4 +26,9 @@ sealed class ExamAction(
     data object ExportResults : ExamAction("Export Results", Icons.Default.FileDownload)
     data object Archive : ExamAction("Archive", Icons.Default.Archive)
     data object Delete : ExamAction("Delete", Icons.Default.Delete, isDangerous = true)
+}
+
+sealed class ExamActionDialog(examEntity: ExamEntity) {
+    data class Delete(val examEntity: ExamEntity) : ExamActionDialog(examEntity)
+    data class Duplicate(val examEntity: ExamEntity) : ExamActionDialog(examEntity)
 }
