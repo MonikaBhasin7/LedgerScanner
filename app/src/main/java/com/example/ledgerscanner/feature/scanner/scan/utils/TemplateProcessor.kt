@@ -338,8 +338,7 @@ class TemplateProcessor @Inject constructor() {
             anchorMat?.release()
         }
     }
-
-
+    
     private fun detectAndFetchBubblesWithinAnchors(
         grayMat: Mat,
         anchorPoints: List<AnchorPoint>,
@@ -372,115 +371,157 @@ class TemplateProcessor @Inject constructor() {
             val maskedArea = Imgproc.contourArea(anchorMat)
 
             // 4. Calculate expected bubbles and adaptive parameters
-            val expectedBubbles = expectedQuestions * optionsPerQuestion
-            val estimatedBubbleRadius = sqrt(maskedArea / (expectedBubbles * 10.0))
-
-            val minRadius = max(5, (estimatedBubbleRadius * 0.5).roundToInt())
-            val maxRadius = min(60, (estimatedBubbleRadius * 1.8).roundToInt())
-            val minDist = max(12.0, estimatedBubbleRadius * 1.0)
+            val exactExpectedBubbles = expectedQuestions * optionsPerQuestion
+            val estimatedBubbleRadius = sqrt(maskedArea / (exactExpectedBubbles * 10.0))
 
             Log.d(
                 TAG,
-                "Masked area: ${maskedArea.toInt()} | Expected: EXACTLY $expectedBubbles bubbles | " +
-                        "Params: minR=$minRadius, maxR=$maxRadius, minDist=$minDist, estR=${estimatedBubbleRadius.roundToInt()}"
+                "Target: EXACTLY $exactExpectedBubbles bubbles | Masked area: ${maskedArea.toInt()} | EstR: ${estimatedBubbleRadius.roundToInt()}"
             )
 
             // 5. Blur
             blurred = Mat()
             Imgproc.GaussianBlur(masked, blurred, Size(5.0, 5.0), 1.5)
 
-            // 6. First attempt: Moderate sensitivity
-            circles = Mat()
-            Imgproc.HoughCircles(
-                blurred,
-                circles,
-                Imgproc.HOUGH_GRADIENT,
-                1.0,
-                minDist,
-                100.0,
-                30.0,
-                minRadius,
-                maxRadius
+            // 6. Define detection strategies (from moderate to extreme)
+            val strategies = listOf(
+                DetectionStrategy(
+                    name = "Moderate",
+                    minDistFactor = 1.0,
+                    param2 = 30.0,
+                    minRadiusFactor = 0.5,
+                    maxRadiusFactor = 1.8,
+                    minRadiusAbs = 5,
+                    maxRadiusAbs = 60
+                ),
+                DetectionStrategy(
+                    name = "Aggressive",
+                    minDistFactor = 0.8,
+                    param2 = 25.0,
+                    minRadiusFactor = 0.4,
+                    maxRadiusFactor = 2.0,
+                    minRadiusAbs = 4,
+                    maxRadiusAbs = 70
+                ),
+                DetectionStrategy(
+                    name = "Conservative",
+                    minDistFactor = 1.2,
+                    param2 = 35.0,
+                    minRadiusFactor = 0.6,
+                    maxRadiusFactor = 1.6,
+                    minRadiusAbs = 6,
+                    maxRadiusAbs = 55
+                ),
+                DetectionStrategy(
+                    name = "Very Aggressive",
+                    minDistFactor = 0.6,
+                    param2 = 20.0,
+                    minRadiusFactor = 0.3,
+                    maxRadiusFactor = 2.5,
+                    minRadiusAbs = 3,
+                    maxRadiusAbs = 80
+                ),
+                DetectionStrategy(
+                    name = "Very Conservative",
+                    minDistFactor = 1.5,
+                    param2 = 40.0,
+                    minRadiusFactor = 0.7,
+                    maxRadiusFactor = 1.4,
+                    minRadiusAbs = 7,
+                    maxRadiusAbs = 50
+                ),
+                DetectionStrategy(
+                    name = "Ultra Aggressive",
+                    minDistFactor = 0.5,
+                    param2 = 15.0,
+                    minRadiusFactor = 0.2,
+                    maxRadiusFactor = 3.0,
+                    minRadiusAbs = 2,
+                    maxRadiusAbs = 90
+                )
             )
 
-            Log.d(TAG, "Attempt 1 (Moderate): ${circles.cols()} bubbles (target: $expectedBubbles)")
+            var bestResult: List<Bubble>? = null
+            var bestCount = 0
+            var bestDifference = Int.MAX_VALUE
 
-            // 7. Check if we found EXACTLY the expected number
-            if (circles.cols() != expectedBubbles) {
+            // 7. Try each strategy
+            for ((index, strategy) in strategies.withIndex()) {
+                circles?.release()
+                circles = Mat()
 
-                when {
-                    // Too few - try aggressive
-                    circles.cols() < expectedBubbles -> {
-                        Log.d(TAG, "Too few (${circles.cols()} < $expectedBubbles). Trying aggressive...")
+                val minDist = max(8.0, estimatedBubbleRadius * strategy.minDistFactor)
+                val minRadius = max(strategy.minRadiusAbs, (estimatedBubbleRadius * strategy.minRadiusFactor).roundToInt())
+                val maxRadius = min(strategy.maxRadiusAbs, (estimatedBubbleRadius * strategy.maxRadiusFactor).roundToInt())
 
-                        circles.release()
-                        circles = Mat()
+                Imgproc.HoughCircles(
+                    blurred,
+                    circles,
+                    Imgproc.HOUGH_GRADIENT,
+                    1.0,
+                    minDist,
+                    100.0,
+                    strategy.param2,
+                    minRadius,
+                    maxRadius
+                )
 
-                        Imgproc.HoughCircles(
-                            blurred,
-                            circles,
-                            Imgproc.HOUGH_GRADIENT,
-                            1.0,
-                            max(10.0, estimatedBubbleRadius * 0.8),
-                            100.0,
-                            25.0,
-                            max(4, (estimatedBubbleRadius * 0.4).roundToInt()),
-                            min(70, (estimatedBubbleRadius * 2.0).roundToInt())
-                        )
+                val detectedCount = circles.cols()
+                val difference = abs(detectedCount - exactExpectedBubbles)
 
-                        Log.d(TAG, "Attempt 2 (Aggressive): ${circles.cols()} bubbles")
-                    }
+                Log.d(
+                    TAG,
+                    "Strategy ${index + 1}/${strategies.size} (${strategy.name}): " +
+                            "${detectedCount} bubbles | Diff: $difference | " +
+                            "Params: [minDist=${minDist.roundToInt()}, param2=${strategy.param2}, " +
+                            "minR=$minRadius, maxR=$maxRadius]"
+                )
 
-                    // Too many - try conservative
-                    circles.cols() > expectedBubbles -> {
-                        Log.d(TAG, "Too many (${circles.cols()} > $expectedBubbles). Trying conservative...")
-
-                        circles.release()
-                        circles = Mat()
-
-                        Imgproc.HoughCircles(
-                            blurred,
-                            circles,
-                            Imgproc.HOUGH_GRADIENT,
-                            1.0,
-                            max(15.0, estimatedBubbleRadius * 1.2),
-                            100.0,
-                            35.0,
-                            max(6, (estimatedBubbleRadius * 0.6).roundToInt()),
-                            min(55, (estimatedBubbleRadius * 1.6).roundToInt())
-                        )
-
-                        Log.d(TAG, "Attempt 2 (Conservative): ${circles.cols()} bubbles")
+                // Extract bubbles
+                val currentBubbles = mutableListOf<Bubble>()
+                for (i in 0 until circles.cols()) {
+                    val data = circles.get(0, i) ?: continue
+                    val x = data[0]
+                    val y = data[1]
+                    val r = data[2]
+                    if (r.isFinite() && r > 0) {
+                        currentBubbles.add(Bubble(x, y, r))
                     }
                 }
 
-                // After second attempt, check again
-                if (circles.cols() != expectedBubbles) {
-                    Log.w(TAG, "⚠ Still not exact: ${circles.cols()} bubbles (expected $expectedBubbles)")
-                } else {
-                    Log.d(TAG, "✓ Second attempt successful! Found exactly $expectedBubbles bubbles")
+                // Track best result
+                if (difference < bestDifference) {
+                    bestResult = currentBubbles
+                    bestCount = detectedCount
+                    bestDifference = difference
                 }
-            } else {
-                Log.d(TAG, "✓ Perfect! Found exactly $expectedBubbles bubbles on first attempt")
+
+                // If EXACT match found, stop immediately
+                if (detectedCount == exactExpectedBubbles) {
+                    Log.d(TAG, "✓ PERFECT MATCH! Found exactly $exactExpectedBubbles bubbles with ${strategy.name} strategy")
+
+                    currentBubbles.sortWith(compareBy({ it.y.roundToInt() }, { it.x }))
+                    return currentBubbles
+                }
+
+                // If we're within 5% and it's better than previous best, continue but track it
+                val tolerance = (exactExpectedBubbles * 0.05).toInt()
+                if (difference <= tolerance) {
+                    Log.d(TAG, "→ Close match within tolerance (±$tolerance)")
+                }
             }
 
-            // 8. Extract bubble centers
-            val centers = mutableListOf<Bubble>()
-            for (i in 0 until circles.cols()) {
-                val data = circles.get(0, i) ?: continue
-                val x = data[0]
-                val y = data[1]
-                val r = data[2]
-                if (r.isFinite() && r > 0) {
-                    centers.add(Bubble(x, y, r))
-                }
-            }
+            // 8. No perfect match found, return best result
+            Log.w(
+                TAG,
+                "⚠ No exact match after ${strategies.size} attempts. " +
+                        "Best: $bestCount bubbles (expected $exactExpectedBubbles, diff: $bestDifference)"
+            )
 
-            centers.sortWith(compareBy({ it.y.roundToInt() }, { it.x }))
+            val finalResult = bestResult ?: emptyList()
+            finalResult.sortedWith(compareBy({ it.y.roundToInt() }, { it.x }))
 
-            Log.d(TAG, "Final: ${centers.size} bubbles (expected $expectedBubbles)")
-
-            return centers
+            return finalResult
 
         } finally {
             mask?.release()
@@ -490,6 +531,19 @@ class TemplateProcessor @Inject constructor() {
             anchorMat?.release()
         }
     }
+
+    /**
+     * Detection strategy configuration
+     */
+    private data class DetectionStrategy(
+        val name: String,
+        val minDistFactor: Double,
+        val param2: Double,
+        val minRadiusFactor: Double,
+        val maxRadiusFactor: Double,
+        val minRadiusAbs: Int,
+        val maxRadiusAbs: Int
+    )
 
     @Throws
     private fun sortBubblesColumnWise(bubbles: List<Bubble>): List<List<Bubble>> {
