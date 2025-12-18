@@ -47,19 +47,21 @@ class OmrScannerViewModel @Inject constructor(
 
         val debugBitmaps = hashMapOf<String, Bitmap>()
         var finalBitmap: Bitmap? = null
+        var gray: Mat? = null
+        var warped: Mat? = null
 
         try {
-            // 1) validate inputs (same behavior as before)
+            // 1) Validate inputs
             val overlayRects = anchorSquaresOnPreviewScreen
             if (overlayRects.isEmpty() || previewRect.width() <= 0f) {
                 return@withContext OmrImageProcessResult(false) to emptyList()
             }
 
-            // 2) convert to gray mat (unchanged implementation)
-            val gray = ImageConversionUtils.imageProxyToGrayMatUpright(image)
-            if (debug) debugBitmaps["image proxy gray mat"] = gray.toBitmapSafe()
+            // 2) Convert to gray mat
+            gray = ImageConversionUtils.imageProxyToGrayMatUpright(image)
+            if (debug) debugBitmaps["image_proxy_gray_mat"] = gray.toBitmapSafe()
 
-            // 3) detect centers in buffer (loop extracted)
+            // 3) Detect centers in buffer
             val centersInBuffer = mutableListOf<AnchorPoint>()
             val allFound = omrProcessor.findCentersInBuffer(
                 overlayRects = overlayRects,
@@ -70,70 +72,82 @@ class OmrScannerViewModel @Inject constructor(
                 centersOut = centersInBuffer
             )
 
-            if (debug) {
+            if (debug && centersInBuffer.isNotEmpty()) {
+                val grayWithAnchors = gray.clone()
                 OpenCvUtils.drawPoints(
-                    gray,
+                    grayWithAnchors,
                     points = centersInBuffer,
                 ).apply {
-                    debugBitmaps["full image with found anchor"] = toBitmapSafe()
+                    debugBitmaps["full_image_with_anchors"] = toBitmapSafe()
+                    release()
                 }
             }
 
             if (!allFound) {
-                gray.release()
                 return@withContext OmrImageProcessResult(
                     success = false,
                     debugBitmaps = debugBitmaps
                 ) to centersInBuffer
             }
 
-            // 4) warp & bubble processing (extracted)
-            val (warped, warpedDebugBitmap) = omrProcessor.warpWithTemplateAndGetWarped(
+            // 4) Warp image
+            val (warpedMat, warpedDebugBitmap) = omrProcessor.warpWithTemplateAndGetWarped(
                 gray = gray,
                 omrTemplate = omrTemplate,
                 centersInBuffer = centersInBuffer,
                 debug = debug,
                 debugBitmaps = debugBitmaps
             )
+            warped = warpedMat
 
             if (debug && warpedDebugBitmap != null) {
                 debugBitmaps["warped"] = warpedDebugBitmap
             }
 
-            var marks : List<Boolean>? = null
+            // 5) Detect filled bubbles
+            var marks: List<Boolean>? = null
+
             if (centersInBuffer.size == 4) {
                 val bubblePoints = templateProcessor.mapTemplateBubblesToImagePoints(omrTemplate)
-                val detectionResult = omrProcessor.detectFilledBubbles(omrTemplate, warped)
-                marks = detectionResult.marks
-                if (debug) {
-                    debugBitmaps["bubble"] = OpenCvUtils.drawPoints(
-                        warped,
-                        points = detectionResult.bubbles.map { it.point },
-                        fillColor = Scalar(255.0, 255.0, 255.0), // white dots
-                        textColor = Scalar(0.0, 255.0, 255.0)    // cyan labels
-                    ).toBitmapSafe()
+
+                if (bubblePoints.size != omrTemplate.totalBubbles()) {
+                    return@withContext OmrImageProcessResult(
+                        success = false,
+                        reason = "Bubble count mismatch: expected ${omrTemplate.totalBubbles()}, got ${bubblePoints.size}",
+                        debugBitmaps = debugBitmaps
+                    ) to centersInBuffer
                 }
 
+                val detectionResult = omrProcessor.detectFilledBubbles(omrTemplate, warped)
+                marks = detectionResult.marks
+
+                if (debug) {
+                    val bubbleDebugMat = warped.clone()
+                    debugBitmaps["bubbles_detected"] = OpenCvUtils.drawPoints(
+                        bubbleDebugMat,
+                        points = detectionResult.bubbles.map { it.point },
+                        fillColor = Scalar(255.0, 255.0, 255.0),
+                        textColor = Scalar(0.0, 255.0, 255.0)
+                    ).toBitmapSafe()
+                    bubbleDebugMat.release()
+                }
+
+                // Create final result bitmap
+                val coloredWarped = warped.toColoredWarped()
                 finalBitmap = OpenCvUtils.drawPoints(
-                    warped.toColoredWarped(),
+                    coloredWarped,
                     bubblesWithColor = detectionResult.bubbles,
                     fillColor = Scalar(255.0, 255.0, 255.0),
                     textColor = Scalar(0.0, 255.0, 255.0)
                 ).toBitmapSafe()
-                if (bubblePoints.size != omrTemplate.totalBubbles()) {
-                    return@withContext OmrImageProcessResult(
-                        success = false,
-                        debugBitmaps = debugBitmaps
-                    ) to centersInBuffer
-                }
-                gray.release()
+                coloredWarped.release()
             } else {
                 return@withContext OmrImageProcessResult(
                     success = false,
-                    debugBitmaps = debugBitmaps,
+                    reason = "Expected 4 anchors, found ${centersInBuffer.size}",
+                    debugBitmaps = debugBitmaps
                 ) to centersInBuffer
             }
-
 
             return@withContext OmrImageProcessResult(
                 success = true,
@@ -143,11 +157,16 @@ class OmrScannerViewModel @Inject constructor(
             ) to centersInBuffer
 
         } catch (e: Exception) {
+            android.util.Log.e("OmrScannerViewModel", "Error processing OMR frame", e)
             return@withContext OmrImageProcessResult(
                 success = false,
-                reason = e.toString(),
+                reason = "Error: ${e.message}",
                 debugBitmaps = debugBitmaps
             ) to listOf()
+        } finally {
+            // IMPORTANT: Release Mat objects to prevent memory leaks
+            gray?.release()
+            warped?.release()
         }
     }
 }
