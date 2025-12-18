@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.RectF
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.utils.image.ImageConversionUtils
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
@@ -18,11 +17,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
-import org.opencv.imgproc.Imgproc
 import javax.inject.Inject
 
 @HiltViewModel
