@@ -285,24 +285,24 @@ private fun CameraViewOrPermissionCard(
                         )
 
                         overlay.setPreviewRect(displayed)
-                        overlay.invalidate()
 
-                        val (omrImageProcessResult, centers) = omrScannerViewModel.processOmrFrame(
+                        val (omrImageProcessResult, detectedAnchors) = omrScannerViewModel.processOmrFrame(
                             imageProxy,
                             omrTemplate,
                             overlay.getAnchorSquaresOnScreen(),
                             overlay.getPreviewRect(),
                             debug = true
                         )
-                        if (omrImageProcessResult.success && isCapturing.compareAndSet(
-                                false,
-                                true
-                            )
-                        ) {
+
+                        // NEW: Update overlay with detected anchors
+                        overlay.setDetectedAnchors(detectedAnchors)
+
+                        if (omrImageProcessResult.success && isCapturing.compareAndSet(false, true)) {
                             mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
                             omrScannerViewModel.setOmrImageProcessResult(omrImageProcessResult)
                             navController.navigate(ScanOmrWithCameraActivity.CAPTURE_PREVIEW_SCREEN)
                         }
+
                         imageProxy.close()
                     }
                 })
