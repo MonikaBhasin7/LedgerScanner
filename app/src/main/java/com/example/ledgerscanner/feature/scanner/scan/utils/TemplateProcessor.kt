@@ -453,7 +453,7 @@ class TemplateProcessor @Inject constructor() {
     /**
      * Sorts bubbles into a 2D array for multi-column layouts
      *
-     * Algorithm:
+     * Algorithm:x
      * 1. Sort bubbles by Y coordinate (group into rows)
      * 2. For each row, find the largest X gap
      * 3. If gap is significant, split row at that point
