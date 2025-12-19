@@ -150,12 +150,13 @@ class CreateTemplateActivity : BaseActivity() {
                         createTemplateViewModel.setTemplateResult(null)
                         createTemplateViewModel.setBitmap(null)
                     },
-                    onProcess = { numberOfQuestionsInAColumn ->
+                    onProcess = { questionsPerColumn, numberOfColumns ->
                         val result =
                             selectedBitmap?.let {
                                 TemplateProcessor().generateTemplateJson(
                                     it,
-                                    numberOfQuestionsInAColumn = numberOfQuestionsInAColumn
+                                    questionsPerColumn = questionsPerColumn,
+                                    numberOfColumns = numberOfColumns
                                 )
                             }
                         createTemplateViewModel.setTemplateResult(result)
@@ -231,12 +232,13 @@ class CreateTemplateActivity : BaseActivity() {
         selectedBitmap: Bitmap?,
         result: OmrTemplateResult?,
         onReselect: () -> Unit,
-        onProcess: (Int) -> Unit,
+        onProcess: (Int, Int) -> Unit,
         onViewJson: (String) -> Unit
     ) {
-
         var numberOfQuestions by remember { mutableStateOf<Int?>(null) }
         var numberOfQuestionsError by remember { mutableStateOf<String?>(null) }
+
+        var numberOfColumns by remember { mutableStateOf<Int?>(null) }
         result?.let {
             if (it.success && it.finalBitmap != null && !it.templateJson.isNullOrEmpty()) {
                 GenericButton(
@@ -245,15 +247,15 @@ class CreateTemplateActivity : BaseActivity() {
                     modifier = Modifier
                         .padding(bottom = 4.dp, start = 16.dp, end = 16.dp)
                         .fillMaxWidth(),
-                    onClick = { onViewJson(it.templateJson!!) }
+                    onClick = { onViewJson(it.templateJson) }
                 )
             }
         }
 
 
-        if (result == null && selectedBitmap != null)
+        if (result == null && selectedBitmap != null) {
             GenericTextField(
-                label = "Number of Questions in one column",
+                label = "Questions per column",
                 value = (numberOfQuestions ?: "").toString(),
                 placeholder = "e.g., 50",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -275,6 +277,22 @@ class CreateTemplateActivity : BaseActivity() {
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             )
 
+            GenericTextField(
+                label = "Number of Columns",
+                value = (numberOfColumns ?: "").toString(),
+                placeholder = "e.g., 2",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                onValueChange = { input ->
+                    val filtered = input.filter { it.isDigit() }
+                    numberOfColumns = filtered.toIntOrNull()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+        }
+
+
         GenericButton(
             text = if (result != null) "Reselect another Image" else "Process template",
             enabled = selectedBitmap != null,
@@ -294,7 +312,7 @@ class CreateTemplateActivity : BaseActivity() {
 
                         else -> {
                             numberOfQuestionsError = null
-                            onProcess(numberOfQuestions!!)
+                            onProcess(numberOfQuestions!!, numberOfColumns ?: 1)
                         }
                     }
                 }

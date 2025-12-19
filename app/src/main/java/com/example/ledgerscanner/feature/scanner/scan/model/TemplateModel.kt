@@ -120,6 +120,19 @@ data class AnchorPoint(
     }
 }
 
+data class Gap(
+    val index: Int,    // Index of bubble before the gap
+    val size: Double   // Size of the gap in pixels
+)
+
+data class HoughParams(
+    val name: String,
+    val minDist: Double,
+    val param2: Double,
+    val minRadius: Int,
+    val maxRadius: Int
+)
+
 enum class OmrTemplateType(val fileName: String) {
     TEN_QUESTIONS("template_omr_10_ques.json"),
     SIXTEEN_QUESTIONS("template_omr_16_ques.json"),

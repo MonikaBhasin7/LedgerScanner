@@ -8,6 +8,8 @@ import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.base.utils.image.toColoredWarped
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
+import com.example.ledgerscanner.feature.scanner.scan.model.Gap
+import com.example.ledgerscanner.feature.scanner.scan.model.HoughParams
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
 import com.example.ledgerscanner.feature.scanner.scan.model.Question
@@ -40,13 +42,22 @@ class TemplateProcessor @Inject constructor() {
     @WorkerThread
     fun generateTemplateJson(
         inputBitmap: Bitmap,
-        debug: Boolean = true,
-        numberOfQuestionsInAColumn: Int
+        questionsPerColumn: Int = 25,
+        numberOfColumns: Int = 2,
+        optionsPerQuestion: Int = 4,
+        debug: Boolean = true
     ): OmrTemplateResult {
         val debugMap = hashMapOf<String, Bitmap>()
         var srcMat: Mat? = null
         var grayMat: Mat? = null
         try {
+            Log.d(
+                TAG, "Starting template generation: $questionsPerColumn questions/column × " +
+                        "$numberOfColumns columns × $optionsPerQuestion options = " +
+                        "${questionsPerColumn * numberOfColumns * optionsPerQuestion} total bubbles"
+            )
+
+
             // 1. Convert bitmap to grayscale
             srcMat = Mat().apply {
                 Utils.bitmapToMat(inputBitmap, this)
@@ -56,7 +67,7 @@ class TemplateProcessor @Inject constructor() {
                 if (debug) debugMap["gray"] = this.toBitmapSafe()
             }
 
-            // 2. Detect 4 anchor squares
+            // 3. Detect anchors
             val anchorPoints: List<AnchorPoint> = detectAnchorPoints(
                 srcMat,
                 grayMat,
@@ -73,21 +84,59 @@ class TemplateProcessor @Inject constructor() {
                 },
             ) ?: listOf()
 
-            // 3. Detect bubble centers
+            // 4. Detect bubbles
             val bubbles = detectAndFetchBubblesWithinAnchors(
-                grayMat,
-                anchorPoints,
-                expectedQuestions = numberOfQuestionsInAColumn,
+                grayMat = grayMat,
+                anchorPoints = anchorPoints,
+                questionsPerColumn = questionsPerColumn,
+                numberOfColumns = numberOfColumns,
+                optionsPerQuestion = optionsPerQuestion,
                 debug = debug,
                 debugMapAdditionCallback = { title, bitmap ->
                     debugMap[title] = bitmap
-                },
+                }
             )
 
-            // 4. Make grid of bubbles
-            val bubbles2DArray = sortBubblesColumnWise(bubbles)
+            // 5. Validate bubble count
+            val expectedBubbles = questionsPerColumn * numberOfColumns * optionsPerQuestion
+            if (bubbles.size != expectedBubbles) {
+                return OmrTemplateResult(
+                    success = false,
+                    reason = "Expected exactly $expectedBubbles bubbles " +
+                            "($questionsPerColumn questions/column × $numberOfColumns columns × $optionsPerQuestion options), " +
+                            "but found ${bubbles.size} bubbles.\n\n" +
+                            "Please ensure:\n" +
+                            "• The OMR sheet has exactly $questionsPerColumn questions per column\n" +
+                            "• There are exactly $numberOfColumns columns\n" +
+                            "• Each question has exactly $optionsPerQuestion options\n" +
+                            "• All bubbles are clearly visible and well-lit",
+                    debugBitmaps = debugMap
+                )
+            }
 
-            // 5. generate template json
+            // 6. Sort bubbles into 2D array (handles multiple columns automatically)
+            val bubbles2DArray = sortBubblesColumnWise(bubbles, optionsPerQuestion)
+
+            // 7. Validate structure
+            val totalQuestions = questionsPerColumn * numberOfColumns
+            if (bubbles2DArray.size != totalQuestions) {
+                return OmrTemplateResult(
+                    success = false,
+                    reason = "Expected $totalQuestions questions after sorting, got ${bubbles2DArray.size}",
+                    debugBitmaps = debugMap
+                )
+            }
+            val invalidRows = bubbles2DArray.filter { it.size != optionsPerQuestion }
+            if (invalidRows.isNotEmpty()) {
+                return OmrTemplateResult(
+                    success = false,
+                    reason = "Found ${invalidRows.size} questions with incorrect bubble count " +
+                            "(expected $optionsPerQuestion per question)",
+                    debugBitmaps = debugMap
+                )
+            }
+
+            // 8. Generate template JSON
             val templatePair = generateTemplateJsonSimple(
                 anchorPoints,
                 bubbles2DArray,
@@ -95,15 +144,18 @@ class TemplateProcessor @Inject constructor() {
             )
 
 
+            // 9. Create final debug bitmap
             val finalBitmap = OpenCvUtils.drawPoints(
                 grayMat.toColoredWarped(),
                 points = anchorPoints,
                 bubbles2DArray = bubbles2DArray,
-                radius = (templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r)
-                    ?.roundToInt(),
-            ).apply {
-                debugMap["Bubbles - Anchors"] = toBitmapSafe()
-            }.toBitmapSafe()
+                radius = templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r?.roundToInt(),
+            ).let {
+                val bitmap = it.toBitmapSafe()
+                debugMap["9_final"] = bitmap
+                it.release()
+                bitmap
+            }
 
             return OmrTemplateResult(
                 success = true,
@@ -113,10 +165,11 @@ class TemplateProcessor @Inject constructor() {
                 template = templatePair.template
             )
         } catch (e: Exception) {
+            Log.e(TAG, "Error generating template", e)
             return OmrTemplateResult(
                 success = false,
-                e.toString(),
-                debugBitmaps = debugMap,
+                reason = "${e.javaClass.simpleName}: ${e.message}",
+                debugBitmaps = debugMap
             )
         } finally {
             srcMat?.release()
@@ -232,118 +285,16 @@ class TemplateProcessor @Inject constructor() {
         return anchors
     }
 
-    @Throws
+    /**
+     * Detect bubbles with adaptive multi-pass strategy
+     * Keeps trying until expected count is reached
+     */
     private fun detectAndFetchBubblesWithinAnchors(
         grayMat: Mat,
         anchorPoints: List<AnchorPoint>,
-        debug: Boolean = false,
-        debugMapAdditionCallback: (String, Bitmap) -> Unit,
-    ): List<Bubble> {
-        var mask: Mat? = null
-        var masked: Mat? = null
-        var blurred: Mat? = null
-        var circles: Mat? = null
-        var anchorMat: MatOfPoint? = null
-
-        try {
-            // 1. Make mask
-            mask = Mat.zeros(grayMat.size(), CvType.CV_8UC1)
-            anchorMat = MatOfPoint(*anchorPoints.map { Point(it.x, it.y) }.toTypedArray())
-            Imgproc.fillConvexPoly(mask, anchorMat, Scalar(255.0))
-
-            // 2. Apply mask
-            masked = Mat()
-            Core.bitwise_and(grayMat, mask, masked)
-            if (debug) debugMapAdditionCallback(
-                "masked within anchors",
-                masked.toBitmapSafe()
-            )
-
-            // 3. Blur
-            blurred = Mat()
-            Imgproc.GaussianBlur(masked, blurred, Size(5.0, 5.0), 1.5)
-
-            // 4. Calculate adaptive parameters
-            val imageArea = grayMat.size().width * grayMat.size().height
-            val estimatedBubbleRadius = sqrt(imageArea / 10000.0) // Rough estimate for ~100 bubbles
-
-            val minRadius = max(5, (estimatedBubbleRadius * 0.5).roundToInt())
-            val maxRadius = min(60, (estimatedBubbleRadius * 1.8).roundToInt())
-            val minDist = max(12.0, estimatedBubbleRadius * 1.0) // Reduced from 1.5
-
-            Log.d(
-                TAG,
-                "Bubble detection params: minR=$minRadius, maxR=$maxRadius, minDist=$minDist, estimatedR=$estimatedBubbleRadius"
-            )
-
-            // 5. Try multiple parameter sets
-            circles = Mat()
-
-            // First attempt: Moderate sensitivity
-            Imgproc.HoughCircles(
-                blurred,
-                circles,
-                Imgproc.HOUGH_GRADIENT,
-                1.0,
-                minDist,
-                100.0,
-                30.0,  // Lowered from 45 - more lenient
-                minRadius,
-                maxRadius
-            )
-
-            Log.d(TAG, "First attempt detected ${circles.cols()} circles")
-
-            // If too few circles, try more aggressive detection
-            if (circles.cols() < 150) { // Expecting 200 for 50 questions
-                circles.release()
-                circles = Mat()
-
-                Imgproc.HoughCircles(
-                    blurred,
-                    circles,
-                    Imgproc.HOUGH_GRADIENT,
-                    1.0,
-                    max(10.0, estimatedBubbleRadius * 0.8), // Even closer circles
-                    100.0,
-                    25.0,  // More lenient
-                    max(4, (estimatedBubbleRadius * 0.4).roundToInt()), // Smaller min
-                    min(70, (estimatedBubbleRadius * 2.0).roundToInt())  // Larger max
-                )
-
-                Log.d(TAG, "Second attempt (aggressive) detected ${circles.cols()} circles")
-            }
-
-            // 6. Extract bubble centers
-            val centers = mutableListOf<Bubble>()
-            for (i in 0 until circles.cols()) {
-                val data = circles.get(0, i) ?: continue
-                val x = data[0]
-                val y = data[1]
-                val r = data[2]
-                centers.add(Bubble(x, y, r))
-            }
-
-            centers.sortWith(compareBy({ it.y.roundToInt() }, { it.x }))
-
-            Log.d(TAG, "Final bubble count: ${centers.size}")
-
-            return centers
-
-        } finally {
-            mask?.release()
-            masked?.release()
-            blurred?.release()
-            circles?.release()
-            anchorMat?.release()
-        }
-    }
-    
-    private fun detectAndFetchBubblesWithinAnchors(
-        grayMat: Mat,
-        anchorPoints: List<AnchorPoint>,
-        expectedQuestions: Int,
-        optionsPerQuestion: Int = 4,
+        questionsPerColumn: Int,
+        numberOfColumns: Int,
+        optionsPerQuestion: Int,
         debug: Boolean = false,
         debugMapAdditionCallback: (String, Bitmap) -> Unit,
     ): List<Bubble> {
@@ -367,114 +318,79 @@ class TemplateProcessor @Inject constructor() {
                 masked.toBitmapSafe()
             )
 
-            // 3. Calculate the ACTUAL area of the masked region
-            val maskedArea = Imgproc.contourArea(anchorMat)
-
-            // 4. Calculate expected bubbles and adaptive parameters
-            val exactExpectedBubbles = expectedQuestions * optionsPerQuestion
-            val estimatedBubbleRadius = sqrt(maskedArea / (exactExpectedBubbles * 10.0))
-
-            Log.d(
-                TAG,
-                "Target: EXACTLY $exactExpectedBubbles bubbles | Masked area: ${maskedArea.toInt()} | EstR: ${estimatedBubbleRadius.roundToInt()}"
-            )
-
-            // 5. Blur
+            // 3. Blur
             blurred = Mat()
             Imgproc.GaussianBlur(masked, blurred, Size(5.0, 5.0), 1.5)
 
-            // 6. Define detection strategies (from moderate to extreme)
-            val strategies = listOf(
-                DetectionStrategy(
+            // 4. Calculate expected bubble count
+            val totalQuestions = questionsPerColumn * numberOfColumns
+            val exactExpectedBubbles = totalQuestions * optionsPerQuestion
+
+            Log.d(
+                TAG, "Expected: $exactExpectedBubbles bubbles " +
+                        "($questionsPerColumn questions/column × $numberOfColumns columns × $optionsPerQuestion options)"
+            )
+
+            // 5. Calculate base parameters
+            val maskedArea = Imgproc.contourArea(anchorMat)
+            val estimatedBubbleRadius = sqrt(maskedArea / (exactExpectedBubbles * 10.0))
+
+            Log.d(TAG, "Estimated bubble radius: ${estimatedBubbleRadius.roundToInt()}")
+
+            // 6. Try detection with increasing aggressiveness
+            val attempts = listOf(
+                // Attempt 1: Moderate (your working parameters)
+                HoughParams(
                     name = "Moderate",
-                    minDistFactor = 1.0,
+                    minDist = max(12.0, estimatedBubbleRadius * 1.0),
                     param2 = 30.0,
-                    minRadiusFactor = 0.5,
-                    maxRadiusFactor = 1.8,
-                    minRadiusAbs = 5,
-                    maxRadiusAbs = 60
+                    minRadius = max(5, (estimatedBubbleRadius * 0.5).roundToInt()),
+                    maxRadius = min(60, (estimatedBubbleRadius * 1.8).roundToInt())
                 ),
-                DetectionStrategy(
+                // Attempt 2: Aggressive
+                HoughParams(
                     name = "Aggressive",
-                    minDistFactor = 0.8,
+                    minDist = max(10.0, estimatedBubbleRadius * 0.8),
                     param2 = 25.0,
-                    minRadiusFactor = 0.4,
-                    maxRadiusFactor = 2.0,
-                    minRadiusAbs = 4,
-                    maxRadiusAbs = 70
+                    minRadius = max(4, (estimatedBubbleRadius * 0.4).roundToInt()),
+                    maxRadius = min(70, (estimatedBubbleRadius * 2.0).roundToInt())
                 ),
-                DetectionStrategy(
-                    name = "Conservative",
-                    minDistFactor = 1.2,
-                    param2 = 35.0,
-                    minRadiusFactor = 0.6,
-                    maxRadiusFactor = 1.6,
-                    minRadiusAbs = 6,
-                    maxRadiusAbs = 55
-                ),
-                DetectionStrategy(
+                // Attempt 3: Very Aggressive
+                HoughParams(
                     name = "Very Aggressive",
-                    minDistFactor = 0.6,
+                    minDist = max(8.0, estimatedBubbleRadius * 0.6),
                     param2 = 20.0,
-                    minRadiusFactor = 0.3,
-                    maxRadiusFactor = 2.5,
-                    minRadiusAbs = 3,
-                    maxRadiusAbs = 80
-                ),
-                DetectionStrategy(
-                    name = "Very Conservative",
-                    minDistFactor = 1.5,
-                    param2 = 40.0,
-                    minRadiusFactor = 0.7,
-                    maxRadiusFactor = 1.4,
-                    minRadiusAbs = 7,
-                    maxRadiusAbs = 50
-                ),
-                DetectionStrategy(
-                    name = "Ultra Aggressive",
-                    minDistFactor = 0.5,
-                    param2 = 15.0,
-                    minRadiusFactor = 0.2,
-                    maxRadiusFactor = 3.0,
-                    minRadiusAbs = 2,
-                    maxRadiusAbs = 90
+                    minRadius = max(3, (estimatedBubbleRadius * 0.3).roundToInt()),
+                    maxRadius = min(80, (estimatedBubbleRadius * 2.2).roundToInt())
                 )
             )
 
-            var bestResult: List<Bubble>? = null
-            var bestCount = 0
-            var bestDifference = Int.MAX_VALUE
+            var closestBubbles = emptyList<Bubble>()
+            var closestCount = 0
+            var closestDiff = Int.MAX_VALUE
 
-            // 7. Try each strategy
-            for ((index, strategy) in strategies.withIndex()) {
+            for ((index, params) in attempts.withIndex()) {
                 circles?.release()
                 circles = Mat()
-
-                val minDist = max(8.0, estimatedBubbleRadius * strategy.minDistFactor)
-                val minRadius = max(strategy.minRadiusAbs, (estimatedBubbleRadius * strategy.minRadiusFactor).roundToInt())
-                val maxRadius = min(strategy.maxRadiusAbs, (estimatedBubbleRadius * strategy.maxRadiusFactor).roundToInt())
 
                 Imgproc.HoughCircles(
                     blurred,
                     circles,
                     Imgproc.HOUGH_GRADIENT,
                     1.0,
-                    minDist,
+                    params.minDist,
                     100.0,
-                    strategy.param2,
-                    minRadius,
-                    maxRadius
+                    params.param2,
+                    params.minRadius,
+                    params.maxRadius
                 )
 
                 val detectedCount = circles.cols()
-                val difference = abs(detectedCount - exactExpectedBubbles)
+                val diff = abs(detectedCount - exactExpectedBubbles)
 
                 Log.d(
-                    TAG,
-                    "Strategy ${index + 1}/${strategies.size} (${strategy.name}): " +
-                            "${detectedCount} bubbles | Diff: $difference | " +
-                            "Params: [minDist=${minDist.roundToInt()}, param2=${strategy.param2}, " +
-                            "minR=$minRadius, maxR=$maxRadius]"
+                    TAG, "Attempt ${index + 1}/${attempts.size} (${params.name}): " +
+                            "detected=$detectedCount, expected=$exactExpectedBubbles, diff=$diff"
                 )
 
                 // Extract bubbles
@@ -489,39 +405,28 @@ class TemplateProcessor @Inject constructor() {
                     }
                 }
 
-                // Track best result
-                if (difference < bestDifference) {
-                    bestResult = currentBubbles
-                    bestCount = detectedCount
-                    bestDifference = difference
+                // Keep track of closest attempt
+                if (diff < closestDiff) {
+                    closestBubbles = currentBubbles
+                    closestCount = currentBubbles.size
+                    closestDiff = diff
                 }
 
-                // If EXACT match found, stop immediately
-                if (detectedCount == exactExpectedBubbles) {
-                    Log.d(TAG, "✓ PERFECT MATCH! Found exactly $exactExpectedBubbles bubbles with ${strategy.name} strategy")
+                // Check if we found EXACTLY the expected number
+                if (currentBubbles.size == exactExpectedBubbles) {
+                    Log.d(TAG, "✓ Perfect match! Found exactly $exactExpectedBubbles bubbles")
 
-                    currentBubbles.sortWith(compareBy({ it.y.roundToInt() }, { it.x }))
-                    return currentBubbles
-                }
-
-                // If we're within 5% and it's better than previous best, continue but track it
-                val tolerance = (exactExpectedBubbles * 0.05).toInt()
-                if (difference <= tolerance) {
-                    Log.d(TAG, "→ Close match within tolerance (±$tolerance)")
+                    return currentBubbles.sortedWith(compareBy({ it.y.roundToInt() }, { it.x }))
                 }
             }
 
-            // 8. No perfect match found, return best result
+            // No perfect match found, return closest attempt
             Log.w(
-                TAG,
-                "⚠ No exact match after ${strategies.size} attempts. " +
-                        "Best: $bestCount bubbles (expected $exactExpectedBubbles, diff: $bestDifference)"
+                TAG, "⚠ Could not find exact match. Closest: $closestCount bubbles " +
+                        "(expected $exactExpectedBubbles, difference: $closestDiff)"
             )
 
-            val finalResult = bestResult ?: emptyList()
-            finalResult.sortedWith(compareBy({ it.y.roundToInt() }, { it.x }))
-
-            return finalResult
+            return closestBubbles.sortedWith(compareBy({ it.y.roundToInt() }, { it.x }))
 
         } finally {
             mask?.release()
@@ -545,34 +450,173 @@ class TemplateProcessor @Inject constructor() {
         val maxRadiusAbs: Int
     )
 
+    /**
+     * Sorts bubbles into a 2D array for multi-column layouts
+     *
+     * Algorithm:
+     * 1. Sort bubbles by Y coordinate (group into rows)
+     * 2. For each row, find the largest X gap
+     * 3. If gap is significant, split row at that point
+     * 4. Each split becomes a separate question
+     *
+     * @param bubbles List of detected bubble centers
+     * @param optionsPerQuestion Expected number of options per question
+     * @return 2D array where each inner list represents one question's options
+     */
     @Throws
-    private fun sortBubblesColumnWise(bubbles: List<Bubble>): List<List<Bubble>> {
+    private fun sortBubblesColumnWise(
+        bubbles: List<Bubble>,
+        optionsPerQuestion: Int = 4
+    ): List<List<Bubble>> {
         if (bubbles.isEmpty()) return emptyList()
 
-        val tol = computeRowToleranceFromBubbles(bubbles)
+        // Step:1 - Sort all bubbles by y coordinated then by x
+        val sortedBubbles = bubbles.sortedWith(compareBy({ it.y.roundToInt() }, { it.x }))
 
-        // 1. Sort by y first
-        val sorted = bubbles.sortedBy { it.y }
-        val rows = mutableListOf<MutableList<Bubble>>()
+        // Step 2: Group bubbles into rows (same Y coordinate)
+        val rows = groupIntoRows(sortedBubbles)
+        Log.d(TAG, "Grouped into ${rows.size} rows")
 
-        // 2. Make buckets by Y tolerance
-        var currentRow = mutableListOf<Bubble>()
-        var currentY = sorted.first().y
+        // Step 3: Process each row and split at large gaps
+        val allQuestions = mutableListOf<MutableList<MutableList<Bubble>>>()
 
-        for (b in sorted) {
-            if (abs(b.y - currentY) <= tol) {
-                currentRow.add(b)
-            } else {
-                // finalize this row
-                rows.add(currentRow.sortedBy { it.x }.toMutableList())
-                // start new row
-                currentRow = mutableListOf(b)
-                currentY = b.y
+        rows.forEachIndexed { rowIndex, rowBubbles ->
+            val questions = splitRowAtGaps(rowBubbles, optionsPerQuestion)
+
+            Log.d(
+                TAG, "Row $rowIndex (Y= ${rowBubbles.first().y.roundToInt()}): " +
+                        "${rowBubbles.size} bubbles → ${questions.size} questions"
+            )
+
+            questions.forEachIndexed { columnIndex, bubbles ->
+                // Ensure allQuestions has enough space for this column
+                while (allQuestions.size <= columnIndex) {
+                    allQuestions.add(mutableListOf())
+                }
+
+                // Add bubbles to the corresponding column
+                allQuestions[columnIndex].add(bubbles.toMutableList())
             }
         }
+
+        // Step 4: Flatten - all questions from column 0, then column 1, etc.
+        val finalQuestions = allQuestions.flatMapIndexed { columnIndex, columnQuestions ->
+            Log.d(TAG, "Column $columnIndex: ${columnQuestions.size} questions")
+            columnQuestions
+        }
+
+
+        // Step 5: Validate
+        val invalidQuestions = finalQuestions.filter { it.size != optionsPerQuestion }
+        if (invalidQuestions.isNotEmpty()) {
+            Log.w(TAG, "⚠️ Found ${invalidQuestions.size} questions with incorrect bubble count")
+            invalidQuestions.forEach { question ->
+                Log.w(TAG, "  Question has ${question.size} bubbles (expected $optionsPerQuestion)")
+            }
+        }
+
+        return finalQuestions
+    }
+
+    /**
+     * Splits a row of bubbles at large X gaps
+     * Each split represents a question in a different column
+     *
+     * @param rowBubbles All bubbles in a single row (same Y coordinate)
+     * @param optionsPerQuestion Expected options per question
+     * @return List of questions, each with its bubbles
+     */
+    private fun splitRowAtGaps(
+        rowBubbles: List<Bubble>,
+        optionsPerQuestion: Int
+    ): List<List<Bubble>> {
+        if (rowBubbles.isEmpty()) return emptyList()
+        if (rowBubbles.size <= optionsPerQuestion) {
+            // Single question, no split needed
+            return listOf(rowBubbles)
+        }
+
+        // Already sorted by X (from parent sort)
+        val sortedByX = rowBubbles.sortedBy { it.x }
+
+        // Calculate gaps between consecutive bubbles
+        val gaps = mutableListOf<Gap>()
+        for (i in 0 until sortedByX.size - 1) {
+            val gap = sortedByX[i + 1].x - sortedByX[i].x
+            gaps.add(Gap(index = i, size = gap))
+        }
+
+        if (gaps.isEmpty()) return listOf(rowBubbles)
+
+        // Find the largest gap
+        val largestGap = gaps.maxByOrNull { it.size } ?: return listOf(rowBubbles)
+
+        // Calculate average gap (normal spacing between options)
+        val avgGap = gaps.map { it.size }.average()
+
+        Log.v(
+            TAG, "Row Y=${sortedByX.first().y.roundToInt()}: " +
+                    "avgGap=${avgGap.roundToInt()}, largestGap=${largestGap.size.roundToInt()} " +
+                    "at index ${largestGap.index}"
+        )
+
+        // Check if largest gap is significantly larger (indicates column boundary)
+        val isSignificantGap = largestGap.size > avgGap * 2.0
+
+        if (!isSignificantGap) {
+            // No significant gap, treat as single question
+            return listOf(rowBubbles)
+        }
+
+        // Split at the largest gap
+        val questions = mutableListOf<List<Bubble>>()
+        var startIndex = 0
+
+        // Split point is after the bubble at largestGap.index
+        val splitIndex = largestGap.index + 1
+
+        // First question (before gap)
+        questions.add(sortedByX.subList(startIndex, splitIndex))
+
+        // Remaining bubbles (after gap) - might contain more questions
+        val remaining = sortedByX.subList(splitIndex, sortedByX.size)
+
+        // Recursively split remaining bubbles if needed
+        val remainingQuestions = splitRowAtGaps(remaining, optionsPerQuestion)
+        questions.addAll(remainingQuestions)
+
+        return questions
+    }
+
+    /**
+     * Groups bubbles into rows based on Y coordinate
+     * Bubbles with similar Y (within tolerance) are grouped together
+     */
+    private fun groupIntoRows(sortedBubbles: List<Bubble>): List<List<Bubble>> {
+        if (sortedBubbles.isEmpty()) return emptyList()
+
+        val rows = mutableListOf<MutableList<Bubble>>()
+        val yTolerance = 10 // Pixels tolerance for considering bubbles in same row
+
+        var currentRow = mutableListOf(sortedBubbles.first())
+        var currentY = sortedBubbles.first().y
+
+        for (i in 1 until sortedBubbles.size) {
+            val bubble = sortedBubbles[i]
+            val bubbleY = bubble.y
+
+            if (abs(bubbleY - currentY) >= yTolerance) {
+                rows.add(currentRow)
+                currentRow = mutableListOf(bubble)
+                currentY = bubbleY
+            } else {
+                currentRow.add(bubble)
+            }
+        }
+
         // Add last row
         if (currentRow.isNotEmpty()) {
-            rows.add(currentRow.sortedBy { it.x }.toMutableList())
+            rows.add(currentRow)
         }
 
         return rows
