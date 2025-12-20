@@ -68,7 +68,7 @@ import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
-import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.custom_ui.OverlayView
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
@@ -81,7 +81,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 fun ScannerScreen(
     navController: NavHostController,
     omrScannerViewModel: OmrScannerViewModel,
-    omrTemplate: Template
+    examEntity: ExamEntity
 ) {
     val context = LocalContext.current
     val activity = remember { context as? BaseActivity }
@@ -109,7 +109,7 @@ fun ScannerScreen(
         lifecycleOwner = lifecycleOwner,
         omrScannerViewModel = omrScannerViewModel,
         imageCapture = imageCapture,
-        omrTemplate = omrTemplate,
+        examEntity = examEntity,
         navController = navController,
         cameraPermissionStatus = cameraPermissionStatus,
         takePermissionCallback = {
@@ -195,7 +195,7 @@ private fun CameraViewOrPermissionCard(
     lifecycleOwner: LifecycleOwner,
     omrScannerViewModel: OmrScannerViewModel,
     imageCapture: ImageCapture,
-    omrTemplate: Template,
+    examEntity: ExamEntity,
     navController: NavHostController,
     cameraPermissionStatus: PermissionStatus,
     takePermissionCallback: () -> Unit,
@@ -246,7 +246,7 @@ private fun CameraViewOrPermissionCard(
                 val overlay = OverlayView(ctx).apply {
                     setWillNotDraw(false)
                     bringToFront()
-                    setTemplateSpec(omrTemplate)
+                    setTemplateSpec(examEntity.template)
                 }
                 container.addView(
                     overlay,
@@ -288,7 +288,7 @@ private fun CameraViewOrPermissionCard(
 
                         val (omrImageProcessResult, detectedAnchors) = omrScannerViewModel.processOmrFrame(
                             imageProxy,
-                            omrTemplate,
+                            examEntity.template,
                             overlay.getAnchorSquaresOnScreen(),
                             overlay.getPreviewRect(),
                             debug = true
