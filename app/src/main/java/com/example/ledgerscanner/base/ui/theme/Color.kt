@@ -20,6 +20,7 @@ val Grey400 = Color(0xFFBFBFBF)   // Medium Grey
 val Grey500 = Color(0xFF949494)   // Neutral Grey
 val Grey600 = Color(0xFF767676)   // Dark Grey
 val Grey700 = Color(0xFF5E5E5E)   // Dim Grey
+val Grey750 = Color(0xFF4D4D4D)
 val Grey800 = Color(0xFF3C3C3C)   // Deep Grey
 val Grey900 = Color(0xFF1E1E1E)   // Almost Black
 

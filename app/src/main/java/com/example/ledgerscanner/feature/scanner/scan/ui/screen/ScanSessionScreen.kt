@@ -46,6 +46,9 @@ import com.example.ledgerscanner.base.ui.theme.Blue75
 import com.example.ledgerscanner.base.ui.theme.Green400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
+import com.example.ledgerscanner.base.ui.theme.Grey700
+import com.example.ledgerscanner.base.ui.theme.Grey750
+import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.base.utils.ui.genericClick
@@ -105,7 +108,7 @@ fun ScanSessionScreen(
                 optionsPerQuestion = optionsPerQuestion
             )
 
-            HorizontalDivider(color = Blue75, thickness = 0.5.dp)
+            HorizontalDivider(color = Blue75, thickness = 0.7.dp)
             Spacer(modifier = Modifier.height(24.dp))
 
             ReadyState(
@@ -140,13 +143,13 @@ private fun ExamHeader(
         Column {
             Text(
                 text = examName,
-                style = AppTypography.h2Bold,
-                color = Color(0xFF212121)
+                style = AppTypography.h3Bold,
+                color = Grey750
             )
             Text(
                 text = "$totalQuestions Questions • $optionsPerQuestion Options",
                 style = AppTypography.body3Regular,
-                color = Color(0xFF757575)
+                color = Grey600
             )
         }
     }
