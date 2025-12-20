@@ -69,7 +69,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.custom_ui.OverlayView
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import kotlinx.coroutines.Dispatchers
@@ -300,7 +300,7 @@ private fun CameraViewOrPermissionCard(
                         if (omrImageProcessResult.success && isCapturing.compareAndSet(false, true)) {
                             mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
                             omrScannerViewModel.setOmrImageProcessResult(omrImageProcessResult)
-                            navController.navigate(ScanOmrWithCameraActivity.CAPTURE_PREVIEW_SCREEN)
+                            navController.navigate(ScanBaseActivity.CAPTURE_PREVIEW_SCREEN)
                         }
 
                         imageProxy.close()

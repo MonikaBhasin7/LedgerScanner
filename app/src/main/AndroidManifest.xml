@@ -37,7 +37,7 @@
             android:name=".feature.scanner.exam.ui.activity.ExamListingActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
-            android:name=".feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity"
+            android:name=".feature.scanner.scan.ui.activity.ScanBaseActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
             android:name=".feature.scanner.scan.ui.activity.CreateTemplateActivity"

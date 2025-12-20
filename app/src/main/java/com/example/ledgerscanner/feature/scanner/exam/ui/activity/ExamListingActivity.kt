@@ -81,7 +81,7 @@ import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDi
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanOmrWithCameraActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -296,8 +296,9 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             ExamAction.ScanSheets -> {
-                // TODO: Navigate to scan screen
-                Toast.makeText(context, "Scan Sheets - Coming soon", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(context, ScanBaseActivity::class.java).apply {
+                    putExtra(ScanBaseActivity.ARG_EXAM_ENTITY, examEntity)
+                })
             }
 
             ExamAction.ViewResults -> {
@@ -691,7 +692,7 @@ class ExamListingActivity : ComponentActivity() {
 
                 is OperationResult.Success -> {
                     startActivity(
-                        Intent(this, ScanOmrWithCameraActivity::class.java).apply {
+                        Intent(this, ScanBaseActivity::class.java).apply {
                             putExtra(EXTRA_TEMPLATE, result.data)
                         }
                     )
