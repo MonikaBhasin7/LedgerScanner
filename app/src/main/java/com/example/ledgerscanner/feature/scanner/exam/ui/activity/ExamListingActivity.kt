@@ -72,6 +72,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionDialog
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
@@ -206,7 +207,11 @@ class ExamListingActivity : ComponentActivity() {
                     onExamClick = { exam ->
                         startActivity(
                             Intent(context, CreateExamActivity::class.java).apply {
-                                putExtra(CreateExamActivity.EXAM_ENTITY, exam)
+                                putExtra(
+                                    CreateExamActivity.CONFIG, CreateExamConfig(
+                                        examEntity = exam,
+                                    )
+                                )
                             }
                         )
                     },
@@ -290,7 +295,11 @@ class ExamListingActivity : ComponentActivity() {
             ExamAction.ContinueSetup, ExamAction.EditExam -> {
                 context.startActivity(
                     Intent(context, CreateExamActivity::class.java).apply {
-                        putExtra(CreateExamActivity.EXAM_ENTITY, examEntity)
+                        putExtra(
+                            CreateExamActivity.CONFIG, CreateExamConfig(
+                                examEntity = examEntity,
+                            )
+                        )
                     }
                 )
             }

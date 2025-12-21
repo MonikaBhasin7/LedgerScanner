@@ -32,6 +32,7 @@ import com.example.ledgerscanner.base.ui.components.GenericDialog
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 
@@ -41,7 +42,8 @@ fun BasicInfoScreen(
     navController: NavHostController,
     createExamViewModel: CreateExamViewModel,
     modifier: Modifier = Modifier,
-    updateBottomBar: (BottomBarConfig) -> Unit
+    updateBottomBar: (BottomBarConfig) -> Unit,
+    viewMode: CreateExamConfig.Mode
 ) {
     val context = LocalContext.current
 

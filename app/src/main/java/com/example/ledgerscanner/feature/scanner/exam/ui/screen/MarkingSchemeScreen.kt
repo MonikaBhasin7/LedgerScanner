@@ -44,13 +44,15 @@ import com.example.ledgerscanner.base.ui.theme.Grey700
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 
 @Composable
 fun MarkingDefaultsScreen(
     modifier: Modifier = Modifier,
     createExamViewModel: CreateExamViewModel,
-    updateBottomBar: (BottomBarConfig) -> Unit
+    updateBottomBar: (BottomBarConfig) -> Unit,
+    viewMode: CreateExamConfig.Mode
 ) {
     var marksPerCorrect by remember { mutableStateOf("1") }
     var marksPerWrong by remember { mutableStateOf("0.25") }

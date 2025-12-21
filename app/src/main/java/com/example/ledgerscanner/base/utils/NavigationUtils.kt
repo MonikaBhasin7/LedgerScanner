@@ -9,7 +9,7 @@ import androidx.navigation.NavHostController
 
 /**
  * Navigate back or finish activity if no back stack exists
- * 
+ *
  * Usage in Composable:
  * ```
  * navController.navigateBackOrFinish(context)
@@ -21,9 +21,13 @@ fun NavHostController.navigateBackOrFinish(context: Context) {
     }
 }
 
+fun NavHostController.navigateFromActivity(context: Context) {
+    context.findActivity()?.finish()
+}
+
 /**
  * Alternative: Navigate back with custom fallback action
- * 
+ *
  * Usage:
  * ```
  * navController.navigateBackOr {
@@ -39,7 +43,7 @@ inline fun NavHostController.navigateBackOr(crossinline onNoBackStack: () -> Uni
 
 /**
  * Safe navigation back - handles both navigation and activity finish
- * 
+ *
  * Usage:
  * ```
  * navController.safeNavigateBack(context)
@@ -56,7 +60,7 @@ fun NavHostController.safeNavigateBack(context: Context): Boolean {
 
 /**
  * Navigate up or finish activity
- * 
+ *
  * Usage:
  * ```
  * navController.navigateUpOrFinish(context)
@@ -86,11 +90,11 @@ fun Context.findActivity(): ComponentActivity? {
 
 /**
  * Composable function to handle back navigation
- * 
+ *
  * Usage in Composable:
  * ```
  * val handleBack = rememberBackHandler(navController)
- * 
+ *
  * GenericToolbar(
  *     title = "Screen",
  *     onBackClick = handleBack
@@ -107,7 +111,7 @@ fun rememberBackHandler(navController: NavHostController): () -> Unit {
 
 /**
  * Composable function with custom fallback
- * 
+ *
  * Usage:
  * ```
  * val handleBack = rememberBackHandler(navController) {

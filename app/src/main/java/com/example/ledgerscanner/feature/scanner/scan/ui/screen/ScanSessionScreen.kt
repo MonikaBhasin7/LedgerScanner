@@ -1,5 +1,6 @@
 package com.example.omrscanner.ui.screens
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
@@ -46,13 +45,14 @@ import com.example.ledgerscanner.base.ui.theme.Blue75
 import com.example.ledgerscanner.base.ui.theme.Green400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
-import com.example.ledgerscanner.base.ui.theme.Grey700
 import com.example.ledgerscanner.base.ui.theme.Grey750
-import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
+import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 
@@ -75,8 +75,19 @@ fun ScanSessionScreen(
     val scannedSheetsCount = examEntity.sheetsCount ?: 0
 
     val onViewAnswerKey: () -> Unit = {
-        // TODO: Navigate to answer key view screen
-        // navController.navigate("answer_key_view/${examEntity.id}")
+        context.startActivity(
+            Intent(
+                context,
+                CreateExamActivity::class.java
+            ).apply {
+                putExtra(
+                    CreateExamActivity.CONFIG, CreateExamConfig(
+                        examEntity = examEntity,
+                        mode = CreateExamConfig.Mode.VIEW,
+                        targetScreen = ExamStep.ANSWER_KEY
+                    )
+                )
+            })
     }
     val onViewResults: () -> Unit = {
         navController.navigate("all_scanned_sheets/${examEntity.id}")
@@ -136,7 +147,9 @@ private fun ExamHeader(
         Icon(
             imageVector = Icons.Outlined.EditNote,
             contentDescription = "",
-            modifier = Modifier.size(48.dp).padding(end = 8.dp),
+            modifier = Modifier
+                .size(48.dp)
+                .padding(end = 8.dp),
             tint = Blue500
         )
 
@@ -287,7 +300,7 @@ private fun StatusCard(
                     style = AppTypography.body3Medium,
                     color = Grey900
                 )
-                if(!subtitle.isNullOrEmpty())
+                if (!subtitle.isNullOrEmpty())
                     Text(
                         text = subtitle,
                         style = AppTypography.h4Bold,

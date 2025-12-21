@@ -33,6 +33,7 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 import java.text.SimpleDateFormat
@@ -44,7 +45,8 @@ fun ReviewScreen(
     createExamViewModel: CreateExamViewModel,
     updateBottomBar: (BottomBarConfig) -> Unit,
     onEditStep: (ExamStep) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewMode: CreateExamConfig.Mode
 ) {
     val examEntity by createExamViewModel.examEntity.collectAsState()
 

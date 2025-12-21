@@ -30,7 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
@@ -39,8 +41,10 @@ import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.White
+import com.example.ledgerscanner.base.utils.navigateFromActivity
 import com.example.ledgerscanner.feature.scanner.exam.model.AnswerKeyBulkFillType
 import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 
 private const val OPTION_A = 1
@@ -50,10 +54,13 @@ private const val OPTION_D = 4
 
 @Composable
 fun AnswerKeyScreen(
+    navController: NavHostController,
     createExamViewModel: CreateExamViewModel,
     modifier: Modifier = Modifier,
-    updateBottomBar: (BottomBarConfig) -> Unit
+    updateBottomBar: (BottomBarConfig) -> Unit,
+    viewMode: CreateExamConfig.Mode,
 ) {
+    val context = LocalContext.current
     var selectedBulkFill by remember { mutableStateOf<AnswerKeyBulkFillType?>(null) }
     val examEntity by createExamViewModel.examEntity.collectAsState()
     val questionCount = examEntity?.totalQuestions ?: 0
@@ -80,10 +87,16 @@ fun AnswerKeyScreen(
     }
 
     LaunchedEffect(allAnswered, answerKeys.toList()) {
+        val isViewMode = CreateExamConfig.Mode.VIEW == viewMode
         updateBottomBar(
             BottomBarConfig(
                 enabled = allAnswered,
+                buttonText = if (isViewMode) "Back" else "Next",
                 onNext = {
+                    if (isViewMode) {
+                        navController.navigateFromActivity(context)
+                    }
+
                     val hasChanges = answerKeys.indices.any { index ->
                         answerKeys[index] != examEntity?.answerKey?.get(index + 1)
                     }
@@ -137,6 +150,7 @@ fun AnswerKeyScreen(
 
         BulkFillWidget(
             selectedLabel = selectedBulkFill,
+            enabled = viewMode == CreateExamConfig.Mode.EDIT,
             onSelect = {
                 selectedBulkFill = it
                 setAnswerKey()
@@ -147,6 +161,7 @@ fun AnswerKeyScreen(
 
         AnswerKeyWidget(
             answerKeys = answerKeys,
+            enabled = viewMode == CreateExamConfig.Mode.EDIT,
             onSelectAnswer = { index, answer ->
                 if (answerKeys[index] != answer) {
                     answerKeys[index] = answer
@@ -160,7 +175,8 @@ fun AnswerKeyScreen(
 @Composable
 fun AnswerKeyWidget(
     answerKeys: List<Int?>,
-    onSelectAnswer: (Int, Int) -> Unit
+    onSelectAnswer: (Int, Int) -> Unit,
+    enabled: Boolean
 ) {
     Column {
         Row(
@@ -177,14 +193,15 @@ fun AnswerKeyWidget(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        AnswerKeyGrid(answerKeys, onSelectAnswer)
+        AnswerKeyGrid(answerKeys, onSelectAnswer, enabled)
     }
 }
 
 @Composable
 fun AnswerKeyGrid(
     answerKeys: List<Int?>,
-    onSelectAnswer: (Int, Int) -> Unit
+    onSelectAnswer: (Int, Int) -> Unit,
+    enabled: Boolean
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -198,9 +215,10 @@ fun AnswerKeyGrid(
             QuestionCard(
                 questionNumber = index + 1,
                 answerItemSelected = answer,
+                enabled = enabled,
                 onSelectAnswer = { selected ->
                     onSelectAnswer(index, selected)
-                }
+                },
             )
         }
     }
@@ -211,6 +229,7 @@ fun QuestionCard(
     questionNumber: Int,
     answerItemSelected: Int?,
     modifier: Modifier = Modifier,
+    enabled: Boolean,
     onSelectAnswer: (Int) -> Unit
 ) {
     Column(
@@ -226,18 +245,38 @@ fun QuestionCard(
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OptionButton("A", answerItemSelected == OPTION_A, Modifier.weight(1f)) {
+                OptionButton(
+                    "A",
+                    answerItemSelected == OPTION_A,
+                    enabled,
+                    Modifier.weight(1f)
+                ) {
                     onSelectAnswer(OPTION_A)
                 }
-                OptionButton("B", answerItemSelected == OPTION_B, Modifier.weight(1f)) {
+                OptionButton(
+                    "B",
+                    answerItemSelected == OPTION_B,
+                    enabled,
+                    Modifier.weight(1f)
+                ) {
                     onSelectAnswer(OPTION_B)
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OptionButton("C", answerItemSelected == OPTION_C, Modifier.weight(1f)) {
+                OptionButton(
+                    "C",
+                    answerItemSelected == OPTION_C,
+                    enabled,
+                    Modifier.weight(1f)
+                ) {
                     onSelectAnswer(OPTION_C)
                 }
-                OptionButton("D", answerItemSelected == OPTION_D, Modifier.weight(1f)) {
+                OptionButton(
+                    "D",
+                    answerItemSelected == OPTION_D,
+                    enabled,
+                    Modifier.weight(1f)
+                ) {
                     onSelectAnswer(OPTION_D)
                 }
             }
@@ -249,6 +288,7 @@ fun QuestionCard(
 fun OptionButton(
     text: String,
     selected: Boolean,
+    enabled: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -262,7 +302,7 @@ fun OptionButton(
                 color = if (selected) Color.Transparent else Grey200,
                 shape = RoundedCornerShape(10.dp)
             )
-            .clickable { onClick() },
+            .clickable { if (enabled) onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -276,8 +316,10 @@ fun OptionButton(
 @Composable
 fun BulkFillWidget(
     onSelect: (AnswerKeyBulkFillType) -> Unit,
-    selectedLabel: AnswerKeyBulkFillType?
+    selectedLabel: AnswerKeyBulkFillType?,
+    enabled: Boolean
 ) {
+    if (!enabled) return
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
