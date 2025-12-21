@@ -145,7 +145,7 @@ class CreateExamActivity : ComponentActivity() {
         updateBottomBar: (BottomBarConfig) -> Unit
     ) {
         val startDestination = config?.targetScreen?.title ?: ExamStep.BASIC_INFO.title
-        val viewMode = config?.mode ?: CreateExamConfig.Mode.VIEW
+        val viewMode = config?.mode ?: CreateExamConfig.Mode.EDIT
 
         NavHost(
             navController = navController,
