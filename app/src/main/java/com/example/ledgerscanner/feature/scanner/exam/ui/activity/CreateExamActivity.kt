@@ -99,7 +99,7 @@ class CreateExamActivity : ComponentActivity() {
 
             LedgerScannerTheme {
                 Scaffold(topBar = {
-                    GenericToolbar(title = "Create Exam", onBackClick = { finish() })
+                    GenericToolbar(title = getToolbarTitle(), onBackClick = { finish() })
                 }, bottomBar = {
                     SaveAndNextBarWidget(
                         enabled = bottomBarConfig.enabled,
@@ -136,6 +136,13 @@ class CreateExamActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    fun getToolbarTitle(): String {
+        if (config?.mode == CreateExamConfig.Mode.VIEW && config?.targetScreen != null) {
+            return config?.targetScreen?.title ?: "Create Exam"
+        }
+        return "Create Exam"
     }
 
     @Composable
