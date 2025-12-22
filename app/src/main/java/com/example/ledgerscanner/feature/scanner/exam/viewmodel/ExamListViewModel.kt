@@ -3,14 +3,16 @@ package com.example.ledgerscanner.feature.scanner.exam.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.ui.components.ButtonType
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionPopupConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.model.QuickActionButton
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -113,33 +115,59 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
     fun getExamActionForStatus(
         status: ExamStatus,
         hasScannedSheets: Boolean = false
-    ): List<ExamAction> {
+    ): ExamActionPopupConfig {
         return when (status) {
-            ExamStatus.DRAFT -> listOf(
-                ExamAction.ContinueSetup,
-                ExamAction.Duplicate,
-                ExamAction.Delete
+            ExamStatus.DRAFT -> ExamActionPopupConfig(
+                menuItems = listOf(
+                    ExamAction.Duplicate,
+                    ExamAction.Delete
+                ),
+                quickAction = QuickActionButton(
+                    action = ExamAction.ContinueSetup,
+                    style = ButtonType.WARNING,
+                ),
             )
 
-            ExamStatus.ACTIVE -> buildList {
-                add(ExamAction.ScanSheets)
-                if (hasScannedSheets) {
-                    add(ExamAction.ViewResults)
-                }
-                add(ExamAction.MarkCompleted)
-                add(ExamAction.EditExam)
-                add(ExamAction.Duplicate)
-                add(ExamAction.Delete)
-            }
-
-            ExamStatus.COMPLETED -> listOf(
-                ExamAction.ViewResults,
-                ExamAction.ExportResults,
-                ExamAction.Duplicate,
-                ExamAction.Archive,
-                ExamAction.Delete
+            ExamStatus.ACTIVE -> ExamActionPopupConfig(
+                menuItems = buildList {
+                    add(ExamAction.MarkCompleted)
+                    add(ExamAction.EditExam)
+                    add(ExamAction.Duplicate)
+                    add(ExamAction.Delete)
+                },
+                quickAction = QuickActionButton(
+                    action = ExamAction.ScanSheets,
+                    style = ButtonType.PRIMARY,
+                    secondaryAction = if (hasScannedSheets) ExamAction.ViewResults else null
+                ),
             )
 
+            ExamStatus.COMPLETED -> ExamActionPopupConfig(
+                menuItems = listOf(
+                    ExamAction.Duplicate,
+                    ExamAction.Archive,
+                    ExamAction.Delete
+                ),
+                quickAction = QuickActionButton(
+                    action = ExamAction.ViewResults,
+                    style = ButtonType.SECONDARY, // Outlined
+                    secondaryAction = ExamAction.ExportResults
+                )
+            )
+
+
+//            ExamStatus.ARCHIVED -> ExamActionPopupConfig(
+//                menuItems = listOf(
+//                    ExamAction.UnarchiveExam,
+//                    ExamAction.ViewResults,
+//                    ExamAction.ExportResults,
+//                    ExamAction.DeleteExam
+//                ),
+//                quickAction = QuickActionButton(
+//                    action = ExamAction.ViewResults,
+//                    style = ButtonStyle.NEUTRAL // Grey outlined
+//                )
+//            )
             ExamStatus.ARCHIVED -> TODO()
         }
     }

@@ -32,6 +32,7 @@ import com.example.ledgerscanner.base.ui.theme.Red500
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionPopupConfig
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 
 @Composable
@@ -39,6 +40,7 @@ fun ExamActionsPopup(
     expanded: Boolean,
     examEntity: ExamEntity,
     viewModel: ExamListViewModel,
+    actions: ExamActionPopupConfig,
     onActionClick: (ExamAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -48,7 +50,6 @@ fun ExamActionsPopup(
     val cardPadding = 16.dp
 
     val offsetX = screenWidth - menuWidth - cardPadding - 50.dp - 24.dp
-    val actions = viewModel.getExamActionForStatus(examEntity.status)
 
     DropdownMenu(
         expanded = expanded,
@@ -68,7 +69,7 @@ fun ExamActionsPopup(
         // Top padding
         Spacer(modifier = Modifier.height(2.dp))
 
-        actions.forEachIndexed { index, action ->
+        actions.menuItems.forEachIndexed { index, action ->
             // Divider before dangerous actions
             if (action.isDangerous && index > 0) {
                 HorizontalDivider(

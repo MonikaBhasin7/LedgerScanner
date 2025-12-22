@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.ui.components.ButtonType
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
@@ -75,7 +76,9 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionDialog
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionPopupConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.model.QuickActionButton
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionConfirmationDialog
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionsPopup
 import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
@@ -431,6 +434,7 @@ class ExamListingActivity : ComponentActivity() {
         onClick: () -> Unit,
         onActionClick: (ExamAction) -> Unit
     ) {
+        val actions = examListViewModel.getExamActionForStatus(item.status)
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
@@ -441,41 +445,99 @@ class ExamListingActivity : ComponentActivity() {
                 )
                 .background(Grey100)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClick() }
-                    .padding(13.dp)
+                    .padding(12.dp)
             ) {
-                ExamIcon()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onClick() }
+                ) {
+                    ExamIcon()
 
-                Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    ExamHeader(
-                        examEntity = item,
-                        onActionClick = onActionClick
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    ExamMetadata(
-                        totalQuestions = item.totalQuestions,
-                        createdAt = item.createdAt,
-                        sheetsCount = item.sheetsCount,
-                        status = item.status
-                    )
-
-                    if (hasStats(item)) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ExamStats(
-                            avgScore = item.avgScorePercent,
-                            topScore = item.topScorePercent,
-                            medianScore = item.medianScorePercent
+                    Column(modifier = Modifier.weight(1f)) {
+                        ExamHeader(
+                            examEntity = item,
+                            actions = actions,
+                            onActionClick = onActionClick
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        ExamMetadata(
+                            totalQuestions = item.totalQuestions,
+                            createdAt = item.createdAt,
+                            sheetsCount = item.sheetsCount,
+                            status = item.status
+                        )
+
+                        if (hasStats(item)) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ExamStats(
+                                avgScore = item.avgScorePercent,
+                                topScore = item.topScorePercent,
+                                medianScore = item.medianScorePercent
+                            )
+                        }
                     }
                 }
+                ExamQuickActionButton(
+                    actions.quickAction,
+                    onActionClick,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
+        }
+    }
+
+
+    @Composable
+    fun ExamQuickActionButton(
+        config: QuickActionButton?,
+        onClick: (ExamAction) -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        if (config == null) return
+        if (config.secondaryAction != null) {
+            // Split button (two actions)
+            Row(
+                modifier = modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GenericButton(
+                    text = config.action.label,
+                    type = config.style,
+                    icon = config.action.icon,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        onClick(config.action)
+                    }
+                )
+                GenericButton(
+                    text = config.secondaryAction.label,
+                    type = ButtonType.SECONDARY,
+                    icon = config.secondaryAction.icon,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        onClick(config.action)
+                    }
+                )
+            }
+        } else {
+            // Single button
+            GenericButton(
+                text = config.action.label,
+                type = config.style,
+                icon = config.action.icon,
+                modifier = modifier.fillMaxWidth(),
+                onClick = {
+                    onClick(config.action)
+                }
+            )
         }
     }
 
@@ -500,9 +562,11 @@ class ExamListingActivity : ComponentActivity() {
     @Composable
     private fun ExamHeader(
         examEntity: ExamEntity,
-        onActionClick: (ExamAction) -> Unit
+        actions: ExamActionPopupConfig,
+        onActionClick: (ExamAction) -> Unit,
     ) {
         var showMenu by remember { mutableStateOf(false) }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -532,11 +596,13 @@ class ExamListingActivity : ComponentActivity() {
                 )
             }
 
+
             // Popup menu - now aligned to actual TopEnd of card
             ExamActionsPopup(
                 expanded = showMenu,
                 examEntity = examEntity,
                 viewModel = examListViewModel,
+                actions = actions,
                 onActionClick = { action ->
                     onActionClick(action)
                 },
@@ -553,18 +619,27 @@ class ExamListingActivity : ComponentActivity() {
         status: ExamStatus
     ) {
         val formattedDate = formatTimestamp(createdAt)
-        val sheetsText = when {
-            status == ExamStatus.DRAFT -> "" // Don't show for drafts
-            sheetsCount != null && sheetsCount > 0 -> "$sheetsCount scanned"
-            else -> "No submissions"
+
+        val infoLine = "$totalQuestions questions • Created $formattedDate"
+
+        val sheetsLine = when {
+            status == ExamStatus.DRAFT -> null
+            sheetsCount != null && sheetsCount > 0 -> "Sheets: $sheetsCount scanned"
+            else -> "No sheets scanned yet"
+        }
+
+        val displayText = if (sheetsLine != null) {
+            "$infoLine\n$sheetsLine"
+        } else {
+            infoLine
         }
 
         Text(
-            text = "$totalQuestions questions • Created $formattedDate\nSheets: $sheetsText",
+            text = displayText,
             color = Grey500,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
-            style = AppTypography.body3Regular
+            style = AppTypography.body2Regular
         )
     }
 

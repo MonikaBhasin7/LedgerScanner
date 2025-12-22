@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.ledgerscanner.base.ui.components.ButtonType
 import com.example.ledgerscanner.database.entity.ExamEntity
 
 sealed class ExamAction(
@@ -32,3 +33,14 @@ sealed class ExamActionDialog(examEntity: ExamEntity) {
     data class Delete(val examEntity: ExamEntity) : ExamActionDialog(examEntity)
     data class Duplicate(val examEntity: ExamEntity) : ExamActionDialog(examEntity)
 }
+
+data class ExamActionPopupConfig(
+    val menuItems: List<ExamAction>,
+    val quickAction: QuickActionButton? = null
+)
+
+data class QuickActionButton(
+    val action: ExamAction,
+    val style: ButtonType = ButtonType.PRIMARY,
+    val secondaryAction: ExamAction? = null // For split buttons
+)

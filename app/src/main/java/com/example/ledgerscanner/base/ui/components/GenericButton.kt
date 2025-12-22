@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,10 +18,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
+import com.example.ledgerscanner.base.ui.theme.Blue500
+import com.example.ledgerscanner.base.ui.theme.Green500
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
+import com.example.ledgerscanner.base.ui.theme.Grey600
 import com.example.ledgerscanner.base.ui.theme.White
 
 @Composable
@@ -33,29 +35,46 @@ fun GenericButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     type: ButtonType = ButtonType.PRIMARY,
-    backgroundColor: Color = MaterialTheme.colorScheme.primary,
     shape: Shape = RoundedCornerShape(24.dp),
     textStyle: TextStyle = AppTypography.label2SemiBold,
 ) {
-    val (bgColor, contentColor) = when (type) {
-        ButtonType.PRIMARY -> MaterialTheme.colorScheme.primary to White
-        ButtonType.SECONDARY -> Color.Transparent to MaterialTheme.colorScheme.primary
-        ButtonType.TERTIARY -> Grey100 to Grey100
+    val (bgColor, contentColor, borderColor) = when (type) {
+        ButtonType.PRIMARY -> Triple(
+            Blue500,
+            White,
+            null
+        )
+        ButtonType.SECONDARY -> Triple(
+            Color.Transparent,
+            Blue500,
+            Blue500
+        )
+        ButtonType.WARNING -> Triple(
+            Color(0xFFFF9800), // Orange
+            White,
+            null
+        )
+        ButtonType.SUCCESS -> Triple(
+            Green500,
+            White,
+            null
+        )
+        ButtonType.NEUTRAL -> Triple(
+            Color.Transparent,
+            Grey600,
+            Grey400
+        )
+        ButtonType.TERTIARY -> Triple(
+            Grey100,
+            Grey600,
+            null
+        )
     }
 
-    val border = when (type) {
-        ButtonType.SECONDARY -> {
-            val borderColor = if (enabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                Grey400
-            }
-            BorderStroke(1.dp, borderColor)
-        }
-
-        else -> null
+    val border = borderColor?.let { color ->
+        val actualBorderColor = if (enabled) color else Grey400
+        BorderStroke(1.dp, actualBorderColor)
     }
-
 
     Button(
         onClick = onClick,
@@ -84,7 +103,10 @@ fun GenericButton(
 }
 
 enum class ButtonType {
-    PRIMARY,
-    SECONDARY,
-    TERTIARY
+    PRIMARY,    // Blue filled
+    SECONDARY,  // Blue outlined
+    WARNING,    // Orange filled
+    SUCCESS,    // Green filled
+    NEUTRAL,    // Grey outlined
+    TERTIARY    // Grey filled (existing)
 }
