@@ -33,9 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +51,6 @@ import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
-import com.example.ledgerscanner.base.ui.theme.Blue75
 import com.example.ledgerscanner.base.ui.theme.Green400
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
@@ -111,9 +107,6 @@ fun ScanSessionScreen(
     val onStartScanning: () -> Unit = {
         navController.navigate(ScanBaseActivity.SCANNER_SCREEN)
     }
-    val onSetAnswerKey: () -> Unit = {
-        navController.navigate("answer_key_input/${examEntity.id}")
-    }
 
     BackHandler(onBack = handleBack)
 
@@ -143,8 +136,8 @@ fun ScanSessionScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             ReadyState(
-                scannedSheetsViewModel,
-                examEntity.id,
+                scannedSheetsViewModel = scannedSheetsViewModel,
+                examId = examEntity.id,
                 onViewAnswerKey = onViewAnswerKey,
                 onViewResults = onViewResults,
                 onStartScanning = onStartScanning,
@@ -176,12 +169,10 @@ private fun ExamHeader(
             Icon(
                 imageVector = Icons.Outlined.Description,
                 contentDescription = "",
-                modifier = Modifier
-                    .size(32.dp),
+                modifier = Modifier.size(32.dp),
                 tint = Blue500
             )
         }
-
 
         Column {
             Text(
@@ -220,7 +211,7 @@ private fun ReadyState(
             icon = Icons.Filled.CheckCircle,
             iconColor = Green400,
             title = "Answer Key Set",
-            linkText = "View Answer Key ->",
+            linkText = "View Answer Key →",
             onLinkClick = onViewAnswerKey,
             backgroundColor = White,
             borderColor = Grey200,
@@ -228,37 +219,35 @@ private fun ReadyState(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Scanned Sheets Card
-
-        var scannedSheetCount by remember { mutableStateOf("Fetching") }
-        when (sheetsCountByExamId) {
-            is UiState.Error -> {
-                scannedSheetCount = (sheetsCountByExamId as UiState.Error<Int>).message
-            }
-
+        // Scanned Sheets Card - Updated Implementation
+        when (val state = sheetsCountByExamId) {
             is UiState.Loading -> {
-                scannedSheetCount = "Fetching"
+                SheetsStatusCard(
+                    sheetsCount = null,
+                    isLoading = true,
+                    onViewResults = onViewResults
+                )
             }
-
             is UiState.Success -> {
-                scannedSheetCount =
-                    (sheetsCountByExamId as UiState.Success<Int>).data.toString() ?: "Error"
+                SheetsStatusCard(
+                    sheetsCount = state.data,
+                    isLoading = false,
+                    onViewResults = onViewResults
+                )
+            }
+            is UiState.Error -> {
+                SheetsStatusCard(
+                    sheetsCount = null,
+                    isLoading = false,
+                    errorMessage = state.message,
+                    onViewResults = onViewResults
+                )
             }
         }
-        StatusCard(
-            icon = Icons.Outlined.BarChart,
-            iconColor = Black,
-            title = "Scanned: ",
-            subtitle = "$scannedSheetCount sheets",
-            linkText = "View Results ->",
-            onLinkClick = onViewResults,
-            backgroundColor = Color.White,
-            borderColor = Blue75
-        )
 
         Spacer(modifier = Modifier.height(36.dp))
 
-        // Ready to Scan Card
+        // Ready to Scan Button
         GenericButton(
             icon = Icons.Outlined.CameraAlt,
             text = "Start Scanning",
@@ -271,12 +260,157 @@ private fun ReadyState(
 
         // Tip
         Text(
-            text = "Tip: Ensure good lighting and include all 4 corner anchors within the camera frame.",
+            text = "💡 Tip: Ensure good lighting and include all 4 corner anchors",
             style = AppTypography.body3Regular,
             color = Grey500,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Left
         )
+    }
+}
+
+@Composable
+private fun SheetsStatusCard(
+    sheetsCount: Int?,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    avgScore: Int? = null,
+    topScore: Int? = null,
+    onViewResults: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = Grey200,
+                shape = RoundedCornerShape(12.dp)
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        onClick = {
+            if (sheetsCount != null && sheetsCount > 0) {
+                onViewResults()
+            }
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon
+            Icon(
+                imageVector = Icons.Outlined.BarChart,
+                contentDescription = null,
+                tint = if (sheetsCount != null && sheetsCount > 0) Blue500 else Grey600,
+                modifier = Modifier.size(20.dp)
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            // Content
+            Column(modifier = Modifier.weight(1f)) {
+                when {
+                    // Loading
+                    isLoading -> {
+                        Text(
+                            text = "Loading...",
+                            style = AppTypography.label2Medium,
+                            color = Grey600
+                        )
+                    }
+
+                    // Error
+                    errorMessage != null -> {
+                        Text(
+                            text = "Error loading sheets",
+                            style = AppTypography.label2Medium,
+                            color = Grey900
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = errorMessage,
+                            style = AppTypography.body3Regular,
+                            color = Grey600
+                        )
+                    }
+
+                    // No sheets
+                    sheetsCount == null || sheetsCount == 0 -> {
+                        Text(
+                            text = "No sheets scanned yet",
+                            style = AppTypography.label2Medium,
+                            color = Grey900
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "Ready to scan your first sheet?",
+                            style = AppTypography.body3Regular,
+                            color = Grey600
+                        )
+                    }
+
+                    // Single sheet
+                    sheetsCount == 1 -> {
+                        Row {
+                            Text(
+                                text = "Scanned: ",
+                                style = AppTypography.body3Regular,
+                                color = Grey600
+                            )
+                            Text(
+                                text = "1 sheet",
+                                style = AppTypography.label2Bold,
+                                color = Grey900
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "View Results →",
+                            style = AppTypography.label3Medium,
+                            color = Blue500
+                        )
+                    }
+
+                    // Multiple sheets
+                    else -> {
+                        Row {
+                            Text(
+                                text = "Scanned: ",
+                                style = AppTypography.body3Regular,
+                                color = Grey600
+                            )
+                            Text(
+                                text = "$sheetsCount sheets",
+                                style = AppTypography.label2Bold,
+                                color = Grey900
+                            )
+                        }
+
+                        // Optional stats
+                        if (avgScore != null && topScore != null) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "Avg: $avgScore% • Top: $topScore%",
+                                style = AppTypography.body4Regular,
+                                color = Grey500
+                            )
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "View Results →",
+                            style = AppTypography.label3Medium,
+                            color = Blue500
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -324,12 +458,13 @@ private fun StatusCard(
                     style = AppTypography.body1Medium,
                     color = Grey900
                 )
-                if (!subtitle.isNullOrEmpty())
+                if (!subtitle.isNullOrEmpty()) {
                     Text(
                         text = subtitle,
                         style = AppTypography.h4Bold,
                         color = Black
                     )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
