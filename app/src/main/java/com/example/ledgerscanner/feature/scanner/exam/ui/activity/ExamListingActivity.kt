@@ -63,6 +63,7 @@ import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
+import com.example.ledgerscanner.base.ui.components.ToolbarAction
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
@@ -84,7 +85,6 @@ import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionsPopu
 import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
@@ -172,21 +172,31 @@ class ExamListingActivity : ComponentActivity() {
         Scaffold(
             containerColor = White,
             topBar = {
-                GenericToolbar(title = "Exams")
-            },
-            bottomBar = {
-                BottomActionBar(
-                    onCreateExam = {
-                        startActivity(Intent(context, CreateExamActivity::class.java))
-                    },
-                    onCreateTemplate = {
-                        startActivity(Intent(context, CreateTemplateActivity::class.java))
-                    },
-                    onSelectExam = {
-                        showTemplatePicker = true
-                    }
+                GenericToolbar(
+                    title = "Exams", actions = listOf(
+                        ToolbarAction.IconText(
+                            icon = Icons.Default.Addchart,
+                            text = "Create Exam",
+                            onClick = {
+                                startActivity(Intent(context, CreateExamActivity::class.java))
+                            }
+                        )
+                    )
                 )
-            }
+            },
+//            bottomBar = {
+//                BottomActionBar(
+//                    onCreateExam = {
+//                        startActivity(Intent(context, CreateExamActivity::class.java))
+//                    },
+//                    onCreateTemplate = {
+//                        startActivity(Intent(context, CreateTemplateActivity::class.java))
+//                    },
+//                    onSelectExam = {
+//                        showTemplatePicker = true
+//                    }
+//                )
+//            }
         ) { innerPadding ->
             Column(
                 modifier = Modifier
