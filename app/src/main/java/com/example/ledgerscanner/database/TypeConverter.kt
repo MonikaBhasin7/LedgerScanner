@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken
 import java.util.Date
 
 class TypeConverter {
+    private val gson = Gson()
 
     // ---------------- ExamStatus Enum ----------------
     @TypeConverter
@@ -54,5 +55,32 @@ class TypeConverter {
 
         val type = object : TypeToken<Map<Int, Int>>() {}.type
         return Gson().fromJson(json, type)
+    }
+
+    @TypeConverter
+    fun fromConfidenceMap(value: Map<Int, Float>?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toConfidenceMap(value: String?): Map<Int, Float>? {
+        return value?.let {
+            val type = object : TypeToken<Map<Int, Float>>() {}.type
+            gson.fromJson(it, type)
+        }
+    }
+
+    // List<Int> for multiple marks
+    @TypeConverter
+    fun fromIntList(value: List<Int>?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toIntList(value: String?): List<Int>? {
+        return value?.let {
+            val type = object : TypeToken<List<Int>>() {}.type
+            gson.fromJson(it, type)
+        }
     }
 }
