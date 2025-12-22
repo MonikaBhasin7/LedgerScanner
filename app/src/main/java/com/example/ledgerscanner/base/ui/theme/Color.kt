@@ -2,11 +2,22 @@ package com.example.ledgerscanner.base.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Blue Palette
-val Blue75 = Color(0xFFE6EEF9)
-val Blue50 = Color(0xFFF5F7FF)
-val Blue500 = Color(0xFF277EFF)   // Primary Blue
-val Blue100 = Color(0xFFDBE7FB)   // Light Blue background
+// Blue Palette - Complete Scale
+val Blue50 = Color(0xFFF5F7FF)   // Lightest (your existing)
+val Blue75 = Color(0xFFE6EEF9)   // Very Light (your existing)
+val Blue100 = Color(0xFFDBE7FB)  // Light Blue background (your existing)
+val Blue200 = Color(0xFFC2D9F7)  // Light-Medium
+val Blue300 = Color(0xFFA8CBF3)  // Medium-Light
+val Blue400 = Color(0xFF8FBDEF)  // Medium
+val Blue500 = Color(0xFF277EFF)  // Primary Blue (your existing)
+val Blue600 = Color(0xFF1F6BCC)  // Medium-Dark
+val Blue700 = Color(0xFF1A5AA8)  // Dark
+val Blue800 = Color(0xFF154885)  // Darker
+val Blue900 = Color(0xFF103661)  // Darkest
+
+// Accent Blues (Optional)
+val BlueAccent = Color(0xFF448AFF)    // Bright accent
+val BlueDark = Color(0xFF0D47A1)      // Very dark alternative
 
 // Neutral / White Palette
 val White = Color(0xFFFFFFFF)   // Pure White

@@ -28,6 +28,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,11 +41,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
+import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Blue75
 import com.example.ledgerscanner.base.ui.theme.Green400
@@ -55,6 +64,7 @@ import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
+import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +74,7 @@ fun ScanSessionScreen(
     examEntity: ExamEntity
 ) {
     val context = LocalContext.current
+    val scannedSheetsViewModel: ScannedSheetsViewModel = hiltViewModel()
 
     val handleBack = rememberBackHandler(navController)
 
@@ -71,8 +82,6 @@ fun ScanSessionScreen(
     val examName = examEntity.examName
     val totalQuestions = examEntity.totalQuestions
     val optionsPerQuestion = examEntity.template.options_per_question
-    val isAnswerKeySet = examEntity.answerKey != null && examEntity.answerKey.isNotEmpty()
-    val scannedSheetsCount = examEntity.sheetsCount ?: 0
 
     val onViewAnswerKey: () -> Unit = {
         context.startActivity(
@@ -119,14 +128,15 @@ fun ScanSessionScreen(
                 optionsPerQuestion = optionsPerQuestion
             )
 
-            HorizontalDivider(color = Blue75, thickness = 0.7.dp)
+            HorizontalDivider(color = Blue100, thickness = 1.dp)
             Spacer(modifier = Modifier.height(24.dp))
 
             ReadyState(
-                scannedSheetsCount = scannedSheetsCount,
+                scannedSheetsViewModel,
+                examEntity.id,
                 onViewAnswerKey = onViewAnswerKey,
                 onViewResults = onViewResults,
-                onStartScanning = onStartScanning
+                onStartScanning = onStartScanning,
             )
         }
     }
@@ -170,11 +180,18 @@ private fun ExamHeader(
 
 @Composable
 private fun ReadyState(
-    scannedSheetsCount: Int,
+    scannedSheetsViewModel: ScannedSheetsViewModel,
+    examId: Int,
     onViewAnswerKey: () -> Unit,
     onViewResults: () -> Unit,
-    onStartScanning: () -> Unit
+    onStartScanning: () -> Unit,
 ) {
+    val sheetsCountByExamId by scannedSheetsViewModel.sheetsCountByExamId.collectAsState()
+
+    LaunchedEffect(Unit) {
+        scannedSheetsViewModel.getCountByExamId(examId)
+    }
+
     Column(
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
@@ -192,11 +209,27 @@ private fun ReadyState(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Scanned Sheets Card
+
+        var scannedSheetCount by remember { mutableStateOf("Fetching") }
+        when (sheetsCountByExamId) {
+            is UiState.Error -> {
+                scannedSheetCount = (sheetsCountByExamId as UiState.Error<Int>).message
+            }
+
+            is UiState.Loading -> {
+                scannedSheetCount = "Fetching"
+            }
+
+            is UiState.Success -> {
+                scannedSheetCount =
+                    (sheetsCountByExamId as UiState.Success<Int>).data.toString() ?: "Error"
+            }
+        }
         StatusCard(
             icon = Icons.Filled.BarChart,
             iconColor = Black,
             title = "Scanned: ",
-            subtitle = "$scannedSheetsCount sheets",
+            subtitle = "$scannedSheetCount sheets",
             linkText = "View Results ->",
             onLinkClick = onViewResults,
             backgroundColor = Color.White,

@@ -1,5 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.scan.di
 
+import com.example.ledgerscanner.database.dao.ScanResultDao
+import com.example.ledgerscanner.feature.scanner.scan.repo.ScanResultRepository
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.Module
@@ -16,4 +18,8 @@ class ActivityDiModule {
 
     @Provides
     fun provideTemplateProcessor(): TemplateProcessor = TemplateProcessor()
+
+    @Provides
+    fun provideExamRepository(dao: ScanResultDao): ScanResultRepository =
+        ScanResultRepository(dao)
 }
