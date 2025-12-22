@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue500
@@ -35,8 +36,9 @@ fun GenericButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     type: ButtonType = ButtonType.PRIMARY,
+    size: ButtonSize = ButtonSize.MEDIUM,
     shape: Shape = RoundedCornerShape(24.dp),
-    textStyle: TextStyle = AppTypography.label2SemiBold,
+    textStyle: TextStyle? = null, // Now optional, determined by size
 ) {
     val (bgColor, contentColor, borderColor) = when (type) {
         ButtonType.PRIMARY -> Triple(
@@ -76,6 +78,34 @@ fun GenericButton(
         BorderStroke(1.dp, actualBorderColor)
     }
 
+    // Size-specific properties
+    val (contentPadding, iconSize, spacerWidth, defaultTextStyle) = when (size) {
+        ButtonSize.SMALL -> {
+            SizeConfig(
+                contentPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp),
+                iconSize = 16.dp,
+                spacerWidth = 6.dp,
+                textStyle = AppTypography.label3Medium
+            )
+        }
+        ButtonSize.MEDIUM -> {
+            SizeConfig(
+                contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp),
+                iconSize = 20.dp,
+                spacerWidth = 8.dp,
+                textStyle = AppTypography.label2SemiBold
+            )
+        }
+        ButtonSize.LARGE -> {
+            SizeConfig(
+                contentPadding = PaddingValues(vertical = 16.dp, horizontal = 24.dp),
+                iconSize = 24.dp,
+                spacerWidth = 10.dp,
+                textStyle = AppTypography.label1Bold
+            )
+        }
+    }
+
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -88,17 +118,20 @@ fun GenericButton(
         shape = shape,
         border = border,
         modifier = modifier,
-        contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp)
+        contentPadding = contentPadding
     ) {
         if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(iconSize)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(spacerWidth))
         }
-        Text(text = text, style = textStyle)
+        Text(
+            text = text,
+            style = textStyle ?: defaultTextStyle
+        )
     }
 }
 
@@ -108,5 +141,18 @@ enum class ButtonType {
     WARNING,    // Orange filled
     SUCCESS,    // Green filled
     NEUTRAL,    // Grey outlined
-    TERTIARY    // Grey filled (existing)
+    TERTIARY    // Grey filled
 }
+
+enum class ButtonSize {
+    SMALL,      // Compact buttons
+    MEDIUM,     // Default size
+    LARGE       // Prominent buttons
+}
+
+private data class SizeConfig(
+    val contentPadding: PaddingValues,
+    val iconSize: Dp,
+    val spacerWidth: Dp,
+    val textStyle: TextStyle
+)

@@ -138,7 +138,6 @@ fun GenericToolbar(
         HorizontalDivider(
             color = Grey200,
             thickness = 1.dp,
-            modifier = Modifier.padding(bottom = 12.dp),
         )
     }
 }

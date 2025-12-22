@@ -2,7 +2,9 @@ package com.example.omrscanner.ui.screens
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,10 +18,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.EditNote
-import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.ui.components.ButtonSize
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.AppTypography
@@ -52,10 +56,13 @@ import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Blue75
 import com.example.ledgerscanner.base.ui.theme.Green400
+import com.example.ledgerscanner.base.ui.theme.Grey100
+import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
-import com.example.ledgerscanner.base.ui.theme.Grey750
+import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Grey900
+import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ExamEntity
@@ -113,7 +120,8 @@ fun ScanSessionScreen(
     Scaffold(
         topBar = {
             GenericToolbar("Scan Session", onBackClick = handleBack)
-        }
+        },
+        containerColor = Grey100
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -127,9 +135,12 @@ fun ScanSessionScreen(
                 totalQuestions = totalQuestions,
                 optionsPerQuestion = optionsPerQuestion
             )
+            HorizontalDivider(
+                color = Grey200,
+                thickness = 1.dp,
+            )
 
-            HorizontalDivider(color = Blue100, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             ReadyState(
                 scannedSheetsViewModel,
@@ -151,23 +162,32 @@ private fun ExamHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .background(White)
+            .padding(16.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        Icon(
-            imageVector = Icons.Outlined.EditNote,
-            contentDescription = "",
+        Box(
             modifier = Modifier
-                .size(48.dp)
-                .padding(end = 8.dp),
-            tint = Blue500
-        )
+                .padding(end = 12.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Blue100)
+                .padding(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Description,
+                contentDescription = "",
+                modifier = Modifier
+                    .size(32.dp),
+                tint = Blue500
+            )
+        }
+
 
         Column {
             Text(
                 text = examName,
-                style = AppTypography.h3Bold,
-                color = Grey750
+                style = AppTypography.h1ExtraBold,
+                color = Grey800
             )
             Text(
                 text = "$totalQuestions Questions • $optionsPerQuestion Options",
@@ -197,13 +217,13 @@ private fun ReadyState(
     ) {
         // Answer Key Set Card
         StatusCard(
-            icon = Icons.Rounded.CheckCircle,
+            icon = Icons.Filled.CheckCircle,
             iconColor = Green400,
             title = "Answer Key Set",
             linkText = "View Answer Key ->",
             onLinkClick = onViewAnswerKey,
-            backgroundColor = Color.White,
-            borderColor = Blue75,
+            backgroundColor = White,
+            borderColor = Grey200,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -226,7 +246,7 @@ private fun ReadyState(
             }
         }
         StatusCard(
-            icon = Icons.Filled.BarChart,
+            icon = Icons.Outlined.BarChart,
             iconColor = Black,
             title = "Scanned: ",
             subtitle = "$scannedSheetCount sheets",
@@ -236,55 +256,26 @@ private fun ReadyState(
             borderColor = Blue75
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(36.dp))
 
         // Ready to Scan Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = Blue500,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .align(Alignment.CenterHorizontally),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = "Ready to scan?",
-                    style = AppTypography.label1Bold,
-                    color = Black
-                )
+        GenericButton(
+            icon = Icons.Outlined.CameraAlt,
+            text = "Start Scanning",
+            size = ButtonSize.LARGE,
+            onClick = onStartScanning,
+            modifier = Modifier.fillMaxWidth()
+        )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                GenericButton(
-                    icon = Icons.Outlined.CameraAlt,
-                    text = "Start Scanning",
-                    onClick = onStartScanning,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Tip
         Text(
-            text = "Tip: Ensure good lighting and include all 4 corner anchors",
+            text = "Tip: Ensure good lighting and include all 4 corner anchors within the camera frame.",
             style = AppTypography.body3Regular,
             color = Grey500,
             modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Left
         )
     }
 }
@@ -309,7 +300,7 @@ private fun StatusCard(
                 shape = RoundedCornerShape(12.dp)
             ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.5.dp,
+            defaultElevation = 1.dp,
         ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
@@ -317,7 +308,7 @@ private fun StatusCard(
         ),
         onClick = onLinkClick
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -327,10 +318,10 @@ private fun StatusCard(
                     modifier = Modifier.size(20.dp),
                     tint = iconColor
                 )
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = title,
-                    style = AppTypography.body3Medium,
+                    style = AppTypography.body1Medium,
                     color = Grey900
                 )
                 if (!subtitle.isNullOrEmpty())
@@ -341,11 +332,11 @@ private fun StatusCard(
                     )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = linkText,
-                style = AppTypography.label3Medium,
+                style = AppTypography.body3Medium,
                 color = Blue500,
                 modifier = Modifier.genericClick { onLinkClick() }
             )
