@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
+import android.graphics.RectF
 import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import android.os.Build
@@ -16,6 +17,8 @@ import org.opencv.core.Mat
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import androidx.core.graphics.createBitmap
+import kotlin.math.max
+import kotlin.math.min
 
 object ImageUtils {
     @WorkerThread
@@ -170,6 +173,73 @@ object ImageUtils {
             }
         }
         return inSampleSize
+    }
+
+    /**
+     * Compute the rectangle (in view coordinates) where the camera image buffer is actually
+     * drawn inside the PreviewView when using FIT_CENTER or FILL_CENTER (letterbox/crop).
+     *
+     * @param viewW view width in px (PreviewView.width)
+     * @param viewH view height in px (PreviewView.height)
+     * @param bufferW image buffer width in px (ImageProxy.width)
+     * @param bufferH image buffer height in px (ImageProxy.height)
+     * @param rotationDegrees imageInfo.rotationDegrees from the ImageProxy
+     * @param useFill true if PreviewView.ScaleType == FILL_CENTER (image is scaled to fill & cropped),
+     *                false if FIT_CENTER (image is letterboxed)
+     * @return RectF representing the displayed image area within the view
+     */
+    fun computeDisplayedImageRect(
+        viewW: Float,
+        viewH: Float,
+        bufferW: Int,
+        bufferH: Int,
+        rotationDegrees: Int,
+        useFill: Boolean
+    ): RectF {
+        // Defensive check for invalid dimensions
+        if (viewW <= 0f || viewH <= 0f || bufferW <= 0 || bufferH <= 0) {
+            return RectF(0f, 0f, viewW.coerceAtLeast(0f), viewH.coerceAtLeast(0f))
+        }
+
+        // Determine logical image dimensions considering rotation
+        val (imgW, imgH) = if (rotationDegrees % 180 == 0) {
+            bufferW.toFloat() to bufferH.toFloat()
+        } else {
+            // Swap dimensions for 90/270 degree rotation
+            bufferH.toFloat() to bufferW.toFloat()
+        }
+
+        // Compute scale factor based on scale type
+        val scale = if (useFill) {
+            // FILL: scale up until both dimensions >= view (crop)
+            max(viewW / imgW, viewH / imgH)
+        } else {
+            // FIT: scale down until both dimensions <= view (letterbox)
+            min(viewW / imgW, viewH / imgH)
+        }
+
+        // Calculate displayed image dimensions
+        val displayedWidth = imgW * scale
+        val displayedHeight = imgH * scale
+
+        // Center the displayed image within the view
+        val left = (viewW - displayedWidth) / 2f
+        val top = (viewH - displayedHeight) / 2f
+        val right = left + displayedWidth
+        val bottom = top + displayedHeight
+
+        // Clamp values to view bounds
+        val clampedLeft = left.coerceIn(0f, viewW)
+        val clampedTop = top.coerceIn(0f, viewH)
+        val clampedRight = right.coerceIn(clampedLeft, viewW)
+        val clampedBottom = bottom.coerceIn(clampedTop, viewH)
+
+        // Validate result is not degenerate
+        if (clampedRight - clampedLeft < 1f || clampedBottom - clampedTop < 1f) {
+            return RectF(0f, 0f, viewW, viewH)
+        }
+
+        return RectF(clampedLeft, clampedTop, clampedRight, clampedBottom)
     }
 }
 

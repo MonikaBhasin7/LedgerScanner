@@ -8,9 +8,10 @@ import com.example.ledgerscanner.base.utils.image.ImageConversionUtils
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.base.utils.image.toColoredWarped
+import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
-import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OmrScannerViewModel @Inject constructor(
     private val omrProcessor: OmrProcessor,
-    private val templateProcessor: TemplateProcessor
+    private val templateProcessor: TemplateProcessor,
+    private val answerEvaluator: AnswerEvaluator
 ) : ViewModel() {
     private val _omrImageProcessResult = MutableStateFlow<OmrImageProcessResult?>(null)
     val omrImageProcessResult = _omrImageProcessResult.asStateFlow()
@@ -36,7 +38,7 @@ class OmrScannerViewModel @Inject constructor(
 
     suspend fun processOmrFrame(
         image: ImageProxy,
-        omrTemplate: Template,
+        examEntity: ExamEntity,
         anchorSquaresOnPreviewScreen: List<RectF>,
         previewRect: RectF,
         debug: Boolean = false
@@ -46,6 +48,7 @@ class OmrScannerViewModel @Inject constructor(
         var finalBitmap: Bitmap? = null
         var gray: Mat? = null
         var warped: Mat? = null
+        val omrTemplate = examEntity.template
 
         try {
             // 1) Validate inputs
@@ -101,9 +104,6 @@ class OmrScannerViewModel @Inject constructor(
                 debugBitmaps["warped"] = warpedDebugBitmap
             }
 
-            // 5) Detect filled bubbles
-            var marks: List<Boolean>? = null
-
             if (centersInBuffer.size == 4) {
                 val bubblePoints = templateProcessor.mapTemplateBubblesToImagePoints(omrTemplate)
 
@@ -115,8 +115,8 @@ class OmrScannerViewModel @Inject constructor(
                     ) to centersInBuffer
                 }
 
+                //Detect filled bubbles (ONLY DETECTION)
                 val detectionResult = omrProcessor.detectFilledBubbles(omrTemplate, warped)
-                marks = detectionResult.marks
 
                 if (debug) {
                     val bubbleDebugMat = warped.clone()
@@ -129,15 +129,44 @@ class OmrScannerViewModel @Inject constructor(
                     bubbleDebugMat.release()
                 }
 
+                //OPTIONAL: Evaluate answers if answer key is provided
+                val evaluationResult = if (examEntity.answerKey != null) {
+                    answerEvaluator.evaluateAnswers(
+                        detectedBubbles = detectionResult.bubbles,
+                        examEntity,
+                    )
+                } else {
+                    null
+                }
+
                 // Create final result bitmap
                 val coloredWarped = warped.toColoredWarped()
-                finalBitmap = OpenCvUtils.drawPoints(
-                    coloredWarped,
-                    bubblesWithColor = detectionResult.bubbles,
-                    fillColor = Scalar(255.0, 255.0, 255.0),
-                    textColor = Scalar(0.0, 255.0, 255.0)
-                ).toBitmapSafe()
+                finalBitmap = if (evaluationResult != null) {
+                    // Draw with colors based on correctness
+                    OpenCvUtils.drawPointsWithEvaluation(
+                        coloredWarped,
+                        bubbles = detectionResult.bubbles,
+                        evaluation = evaluationResult
+                    ).toBitmapSafe()
+                } else {
+                    // Draw without evaluation colors
+                    OpenCvUtils.drawPoints(
+                        coloredWarped,
+                        points = detectionResult.bubbles.map { it.point },
+                        fillColor = Scalar(255.0, 255.0, 255.0),
+                        textColor = Scalar(0.0, 255.0, 255.0)
+                    ).toBitmapSafe()
+                }
                 coloredWarped.release()
+
+
+                return@withContext OmrImageProcessResult(
+                    success = true,
+                    debugBitmaps = debugBitmaps,
+                    finalBitmap = finalBitmap,
+                    detectedBubbles = detectionResult.bubbles,
+                    evaluation = evaluationResult
+                ) to centersInBuffer
             } else {
                 return@withContext OmrImageProcessResult(
                     success = false,
@@ -145,14 +174,6 @@ class OmrScannerViewModel @Inject constructor(
                     debugBitmaps = debugBitmaps
                 ) to centersInBuffer
             }
-
-            return@withContext OmrImageProcessResult(
-                success = true,
-                debugBitmaps = debugBitmaps,
-                finalBitmap = finalBitmap,
-                marks = marks
-            ) to centersInBuffer
-
         } catch (e: Exception) {
             android.util.Log.e("OmrScannerViewModel", "Error processing OMR frame", e)
             return@withContext OmrImageProcessResult(

@@ -10,29 +10,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 import com.example.ledgerscanner.base.ui.theme.AppTypography
+import com.example.ledgerscanner.feature.scanner.scan.model.EvaluationResult
 
 @Composable
 fun ScoreSummaryCard(
-    marks: List<Boolean>
+    evaluation: EvaluationResult,
+    modifier: Modifier = Modifier
 ) {
-    val totalQuestions = marks.size
-    val correctAnswers = marks.count { it }
-    val incorrectAnswers = totalQuestions - correctAnswers
-    val ratio = if (totalQuestions > 0) correctAnswers.toDouble() / totalQuestions else 0.0
-    val percent = (ratio * 100).roundToInt()
-
     val scoreColor = when {
-        ratio >= 0.7 -> Color(0xFF16A34A) // Green
-        ratio >= 0.4 -> Color(0xFFF59E0B) // Amber
+        evaluation.percentage >= 70f -> Color(0xFF16A34A) // Green
+        evaluation.percentage >= 40f -> Color(0xFFF59E0B) // Amber
         else -> Color(0xFFDC2626) // Red
     }
 
@@ -41,7 +36,7 @@ fun ScoreSummaryCard(
         colors = CardDefaults.cardColors(
             containerColor = scoreColor.copy(alpha = 0.10f)
         ),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
@@ -57,29 +52,91 @@ fun ScoreSummaryCard(
                 color = Color.Black
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Score Rows
-            ScoreRow(label = "Total Questions", value = "$totalQuestions")
-            ScoreRow(label = "Correct Answers", value = "$correctAnswers")
-            ScoreRow(label = "Incorrect Answers", value = "$incorrectAnswers")
+            ScoreRow(label = "Total Questions", value = "${evaluation.totalQuestions}")
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(thickness = 1.dp, color = Color.LightGray.copy(alpha = 0.4f))
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Final Score + percent
-            Text(
-                text = "🎯 Final Score: $correctAnswers / $totalQuestions  •  $percent%",
-                style = AppTypography.body1Regular.copy(fontWeight = FontWeight.SemiBold),
-                color = scoreColor
+            ScoreRow(
+                label = "Correct Answers",
+                value = "${evaluation.correctCount}",
+                valueColor = Color(0xFF16A34A) // Green
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ScoreRow(
+                label = "Incorrect Answers",
+                value = "${evaluation.incorrectCount}",
+                valueColor = Color(0xFFDC2626) // Red
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ScoreRow(
+                label = "Unanswered",
+                value = "${evaluation.unansweredCount}",
+                valueColor = Color.Gray
+            )
+
+            // Show multiple marks if any
+            if (evaluation.multipleMarksQuestions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ScoreRow(
+                    label = "Multiple Marks ⚠️",
+                    value = "${evaluation.multipleMarksQuestions.size}",
+                    valueColor = Color(0xFFF59E0B) // Orange
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(thickness = 1.dp, color = Color.LightGray.copy(alpha = 0.4f))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Marks Obtained
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Marks Obtained",
+                    style = AppTypography.body1Regular.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.Black
+                )
+                Text(
+                    text = evaluation.getMarksFormatted(),
+                    style = AppTypography.body1Regular.copy(fontWeight = FontWeight.Bold),
+                    color = scoreColor
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Percentage and Grade
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "🎯 Percentage",
+                    style = AppTypography.body1Regular.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.Black
+                )
+                Text(
+                    text = "${evaluation.getPercentageFormatted()} • Grade: ${evaluation.getGrade()}",
+                    style = AppTypography.body1Regular.copy(fontWeight = FontWeight.Bold),
+                    color = scoreColor
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ScoreRow(label: String, value: String) {
+private fun ScoreRow(
+    label: String,
+    value: String,
+    valueColor: Color = Color.Black
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -92,7 +149,7 @@ private fun ScoreRow(label: String, value: String) {
         Text(
             text = value,
             style = AppTypography.body2Medium.copy(fontWeight = FontWeight.Medium),
-            color = Color.Black
+            color = valueColor
         )
     }
 }

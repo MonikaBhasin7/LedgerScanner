@@ -180,11 +180,9 @@ class OmrProcessor @Inject constructor() {
         omrTemplate: Template,
         warped: Mat
     ): OmrDetectionResult {
-        val correctOptionIndex = 1 // TODO: Make this configurable via answer key
         val bubbleResults = mutableListOf<BubbleResult>()
-        val correctnessMarks = mutableListOf<Boolean>()
 
-        omrTemplate.questions.forEach { question ->
+        omrTemplate.questions.forEachIndexed {questionIndex, question ->
             var isQuestionCorrect = false
 
             question.options.forEachIndexed { optionIndex, option ->
@@ -211,25 +209,22 @@ class OmrProcessor @Inject constructor() {
 
                 // Check if marked option is correct
                 if (isMarked) {
-                    if (optionIndex == correctOptionIndex) {
-                        isQuestionCorrect = true
-                        bubbleResults.add(BubbleResult(bubblePoint, isCorrect = true))
-                    } else {
-                        isQuestionCorrect = false
-                        bubbleResults.add(BubbleResult(bubblePoint, isCorrect = false))
-                    }
+                    bubbleResults.add(
+                        BubbleResult(
+                            point = bubblePoint,
+                            questionIndex = questionIndex,
+                            optionIndex = optionIndex,
+                            confidence = confidence
+                        )
+                    )
                 }
             }
-
-            correctnessMarks.add(isQuestionCorrect)
         }
 
-        Log.d(TAG, "Detection complete: ${bubbleResults.size} bubbles marked, " +
-                "${correctnessMarks.count { it }} correct answers")
+        Log.d(TAG, "Detection complete: ${bubbleResults.size} bubbles marked")
 
         return OmrDetectionResult(
-            bubbles = bubbleResults,
-            marks = correctnessMarks
+            bubbles = bubbleResults
         )
     }
 

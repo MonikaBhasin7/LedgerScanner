@@ -16,9 +16,9 @@ data class OmrImageProcessResult(
     override val success: Boolean,
     override val reason: String? = null,
     override val finalBitmap: Bitmap? = null,
-    val confidence: Double? = null, // heuristic confidence
     override val debugBitmaps: HashMap<String, Bitmap> = hashMapOf(),
-    val marks: List<Boolean>? = null
+    val detectedBubbles: List<BubbleResult>? = null,// Detection results
+    val evaluation: EvaluationResult? = null // Evaluation results (optional)
 ) : OmrResult(success, reason, finalBitmap, debugBitmaps)
 
 @Parcelize

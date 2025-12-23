@@ -47,10 +47,10 @@ import com.example.ledgerscanner.feature.scanner.exam.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.CreateExamViewModel
 
-private const val OPTION_A = 1
-private const val OPTION_B = 2
-private const val OPTION_C = 3
-private const val OPTION_D = 4
+private const val OPTION_A = 0
+private const val OPTION_B = 1
+private const val OPTION_C = 2
+private const val OPTION_D = 3
 
 @Composable
 fun AnswerKeyScreen(

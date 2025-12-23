@@ -85,8 +85,11 @@ fun CapturedPreviewScreen(
                         }
                     }
                 }
-                omrImageProcessResult?.marks?.let {
-                    ScoreSummaryCard(it)
+                omrImageProcessResult?.evaluation?.let { evaluation ->
+                    ScoreSummaryCard(
+                        evaluation = evaluation,
+                        modifier = Modifier // Optional modifier
+                    )
                 }
             }
 
