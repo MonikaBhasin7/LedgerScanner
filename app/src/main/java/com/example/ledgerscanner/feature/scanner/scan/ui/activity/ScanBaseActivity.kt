@@ -13,7 +13,7 @@ import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.scan.ui.screen.CapturedPreviewScreen
+import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScanResultScreen
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannerScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import com.example.omrscanner.ui.screens.ScanSessionScreen
@@ -28,7 +28,7 @@ class ScanBaseActivity : BaseActivity() {
         const val ARG_EXAM_ENTITY = "exam_entity"
         const val SCANNER_SCREEN = "scanner_screen"
         const val SCANNER_SESSION_SCREEN = "scan_session_screen"
-        const val CAPTURE_PREVIEW_SCREEN = "capture_preview_screen"
+        const val SCAN_RESULT_SCREEN = "scan_result_screen"
     }
 
     private var examEntity: ExamEntity? = null
@@ -63,9 +63,15 @@ class ScanBaseActivity : BaseActivity() {
                                 ScannerScreen(navController, omrScannerViewModel, examEntity!!)
 //                                ScanResultScreen(navController, examEntity!!)
                             }
-                            composable(CAPTURE_PREVIEW_SCREEN) { backStackEntry ->
-                                val id = backStackEntry.arguments?.getString("id")
-                                CapturedPreviewScreen(
+//                            composable(CAPTURE_PREVIEW_SCREEN) { backStackEntry ->
+////                                CapturedPreviewScreen(
+////                                    navController,
+////                                    omrScannerViewModel,
+////                                    innerPadding
+////                                )
+//                            }
+                            composable(SCAN_RESULT_SCREEN) { backStackEntry ->
+                                ScanResultScreen(
                                     navController,
                                     omrScannerViewModel,
                                     innerPadding

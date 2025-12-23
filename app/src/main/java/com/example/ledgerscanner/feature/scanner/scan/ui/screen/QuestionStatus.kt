@@ -85,7 +85,7 @@ data class QuestionResult(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScanResultScreen(
+fun ScanResultScreen1(
     navController: NavHostController,
     examEntity: ExamEntity,
     sheetNumber: Int = 6,
@@ -132,7 +132,7 @@ fun ScanResultScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // OMR Sheet Preview
-            OmrSheetPreview(
+            OmrSheetPreview1(
                 questions = allQuestions.take(5),
                 optionsPerQuestion = examEntity.template.options_per_question
             )
@@ -192,7 +192,7 @@ fun ScanResultScreen(
 }
 
 @Composable
-private fun OmrSheetPreview(
+private fun OmrSheetPreview1(
     questions: List<QuestionResult>,
     optionsPerQuestion: Int
 ) {

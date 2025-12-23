@@ -2,7 +2,7 @@ package com.example.ledgerscanner.feature.scanner.scan.model
 
 import android.graphics.Bitmap
 import android.os.Parcelable
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 
 sealed class OmrResult(
     open val success: Boolean,

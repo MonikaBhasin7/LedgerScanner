@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.view.doOnLayout
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.enums.PermissionStatus
@@ -151,7 +152,7 @@ private fun CameraViewOrPermissionCard(
 @Composable
 private fun CameraPreview(
     context: Context,
-    lifecycleOwner: androidx.lifecycle.LifecycleOwner,
+    lifecycleOwner: LifecycleOwner,
     omrScannerViewModel: OmrScannerViewModel,
     imageCapture: ImageCapture,
     examEntity: ExamEntity,
@@ -316,8 +317,8 @@ private fun setupImageAnalysis(
 
             if (omrImageProcessResult.success && isCapturing.compareAndSet(false, true)) {
                 mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
-                omrScannerViewModel.setOmrImageProcessResult(omrImageProcessResult)
-                navController.navigate(ScanBaseActivity.CAPTURE_PREVIEW_SCREEN)
+                omrScannerViewModel.setCapturedResult(omrImageProcessResult)
+                navController.navigate(ScanBaseActivity.SCAN_RESULT_SCREEN)
             }
 
             imageProxy.close()

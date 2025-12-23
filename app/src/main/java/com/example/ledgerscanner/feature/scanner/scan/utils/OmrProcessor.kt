@@ -88,9 +88,8 @@ class OmrProcessor @Inject constructor() {
         overlayRects: List<RectF>,
         previewRect: RectF,
         gray: Mat,
-        debug: Boolean,
-        debugBitmaps: MutableMap<String, Bitmap>,
-        centersOut: MutableList<AnchorPoint>
+        centersOut: MutableList<AnchorPoint>,
+        onDebug: (String, Bitmap) -> Unit
     ): Boolean {
         var allAnchorsFound = true
 
@@ -108,9 +107,7 @@ class OmrProcessor @Inject constructor() {
                 // Extract region of interest
                 roi = Mat(gray, matRect)
 
-                if (debug) {
-                    debugBitmaps["roi_anchor_$index"] = roi.toBitmapSafe()
-                }
+                onDebug("roi_anchor_$index", roi.toBitmapSafe())
 
                 // Detect anchor in ROI
                 val anchorInRoi = OpenCvUtils.detectAnchorInRoi(roi)
@@ -149,8 +146,6 @@ class OmrProcessor @Inject constructor() {
         gray: Mat,
         omrTemplate: Template,
         centersInBuffer: List<AnchorPoint>,
-        debug: Boolean,
-        debugBitmaps: MutableMap<String, Bitmap>
     ): Pair<Mat, Bitmap?> {
         val warped = warpWithAnchors(
             src = gray,
@@ -159,13 +154,7 @@ class OmrProcessor @Inject constructor() {
             templateSize = Size(omrTemplate.sheet_width, omrTemplate.sheet_height)
         )
 
-        val debugBitmap = if (debug) {
-            warped.toBitmapSafe()
-        } else {
-            null
-        }
-
-        return warped to debugBitmap
+        return warped to warped.toBitmapSafe()
     }
 
     /**

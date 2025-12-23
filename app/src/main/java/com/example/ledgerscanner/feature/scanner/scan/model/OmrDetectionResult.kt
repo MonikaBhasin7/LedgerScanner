@@ -1,7 +1,9 @@
 package com.example.ledgerscanner.feature.scanner.scan.model
 
+import android.graphics.Bitmap
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import org.opencv.core.Mat
 
 data class OmrDetectionResult(
     val bubbles: List<BubbleResult> // Just the detected filled bubbles
@@ -117,4 +119,24 @@ enum class AnswerStatus {
     INCORRECT,
     UNANSWERED,
     MULTIPLE_MARKS
+}
+
+data class AnchorDetectionResult(
+    val success: Boolean,
+    val centers: List<AnchorPoint>
+)
+
+/**
+ * Context object to manage Mat resources and debug bitmaps throughout processing.
+ * Ensures proper cleanup in finally block.
+ */
+class OmrProcessingContext {
+    var grayMat: Mat? = null
+    var warpedMat: Mat? = null
+    val debugBitmaps = hashMapOf<String, Bitmap>()
+
+    fun release() {
+        grayMat?.release()
+        warpedMat?.release()
+    }
 }
