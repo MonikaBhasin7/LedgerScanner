@@ -61,6 +61,7 @@ class ScanBaseActivity : BaseActivity() {
                             }
                             composable(SCANNER_SCREEN) {
                                 ScannerScreen(navController, omrScannerViewModel, examEntity!!)
+//                                ScanResultScreen(navController, examEntity!!)
                             }
                             composable(CAPTURE_PREVIEW_SCREEN) { backStackEntry ->
                                 val id = backStackEntry.arguments?.getString("id")

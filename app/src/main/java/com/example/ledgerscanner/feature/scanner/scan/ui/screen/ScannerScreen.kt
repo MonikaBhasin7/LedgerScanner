@@ -127,69 +127,6 @@ fun ScannerScreen(
 }
 
 @Composable
-fun ScanningTipsCard() {
-    @Composable
-    fun TipRow(icon: ImageVector, text: String) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.Gray,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = text,
-                style = AppTypography.body3Regular,
-                color = Color.Gray
-            )
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .padding(top = 12.dp)
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = Grey200,
-                shape = RoundedCornerShape(12.dp)
-            ),
-        colors = CardDefaults.cardColors(containerColor = Grey100),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Scanning tips",
-                style = AppTypography.label2Medium,
-                color = Color.Black
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TipRow(
-                icon = Icons.Outlined.OpenWith,
-                text = "Fill the frame, include all four corners."
-            )
-            TipRow(
-                icon = Icons.Outlined.WbSunny,
-                text = "Avoid glare and shadows on bubbles."
-            )
-            TipRow(
-                icon = Icons.Outlined.Crop,
-                text = "Perspective will be corrected automatically."
-            )
-        }
-    }
-}
-
-@Composable
 private fun CameraViewOrPermissionCard(
     context: Context,
     lifecycleOwner: LifecycleOwner,

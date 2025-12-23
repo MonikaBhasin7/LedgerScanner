@@ -84,3 +84,22 @@ val Green600 = Color(0xFF00AE14)
 val Green700 = Color(0xFF009611)
 val Green800 = Color(0xFF007D0E)
 val Green900 = Color(0xFF005C09)
+
+// Orange Palette - Complete Scale
+val Orange50 = Color(0xFFFFF3E0)   // Lightest
+val Orange75 = Color(0xFFFFE9C5)   // Very Light
+val Orange100 = Color(0xFFFFE0B2)  // Light
+val Orange200 = Color(0xFFFFCC80)  // Light-Medium
+val Orange300 = Color(0xFFFFB74D)  // Medium-Light
+val Orange400 = Color(0xFFFFA726)  // Medium
+val Orange500 = Color(0xFFFF9800)  // Primary Orange (Warning)
+val Orange600 = Color(0xFFFB8C00)  // Medium-Dark
+val Orange700 = Color(0xFFF57C00)  // Dark
+val Orange800 = Color(0xFFEF6C00)  // Darker
+val Orange900 = Color(0xFFE65100)  // Darkest
+
+// Accent Oranges (Optional)
+val OrangeAccent100 = Color(0xFFFFD180)
+val OrangeAccent200 = Color(0xFFFFAB40)
+val OrangeAccent400 = Color(0xFFFF9100)
+val OrangeAccent700 = Color(0xFFFF6D00)
