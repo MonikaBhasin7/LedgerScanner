@@ -26,11 +26,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -49,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.ui.components.GenericTextField
@@ -70,6 +74,7 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.AnswerModel
+import com.example.ledgerscanner.feature.scanner.scan.model.AnswerStatus
 import com.example.ledgerscanner.feature.scanner.scan.model.BubbleResult
 import com.example.ledgerscanner.feature.scanner.scan.model.EvaluationResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
@@ -239,6 +244,8 @@ fun ScanResultScreen(
         )
     }
 
+    var questionDetailsExpanded by remember { mutableStateOf(false) }
+
     Scaffold(topBar = {
         GenericToolbar(
             title = "Scan Result",
@@ -276,12 +283,159 @@ fun ScanResultScreen(
                     omrImageProcessResult?.evaluation
                 )
 
-                Spacer(Modifier.height(100.dp))
+                Spacer(Modifier.height(16.dp))
+
+                // Question Details
+                QuestionDetailsSection(
+                    evaluation = omrImageProcessResult?.evaluation,
+                    expanded = questionDetailsExpanded,
+                    onToggle = { questionDetailsExpanded = !questionDetailsExpanded }
+                )
+
+                Spacer(Modifier.height(24.dp))
             }
         }
 
     }
 }
+
+@Composable
+private fun QuestionDetailsSection(
+    evaluation: EvaluationResult?,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    evaluation?.let { evaluation ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = White),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.elevatedCardElevation(1.dp),
+            onClick = onToggle
+        ) {
+            Column {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Question Details",
+                        style = AppTypography.label2Bold,
+                        color = Grey900
+                    )
+
+                    Icon(
+                        imageVector = if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = Grey600
+                    )
+                }
+
+                // Question items
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val itemsToShow = if (expanded) {
+                        evaluation.answerMap.entries.toList()
+                    } else {
+                        evaluation.answerMap.entries.take(3) // Show first 3 items
+                    }
+
+                    itemsToShow.forEach { (questionNumber, answerModel) ->
+                        QuestionDetailItem(questionNumber, answerModel)
+                    }
+
+                    // Show "View more" hint when collapsed
+                    if (!expanded && evaluation.answerMap.size > 3) {
+                        Text(
+                            text = "Tap to view ${evaluation.answerMap.size - 3} more...",
+                            style = AppTypography.body3Regular,
+                            color = Blue500,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestionDetailItem(
+    questionNumber: Int,
+    answerModel: AnswerModel
+) {
+    val status = answerModel.getStatus()
+
+    val (backgroundColor, textColor, icon) = when (status) {
+        AnswerStatus.CORRECT -> Triple(Green500.copy(alpha = 0.1f), Green500, "✓")
+        AnswerStatus.INCORRECT -> Triple(Red500.copy(alpha = 0.1f), Red500, "✗")
+        AnswerStatus.UNANSWERED -> Triple(Grey200, Grey600, "—")
+        AnswerStatus.MULTIPLE_MARKS -> Triple(Orange500.copy(alpha = 0.1f), Orange500, "⚠")
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor, RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = icon,
+                style = AppTypography.body2Medium,
+                color = textColor
+            )
+
+            Text(
+                text = "Q${questionNumber + 1}",
+                style = AppTypography.body3Medium,
+                color = Grey900
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = if (answerModel.isAttempted()) {
+                    answerModel.userSelected.joinToString(", ") { getOptionLetter(it) }
+                } else {
+                    "Not answered"
+                },
+                style = AppTypography.body3Regular,
+                color = if (answerModel.isAttempted()) textColor else Grey600
+            )
+
+            if (answerModel.correctAnswer != -1 && !answerModel.isCorrect()) {
+                Text(
+                    text = "→ ${getOptionLetter(answerModel.correctAnswer)}",
+                    style = AppTypography.body3Regular,
+                    color = Green500
+                )
+            }
+        }
+    }
+
+    Spacer(Modifier.height(8.dp))
+}
+
+private fun getOptionLetter(index: Int): String = ('A' + index).toString()
 
 @Composable
 private fun StudentDetailsSection(barcodeId: String?) {
