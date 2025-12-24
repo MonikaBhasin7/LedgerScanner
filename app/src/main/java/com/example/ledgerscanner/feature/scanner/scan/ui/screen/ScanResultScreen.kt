@@ -3,6 +3,7 @@ package com.example.ledgerscanner.feature.scanner.scan.ui.screen
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,7 +35,6 @@ import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -55,6 +56,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.ledgerscanner.base.ui.components.ButtonSize
+import com.example.ledgerscanner.base.ui.components.ButtonType
+import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.components.ToolbarAction
@@ -250,13 +254,14 @@ fun ScanResultScreen(
         GenericToolbar(
             title = "Scan Result",
             onBackClick = handleBack,
-            actions = listOf(
-                ToolbarAction.Icon(
-                    icon = Icons.Outlined.MoreVert,
-                    contentDescription = "Menu",
-                    onClick = { /* Show menu */ }
-                )
-            )
+        )
+    }, bottomBar = {
+        ActionButtonsSection(
+            onSaveAndContinue = {},
+            onRetryScan = { },
+            onScanNext = { },
+            onViewAllSheets = {},
+            totalSheets = 5
         )
     }, containerColor = Grey100) { paddingValues ->
         omrImageProcessResult?.let {
@@ -296,6 +301,72 @@ fun ScanResultScreen(
             }
         }
 
+    }
+}
+
+@Composable
+private fun ActionButtonsSection(
+    onSaveAndContinue: () -> Unit,
+    onRetryScan: () -> Unit,
+    onScanNext: () -> Unit,
+    onViewAllSheets: () -> Unit,
+    totalSheets: Int
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 10.dp),
+        colors = CardDefaults.cardColors(containerColor = White)
+    ) {
+        Column(modifier = Modifier
+            .padding(16.dp)
+            .navigationBarsPadding()
+        ) {
+            // Primary button
+            GenericButton(
+                text = "Save & Continue",
+                onClick = onSaveAndContinue,
+                size = ButtonSize.LARGE,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Secondary buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                GenericButton(
+                    text = "🔄 Retry Scan",
+                    onClick = onRetryScan,
+                    type = ButtonType.SECONDARY,
+                    size = ButtonSize.MEDIUM,
+                    modifier = Modifier.weight(1f)
+                )
+
+                GenericButton(
+                    text = "📷 Scan Next",
+                    onClick = onScanNext,
+                    type = ButtonType.SECONDARY,
+                    size = ButtonSize.MEDIUM,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Link
+            Text(
+                text = "View All Scanned Sheets ($totalSheets)",
+                style = AppTypography.label3Bold,
+                color = Blue500,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onViewAllSheets() },
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
@@ -574,7 +645,7 @@ private fun ScoreSummaryCard(evaluation: EvaluationResult?) {
                         ScoreStat(
                             icon = Icons.Outlined.Warning,
                             count = evaluation.multipleMarksQuestions.size,
-                            label = "Multiple Answers",
+                            label = "Multiple\nAnswers",
                             color = Orange500
                         )
                     }
