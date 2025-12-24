@@ -140,7 +140,7 @@ fun ScanResultScreen1(
             Spacer(Modifier.height(16.dp))
 
             // Student Details
-            StudentDetailsSection(
+            StudentDetailsSection1(
                 studentName = studentName,
                 rollNumber = rollNumber
             )
@@ -148,7 +148,7 @@ fun ScanResultScreen1(
             Spacer(Modifier.height(16.dp))
 
             // Score Summary
-            ScoreSummaryCard(
+            ScoreSummaryCard1(
                 score = score,
                 totalQuestions = totalQuestions,
                 scorePercent = scorePercent,
@@ -326,7 +326,7 @@ private fun OmrBubble(
 }
 
 @Composable
-private fun StudentDetailsSection(
+private fun StudentDetailsSection1(
     studentName: String,
     rollNumber: String
 ) {
@@ -374,7 +374,7 @@ private fun StudentDetailsSection(
 }
 
 @Composable
-private fun ScoreSummaryCard(
+private fun ScoreSummaryCard1(
     score: Int,
     totalQuestions: Int,
     scorePercent: Int,

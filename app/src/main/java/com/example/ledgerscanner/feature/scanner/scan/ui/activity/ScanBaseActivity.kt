@@ -57,7 +57,8 @@ class ScanBaseActivity : BaseActivity() {
                         val navController = rememberNavController()
                         NavHost(navController, startDestination = SCANNER_SESSION_SCREEN) {
                             composable(SCANNER_SESSION_SCREEN) {
-                                ScanSessionScreen(navController, omrScannerViewModel, examEntity!!)
+                                ScanResultScreen(navController, omrScannerViewModel, innerPadding)
+//                                ScanSessionScreen(navController, omrScannerViewModel, examEntity!!)
                             }
                             composable(SCANNER_SCREEN) {
                                 ScannerScreen(navController, omrScannerViewModel, examEntity!!)
@@ -71,11 +72,11 @@ class ScanBaseActivity : BaseActivity() {
 ////                                )
 //                            }
                             composable(SCAN_RESULT_SCREEN) { backStackEntry ->
-                                ScanResultScreen(
-                                    navController,
-                                    omrScannerViewModel,
-                                    innerPadding
-                                )
+//                                ScanResultScreen(
+//                                    navController,
+//                                    omrScannerViewModel,
+//                                    innerPadding
+//                                )
                             }
                         }
                     }

@@ -18,7 +18,8 @@ data class OmrImageProcessResult(
     override val finalBitmap: Bitmap? = null,
     override val debugBitmaps: HashMap<String, Bitmap> = hashMapOf(),
     val detectedBubbles: List<BubbleResult>? = null,// Detection results
-    val evaluation: EvaluationResult? = null // Evaluation results (optional)
+    val evaluation: EvaluationResult? = null, // Evaluation results (optional)
+    val barcodeId: String? = null
 ) : OmrResult(success, reason, finalBitmap, debugBitmaps)
 
 @Parcelize
