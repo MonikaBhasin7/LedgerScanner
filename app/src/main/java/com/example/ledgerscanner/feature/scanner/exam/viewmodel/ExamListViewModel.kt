@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.exam.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.UiState
@@ -7,22 +8,31 @@ import com.example.ledgerscanner.base.ui.components.ButtonType
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionPopupConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.QuickActionButton
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
+import com.example.ledgerscanner.feature.scanner.scan.repo.ScanResultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class ExamListViewModel @Inject constructor(val repository: ExamRepository) : ViewModel() {
+class ExamListViewModel @Inject constructor(
+    val repository: ExamRepository,
+    val scanResultRepository: ScanResultRepository
+) : ViewModel() {
 
     private val _examList = MutableStateFlow<UiState<List<ExamEntity>>>(UiState.Loading())
     val examList: MutableStateFlow<UiState<List<ExamEntity>>> = _examList
+
+    private val _examStatsCache = MutableStateFlow<Map<Int, ExamStatistics>>(emptyMap())
+    val examStatsCache = _examStatsCache.asStateFlow()
 
     private val _deleteExamState = MutableStateFlow<UiState<Unit>>(UiState.Loading())
     val deleteExamState = _deleteExamState.asStateFlow()
@@ -53,6 +63,21 @@ class ExamListViewModel @Inject constructor(val repository: ExamRepository) : Vi
                 }
             } catch (e: Exception) {
                 _examList.value = UiState.Error(e.message ?: "Something went wrong")
+            }
+        }
+    }
+
+    // Load stats for specific exam (called when item becomes visible)
+    fun loadStatsForExam(examId: Int) {
+        viewModelScope.launch {
+            try {
+                scanResultRepository.getStatistics(examId).collect { stats ->
+                    _examStatsCache.update { currentCache ->
+                        currentCache + (examId to stats)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ExamListViewModel", "Error loading stats for exam $examId", e)
             }
         }
     }

@@ -72,7 +72,7 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
             try {
                 changeOperationState(OperationState.Loading)
                 val answerKeyMap = answerKeys.withIndex().associate {
-                    it.index + 1 to it.value
+                    it.index to it.value
                 }
                 _examEntity.value = repository.saveAnswerKey(
                     examEntity = _examEntity.value

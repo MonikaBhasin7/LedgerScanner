@@ -16,6 +16,7 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScanResultScreen
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannerScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
+import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
 import com.example.omrscanner.ui.screens.ScanSessionScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -34,6 +35,7 @@ class ScanBaseActivity : BaseActivity() {
     private var examEntity: ExamEntity? = null
 
     private val omrScannerViewModel: OmrScannerViewModel by viewModels()
+    private val scannedSheetsViewModel: ScannedSheetsViewModel by viewModels()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,26 +59,30 @@ class ScanBaseActivity : BaseActivity() {
                         val navController = rememberNavController()
                         NavHost(navController, startDestination = SCANNER_SESSION_SCREEN) {
                             composable(SCANNER_SESSION_SCREEN) {
-                                ScanResultScreen(navController, omrScannerViewModel, innerPadding)
-//                                ScanSessionScreen(navController, omrScannerViewModel, examEntity!!)
+//                                ScanResultScreen(
+//                                    navController,
+//                                    examEntity!!,
+//                                    omrScannerViewModel,
+//                                    scannedSheetsViewModel
+//                                )
+                                ScanSessionScreen(
+                                    navController,
+                                    omrScannerViewModel,
+                                    scannedSheetsViewModel,
+                                    examEntity!!
+                                )
                             }
                             composable(SCANNER_SCREEN) {
                                 ScannerScreen(navController, omrScannerViewModel, examEntity!!)
 //                                ScanResultScreen(navController, examEntity!!)
                             }
-//                            composable(CAPTURE_PREVIEW_SCREEN) { backStackEntry ->
-////                                CapturedPreviewScreen(
-////                                    navController,
-////                                    omrScannerViewModel,
-////                                    innerPadding
-////                                )
-//                            }
                             composable(SCAN_RESULT_SCREEN) { backStackEntry ->
-//                                ScanResultScreen(
-//                                    navController,
-//                                    omrScannerViewModel,
-//                                    innerPadding
-//                                )
+                                ScanResultScreen(
+                                    navController,
+                                    examEntity!!,
+                                    omrScannerViewModel,
+                                    scannedSheetsViewModel
+                                )
                             }
                         }
                     }

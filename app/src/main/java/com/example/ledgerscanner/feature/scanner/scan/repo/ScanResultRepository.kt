@@ -1,46 +1,128 @@
 package com.example.ledgerscanner.feature.scanner.scan.repo
 
+import android.content.Context
+import com.example.ledgerscanner.base.utils.StorageUtils
 import com.example.ledgerscanner.database.dao.ScanResultDao
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.StudentDetailsForScanResult
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-class ScanResultRepository @Inject constructor(private val scanResultDao: ScanResultDao) {
+class ScanResultRepository @Inject constructor(
+    private val scanResultDao: ScanResultDao,
+    @ApplicationContext private val context: Context
+) {
+    suspend fun saveSheet(
+        details: StudentDetailsForScanResult,
+        omrImageProcessResult: OmrImageProcessResult,
+        examId: Int
+    ): Long {
+        return withContext(Dispatchers.IO) {
+            // Validate
+            require(omrImageProcessResult.success) { "Invalid scan result" }
+            val evaluation = omrImageProcessResult.evaluation
+                ?: throw IllegalStateException("No evaluation data available")
 
-    // Insert
+            // Save images
+            val scannedImagePath = omrImageProcessResult.finalBitmap?.let { bitmap ->
+                StorageUtils.saveImageToStorage(
+                    context,
+                    bitmap,
+                    "scan_${System.currentTimeMillis()}.jpg"
+                )
+            } ?: throw IllegalStateException("No scanned image available")
+
+            val thumbnailPath = omrImageProcessResult.finalBitmap.let { bitmap ->
+                val thumbnail = StorageUtils.createThumbnail(bitmap, 300, 400)
+                StorageUtils.saveImageToStorage(
+                    context,
+                    thumbnail,
+                    "thumb_${System.currentTimeMillis()}.jpg"
+                )
+            }
+
+            // Convert detected bubbles to answers
+            val studentAnswers = mutableMapOf<Int, List<Int>>()
+
+            evaluation.answerMap.forEach { (key, item) ->
+                studentAnswers[key] = item.userSelected.toList()
+            }
+            // Create entity
+            val scanResult = ScanResultEntity(
+                examId = examId,
+                barCode = details.barcodeId,
+                scannedImagePath = scannedImagePath,
+                thumbnailPath = thumbnailPath,
+                scannedAt = System.currentTimeMillis(),
+                studentAnswers = studentAnswers,
+                multipleMarksDetected = evaluation.multipleMarksQuestions,
+                score = evaluation.marksObtained.toInt(),
+                totalQuestions = evaluation.totalQuestions,
+                correctCount = evaluation.correctCount,
+                wrongCount = evaluation.incorrectCount,
+                blankCount = evaluation.unansweredCount,
+                scorePercent = evaluation.percentage
+            )
+
+            // Insert
+            scanResultDao.insert(scanResult)
+        }
+    }
+
+    // ============ Insert ============
+
     suspend fun insert(scanResult: ScanResultEntity): Long {
         return scanResultDao.insert(scanResult)
     }
 
-    // Update
+    // ============ Update ============
+
     suspend fun update(scanResult: ScanResultEntity) {
         scanResultDao.update(scanResult)
     }
 
-    // Delete
+    // ============ Delete ============
+
     suspend fun delete(scanResult: ScanResultEntity) {
         scanResultDao.delete(scanResult)
     }
 
-    // Get all by exam
+    suspend fun deleteById(id: Int) {
+        scanResultDao.deleteById(id)
+    }
+
+    suspend fun deleteAllByExamId(examId: Int) {
+        scanResultDao.deleteAllByExamId(examId)
+    }
+
+    // ============ Get ============
+
     fun getAllByExamId(examId: Int): Flow<List<ScanResultEntity>> {
         return scanResultDao.getAllByExamId(examId)
     }
 
-    // Get count
+    suspend fun getByIdOnce(id: Int): ScanResultEntity? {
+        return scanResultDao.getByIdOnce(id)
+    }
+
+    // ============ Count ============
+
     fun getCountByExamId(examId: Int): Flow<Int> {
         return scanResultDao.getCountByExamId(examId)
     }
 
-    // Get statistics
-    suspend fun getStatistics(examId: Int): ExamStatistics {
-        return ExamStatistics(
-            avgScore = scanResultDao.getAverageScore(examId) ?: 0f,
-            topScore = scanResultDao.getTopScore(examId) ?: 0f,
-            lowestScore = scanResultDao.getLowestScore(examId) ?: 0f,
-            medianScore = scanResultDao.getMedianScore(examId) ?: 0f,
-            passRate = scanResultDao.getPassRate(examId) ?: 0f
-        )
+    suspend fun getCountByExamIdOnce(examId: Int): Int {
+        return scanResultDao.getCountByExamIdOnce(examId)
+    }
+
+    // ============ Statistics ============
+
+    suspend fun getStatistics(examId: Int): Flow<ExamStatistics> {
+        return scanResultDao.getStatisticsByExamId(examId)
     }
 }

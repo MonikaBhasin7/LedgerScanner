@@ -34,10 +34,7 @@ data class ScanResultEntity(
     val scannedAt: Long = System.currentTimeMillis(),
 
     // ✅ ALL ANSWERS IN ONE MAP
-    val studentAnswers: Map<Int, Int>, // {1: 0, 2: 1, 3: 2, ...}
-
-    // ✅ CONFIDENCE SCORES IN ONE MAP (optional)
-    val confidenceScores: Map<Int, Float>? = null, // {1: 0.95, 2: 0.45, ...}
+    val studentAnswers: Map<Int, List<Int>>, // {1: 0, 2: 1, 3: 2, ...}
 
     // ✅ ISSUES IN ONE MAP (optional)
     val multipleMarksDetected: List<Int>? = null, // [7, 12, 23] - question numbers with multiple marks

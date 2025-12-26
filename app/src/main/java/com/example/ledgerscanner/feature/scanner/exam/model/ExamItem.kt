@@ -1,10 +1,11 @@
 package com.example.ledgerscanner.feature.scanner.exam.model
 
 import android.os.Parcelable
-import kotlinx.android.parcel.Parcelize
+import com.example.ledgerscanner.database.entity.ExamEntity
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
-enum class ExamStatus: Parcelable {
+enum class ExamStatus : Parcelable {
     DRAFT,      // template created, not scanned yet
     ACTIVE,     // currently scanning / running
     COMPLETED,  // all sheets scanned, stats available

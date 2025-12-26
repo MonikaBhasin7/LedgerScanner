@@ -29,7 +29,7 @@ class AnswerEvaluator @Inject constructor() {
         val totalQuestions = examEntity.totalQuestions
         val answerKey = examEntity.answerKey ?: emptyMap()
         val marksPerCorrect = examEntity.marksPerCorrect ?: 1f
-        val marksPerWrong = examEntity.marksPerWrong ?: 0f // Already stored as negative value in DB
+        val marksPerWrong = (examEntity.marksPerWrong ?: 0f) * -1
 
         // Initialize answer map for all questions
         val answerMap = mutableMapOf<Int, AnswerModel>()
@@ -82,7 +82,7 @@ class AnswerEvaluator @Inject constructor() {
                         correctnessMarks[questionIndex] = true
                     } else {
                         incorrectCount++
-                        marksObtained += marksPerWrong // Apply negative marking
+                        marksObtained += marksPerWrong
                         correctnessMarks[questionIndex] = false
                     }
                 }

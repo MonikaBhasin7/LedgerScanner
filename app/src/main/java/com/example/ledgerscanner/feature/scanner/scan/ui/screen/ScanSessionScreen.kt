@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,7 +42,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.ButtonSize
@@ -74,10 +74,10 @@ import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsVie
 fun ScanSessionScreen(
     navController: NavHostController,
     omrScannerViewModel: OmrScannerViewModel,
+    scannedSheetsViewModel: ScannedSheetsViewModel,
     examEntity: ExamEntity
 ) {
     val context = LocalContext.current
-    val scannedSheetsViewModel: ScannedSheetsViewModel = hiltViewModel()
 
     val handleBack = rememberBackHandler(navController)
 
@@ -114,6 +114,9 @@ fun ScanSessionScreen(
         topBar = {
             GenericToolbar("Scan Session", onBackClick = handleBack)
         },
+        bottomBar = {
+            ScannerButton(onStartScanning)
+        },
         containerColor = Grey100
     ) { paddingValues ->
         Column(
@@ -140,10 +143,40 @@ fun ScanSessionScreen(
                 examId = examEntity.id,
                 onViewAnswerKey = onViewAnswerKey,
                 onViewResults = onViewResults,
-                onStartScanning = onStartScanning,
             )
         }
     }
+}
+
+@Composable
+fun ScannerButton(onStartScanning: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(16.dp)
+    ) {
+        Column {
+            GenericButton(
+                icon = Icons.Outlined.CameraAlt,
+                text = "Start Scanning",
+                size = ButtonSize.LARGE,
+                onClick = onStartScanning,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "💡 Tip: Ensure good lighting and include all 4 corner anchors",
+                style = AppTypography.body3Regular,
+                color = Grey500,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Left
+            )
+        }
+    }
+
+
 }
 
 @Composable
@@ -194,8 +227,7 @@ private fun ReadyState(
     scannedSheetsViewModel: ScannedSheetsViewModel,
     examId: Int,
     onViewAnswerKey: () -> Unit,
-    onViewResults: () -> Unit,
-    onStartScanning: () -> Unit,
+    onViewResults: () -> Unit
 ) {
     val sheetsCountByExamId by scannedSheetsViewModel.sheetsCountByExamId.collectAsState()
 
@@ -228,6 +260,7 @@ private fun ReadyState(
                     onViewResults = onViewResults
                 )
             }
+
             is UiState.Success -> {
                 SheetsStatusCard(
                     sheetsCount = state.data,
@@ -235,6 +268,7 @@ private fun ReadyState(
                     onViewResults = onViewResults
                 )
             }
+
             is UiState.Error -> {
                 SheetsStatusCard(
                     sheetsCount = null,
@@ -243,29 +277,9 @@ private fun ReadyState(
                     onViewResults = onViewResults
                 )
             }
+
+            is UiState.Idle<*> -> {}
         }
-
-        Spacer(modifier = Modifier.height(36.dp))
-
-        // Ready to Scan Button
-        GenericButton(
-            icon = Icons.Outlined.CameraAlt,
-            text = "Start Scanning",
-            size = ButtonSize.LARGE,
-            onClick = onStartScanning,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Tip
-        Text(
-            text = "💡 Tip: Ensure good lighting and include all 4 corner anchors",
-            style = AppTypography.body3Regular,
-            color = Grey500,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Left
-        )
     }
 }
 

@@ -68,16 +68,22 @@ import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
+import com.example.ledgerscanner.base.ui.theme.Green600
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
+import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
+import com.example.ledgerscanner.base.ui.theme.Grey600
+import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
+import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionDialog
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionPopupConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.QuickActionButton
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionConfirmationDialog
@@ -122,6 +128,7 @@ class ExamListingActivity : ComponentActivity() {
         var showDeleteAndDuplicateDialog by remember { mutableStateOf<ExamActionDialog?>(null) }
         val deleteState by viewModel.deleteExamState.collectAsState()
         val duplicateState by viewModel.duplicateExamState.collectAsState()
+        val examStatistics by viewModel.examStatsCache.collectAsState()
 
 
         // Handle filter changes - starts collecting from DB
@@ -217,6 +224,7 @@ class ExamListingActivity : ComponentActivity() {
 
                 ExamList(
                     examListResponse = examListResponse,
+                    examStatistics = examStatistics,
                     onExamClick = { exam ->
                         startActivity(
                             Intent(context, CreateExamActivity::class.java).apply {
@@ -227,6 +235,9 @@ class ExamListingActivity : ComponentActivity() {
                                 )
                             }
                         )
+                    },
+                    onLoadStats = {
+                        viewModel.loadStatsForExam(it)
                     },
                     onRetry = {
                         examListViewModel.getExamList(examFilter)
@@ -357,9 +368,11 @@ class ExamListingActivity : ComponentActivity() {
     @Composable
     private fun ExamList(
         examListResponse: UiState<List<ExamEntity>>,
+        examStatistics: Map<Int, ExamStatistics>,
         onExamClick: (ExamEntity) -> Unit,
         onRetry: () -> Unit,
-        onActionClick: (ExamEntity, ExamAction) -> Unit
+        onActionClick: (ExamEntity, ExamAction) -> Unit,
+        onLoadStats: (Int) -> Unit
     ) {
         when (examListResponse) {
             is UiState.Loading -> {
@@ -390,8 +403,15 @@ class ExamListingActivity : ComponentActivity() {
                         items = items,
                         key = { _, item -> item.id }
                     ) { _, item ->
+                        // Load stats when item becomes visible
+                        LaunchedEffect(item.id) {
+                            if (!examStatistics.containsKey(item.id)) {
+                                onLoadStats(item.id)
+                            }
+                        }
                         ExamCardRow(
                             item = item,
+                            examStatistics = examStatistics[item.id],
                             onClick = { onExamClick(item) },
                             onActionClick = {
                                 onActionClick(item, it)
@@ -400,6 +420,8 @@ class ExamListingActivity : ComponentActivity() {
                     }
                 }
             }
+
+            is UiState.Idle -> {}
         }
     }
 
@@ -441,8 +463,9 @@ class ExamListingActivity : ComponentActivity() {
     @Composable
     private fun ExamCardRow(
         item: ExamEntity,
+        examStatistics: ExamStatistics?,
         onClick: () -> Unit,
-        onActionClick: (ExamAction) -> Unit
+        onActionClick: (ExamAction) -> Unit,
     ) {
         val actions = examListViewModel.getExamActionForStatus(item.status)
         Box(
@@ -478,19 +501,21 @@ class ExamListingActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        val sheetCount = examStatistics?.sheetsCount ?: 0
                         ExamMetadata(
                             totalQuestions = item.totalQuestions,
                             createdAt = item.createdAt,
-                            sheetsCount = item.sheetsCount,
+                            sheetsCount = sheetCount,
                             status = item.status
                         )
 
-                        if (hasStats(item)) {
+                        // Show stats if available
+                        if (examStatistics != null && examStatistics.hasStats() && sheetCount > 0) {
                             Spacer(modifier = Modifier.height(8.dp))
                             ExamStats(
-                                avgScore = item.avgScorePercent,
-                                topScore = item.topScorePercent,
-                                medianScore = item.medianScorePercent
+                                avgScore = examStatistics.avgScore?.toInt(),
+                                topScore = examStatistics.topScore?.toInt(),
+                                lowestScore = examStatistics.lowestScore?.toInt()
                             )
                         }
                     }
@@ -625,7 +650,7 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamMetadata(
         totalQuestions: Int,
         createdAt: Long,
-        sheetsCount: Int?,
+        sheetsCount: Int,
         status: ExamStatus
     ) {
         val formattedDate = formatTimestamp(createdAt)
@@ -634,7 +659,7 @@ class ExamListingActivity : ComponentActivity() {
 
         val sheetsLine = when {
             status == ExamStatus.DRAFT -> null
-            sheetsCount != null && sheetsCount > 0 -> "Sheets: $sheetsCount scanned"
+            sheetsCount > 0 -> "Sheets: $sheetsCount scanned"
             else -> "No sheets scanned yet"
         }
 
@@ -657,13 +682,53 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamStats(
         avgScore: Int?,
         topScore: Int?,
-        medianScore: Int?
+        lowestScore: Int?
     ) {
-        Text(
-            text = "Avg ${avgScore ?: 0}% • Top ${topScore ?: 0}% • Median ${medianScore ?: 0}%",
-            color = Grey500,
-            style = AppTypography.body4Medium
-        )
+        val validAvg = avgScore?.coerceIn(0, 100) ?: 0
+        val validTop = topScore?.coerceIn(0, 100) ?: 0
+        val validLow = lowestScore?.coerceIn(0, 100) ?: 0
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Avg",
+                color = Grey600,
+                style = AppTypography.body4Medium
+            )
+            Text(
+                text = "$validAvg%",
+                color = Grey900,
+                style = AppTypography.label3Bold
+            )
+
+            Text("•", color = Grey400, style = AppTypography.body4Medium)
+
+            Text(
+                text = "Top",
+                color = Grey600,
+                style = AppTypography.body4Medium
+            )
+            Text(
+                text = "$validTop%",
+                color = Green600,
+                style = AppTypography.label3Bold
+            )
+
+            Text("•", color = Grey400, style = AppTypography.body4Medium)
+
+            Text(
+                text = "Low",
+                color = Grey600,
+                style = AppTypography.body4Medium
+            )
+            Text(
+                text = "$validLow%",
+                color = Orange600,
+                style = AppTypography.label3Bold
+            )
+        }
     }
 
     @Composable
@@ -798,11 +863,5 @@ class ExamListingActivity : ComponentActivity() {
     private fun formatTimestamp(timestamp: Long): String {
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         return sdf.format(Date(timestamp))
-    }
-
-    private fun hasStats(exam: ExamEntity): Boolean {
-        return exam.avgScorePercent != null ||
-                exam.topScorePercent != null ||
-                exam.medianScorePercent != null
     }
 }

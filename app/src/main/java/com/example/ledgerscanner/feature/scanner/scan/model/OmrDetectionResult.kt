@@ -140,3 +140,9 @@ class OmrProcessingContext {
         warpedMat?.release()
     }
 }
+
+data class StudentDetailsForScanResult(
+    val name: String?,
+    val rollNumber: Int?,
+    val barcodeId: String?
+)

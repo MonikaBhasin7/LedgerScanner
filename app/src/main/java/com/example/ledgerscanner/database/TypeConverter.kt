@@ -83,4 +83,17 @@ class TypeConverter {
             gson.fromJson(it, type)
         }
     }
+
+    @TypeConverter
+    fun fromStudentAnswersMap(value: Map<Int, List<Int>>?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toStudentAnswersMap(value: String?): Map<Int, List<Int>>? {
+        return value?.let {
+            val type = object : TypeToken<Map<Int, List<Int>>>() {}.type
+            gson.fromJson(it, type)
+        }
+    }
 }

@@ -111,6 +111,8 @@ fun SelectTemplateScreen(
                         }
                     )
                 }
+
+                is UiState.Idle<*> -> {}
             }
         }
     }

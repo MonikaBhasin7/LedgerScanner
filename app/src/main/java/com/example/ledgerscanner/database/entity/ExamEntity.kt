@@ -20,8 +20,4 @@ data class ExamEntity(
     val marksPerCorrect: Float? = null,
     val marksPerWrong: Float? = null,
     val createdAt: Long,
-    val sheetsCount: Int? = null,
-    val avgScorePercent: Int? = null,
-    val topScorePercent: Int? = null,
-    val medianScorePercent: Int? = null
 ): Parcelable

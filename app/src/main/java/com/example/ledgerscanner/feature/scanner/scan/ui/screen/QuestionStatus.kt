@@ -178,13 +178,13 @@ fun ScanResultScreen1(
             Spacer(Modifier.height(24.dp))
 
             // Action Buttons
-            ActionButtonsSection(
-                onSaveAndContinue = onSaveAndContinue,
-                onRetryScan = onRetryScan,
-                onScanNext = onScanNext,
-                onViewAllSheets = onViewAllSheets,
-                totalSheets = 5
-            )
+//            ActionButtonsSection1(
+//                onSaveAndContinue = onSaveAndContinue,
+//                onRetryScan = onRetryScan,
+//                onScanNext = onScanNext,
+//                onViewAllSheets = onViewAllSheets,
+//                totalSheets = 5
+//            )
 
             Spacer(Modifier.height(24.dp))
         }
@@ -636,12 +636,12 @@ private fun QuestionDetailItem(question: QuestionResult) {
 }
 
 @Composable
-private fun ActionButtonsSection(
+private fun ActionButtonsSection1(
     onSaveAndContinue: () -> Unit,
     onRetryScan: () -> Unit,
     onScanNext: () -> Unit,
     onViewAllSheets: () -> Unit,
-    totalSheets: Int
+
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         // Primary button
@@ -680,7 +680,7 @@ private fun ActionButtonsSection(
 
         // Link
         Text(
-            text = "View All Scanned Sheets ($totalSheets)",
+            text = "View All Scanned Sheets ()",
             style = AppTypography.label3Bold,
             color = Blue500,
             modifier = Modifier
