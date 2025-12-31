@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -86,6 +90,7 @@ import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.scan.model.ScannedSheetViewMode
 import com.example.ledgerscanner.feature.scanner.scan.model.SheetFilter
 import com.example.ledgerscanner.feature.scanner.scan.model.SheetSort
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
@@ -104,6 +109,7 @@ fun ScannedSheetsScreen(
     val examStats by scannedSheetsViewModel.examStatsCache.collectAsState()
     val selectedFilter by scannedSheetsViewModel.selectedFilter.collectAsState()
     val selectedSort by scannedSheetsViewModel.selectedSort.collectAsState()
+    val viewMode by scannedSheetsViewModel.viewMode.collectAsState()
     val handleBack = rememberBackHandler(navController)
 
     LaunchedEffect(Unit) {
@@ -137,9 +143,11 @@ fun ScannedSheetsScreen(
                             FilterAndSortControls(
                                 selectedFilter = selectedFilter,
                                 selectedSort = selectedSort,
+                                viewMode = viewMode,
                                 sheets = dataHolder.originalList,
                                 onFilterChange = { scannedSheetsViewModel.setFilter(it) },
-                                onSortChange = { scannedSheetsViewModel.setSort(it) }
+                                onSortChange = { scannedSheetsViewModel.setSort(it) },
+                                onViewModeChange = { scannedSheetsViewModel.setViewMode(it) }
                             )
                         }
 
@@ -185,7 +193,11 @@ fun ScannedSheetsScreen(
                                 }
                             }
                             else -> {
-                                ScannedSheetsList(sheets = filteredSheets)
+                                // Update list rendering
+                                when (viewMode) {
+                                    ScannedSheetViewMode.LIST -> ScannedSheetsList(sheets = filteredSheets)
+                                    ScannedSheetViewMode.GRID -> ScannedSheetsGrid(sheets = filteredSheets)
+                                }
                             }
                         }
                     }
@@ -196,17 +208,16 @@ fun ScannedSheetsScreen(
     }
 }
 
-
 @Composable
 private fun FilterAndSortControls(
     selectedFilter: SheetFilter,
     selectedSort: SheetSort,
+    viewMode: ScannedSheetViewMode,
     sheets: List<ScanResultEntity>,
     onFilterChange: (SheetFilter) -> Unit,
-    onSortChange: (SheetSort) -> Unit
+    onSortChange: (SheetSort) -> Unit,
+    onViewModeChange: (ScannedSheetViewMode) -> Unit
 ) {
-    // Get the data holder from the success state to access original list
-    // For count calculations, we need the original list, not filtered
     val totalCount = sheets.size
     val highScoreCount = sheets.count { it.scorePercent >= 75 }
     val lowScoreCount = sheets.count { it.scorePercent < 40 }
@@ -244,26 +255,26 @@ private fun FilterAndSortControls(
 
                 // Grid View Icon
                 IconButton(
-                    onClick = { /* TODO: Toggle grid view */ },
+                    onClick = { onViewModeChange(ScannedSheetViewMode.GRID) },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.GridView,
                         contentDescription = "Grid view",
-                        tint = Grey600,
+                        tint = if (viewMode == ScannedSheetViewMode.GRID) Blue600 else Grey600,
                         modifier = Modifier.size(24.dp)
                     )
                 }
 
                 // List View Icon
                 IconButton(
-                    onClick = { /* TODO: Toggle list view */ },
+                    onClick = { onViewModeChange(ScannedSheetViewMode.LIST) },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.List,
                         contentDescription = "List view",
-                        tint = Blue600,
+                        tint = if (viewMode == ScannedSheetViewMode.LIST) Blue600 else Grey600,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -304,6 +315,149 @@ private fun FilterAndSortControls(
     }
 }
 
+@Composable
+private fun ScannedSheetsGrid(sheets: List<ScanResultEntity>) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(sheets) { sheet ->
+            ScannedSheetGridItem(sheet = sheet)
+        }
+    }
+}
+
+@Composable
+private fun ScannedSheetGridItem(
+    sheet: ScanResultEntity,
+    onViewDetails: () -> Unit = {}
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onViewDetails() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Sheet Preview
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Grey200)
+            ) {
+                if (sheet.scannedImagePath != null) {
+                    val file = File(sheet.scannedImagePath)
+                    if (file.exists()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(file)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Sheet preview",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+
+                // New Badge overlay
+                if (isRecentSheet(sheet.scannedAt)) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                    ) {
+                        NewBadge()
+                    }
+                }
+            }
+
+            // Sheet ID
+            Text(
+                text = "Sheet #${sheet.id}",
+                style = AppTypography.text16Bold,
+                color = Grey900
+            )
+
+            // Student
+            Text(
+                text = sheet.barCode ?: "Unknown",
+                style = AppTypography.text13Regular,
+                color = Grey600,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Score
+            Text(
+                text = "${sheet.scorePercent.toInt()}%",
+                style = AppTypography.text24Bold,
+                color = Blue700
+            )
+
+            // Score indicators
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompactScoreIndicator(
+                    icon = "✓",
+                    count = sheet.correctCount,
+                    color = Green600
+                )
+
+                CompactScoreIndicator(
+                    icon = "✕",
+                    count = sheet.wrongCount,
+                    color = Red600
+                )
+
+                CompactScoreIndicator(
+                    icon = "—",
+                    count = sheet.blankCount,
+                    color = Grey600
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactScoreIndicator(
+    icon: String,
+    count: Int,
+    color: Color
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = icon,
+            color = color,
+            style = AppTypography.text14Bold,
+            fontSize = 14.sp
+        )
+        Text(
+            text = count.toString(),
+            color = color,
+            style = AppTypography.text13SemiBold
+        )
+    }
+}
 @Composable
 private fun FilterChip(
     label: String,

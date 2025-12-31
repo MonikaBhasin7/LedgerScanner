@@ -8,6 +8,7 @@ import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.ScannedSheetDataHolder
+import com.example.ledgerscanner.feature.scanner.scan.model.ScannedSheetViewMode
 import com.example.ledgerscanner.feature.scanner.scan.model.SheetFilter
 import com.example.ledgerscanner.feature.scanner.scan.model.SheetSort
 import com.example.ledgerscanner.feature.scanner.scan.model.StudentDetailsForScanResult
@@ -44,6 +45,12 @@ class ScannedSheetsViewModel @Inject constructor(
     private val _selectedSort = MutableStateFlow(SheetSort.DATE_NEWEST)
     val selectedSort = _selectedSort.asStateFlow()
 
+    private val _viewMode = MutableStateFlow(ScannedSheetViewMode.LIST)
+    val viewMode = _viewMode.asStateFlow()
+
+    fun setViewMode(mode: ScannedSheetViewMode) {
+        _viewMode.value = mode
+    }
     fun setFilter(filter: SheetFilter) {
         _selectedFilter.value = filter
         applyFilterAndSort()

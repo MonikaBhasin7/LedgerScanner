@@ -21,3 +21,8 @@ data class ScannedSheetDataHolder(
     val filterList: MutableList<ScanResultEntity>? = null,
     val originalList: MutableList<ScanResultEntity>? = null,
 )
+
+enum class ScannedSheetViewMode {
+    LIST,
+    GRID
+}
