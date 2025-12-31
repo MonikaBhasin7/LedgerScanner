@@ -64,18 +64,10 @@ class ScanBaseActivity : BaseActivity() {
                                     scanResultViewModel,
                                     examEntity!!,
                                     onViewResults = {
-                                        Intent(
-                                            this@ScanBaseActivity,
-                                            ScanResultActivity::class.java
-                                        ).apply {
-                                            putExtra(ScanResultActivity.ARG_EXAM_ENTITY, examEntity)
-                                            putExtra(
-                                                ScanResultActivity.ARG_DESTINATION_SCREEN,
-                                                ScanResultActivity.SCANNED_SHEETS_SCREEN
-                                            )
-                                        }.apply {
-                                            startActivity(this)
-                                        }
+                                        ScanResultActivity.launchScannedSheetsScreen(
+                                            context = this@ScanBaseActivity,
+                                            examEntity!!
+                                        )
                                     }
                                 )
                             }

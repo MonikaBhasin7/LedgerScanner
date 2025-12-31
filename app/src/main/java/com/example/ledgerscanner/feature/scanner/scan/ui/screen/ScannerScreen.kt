@@ -320,22 +320,11 @@ private fun setupImageAnalysis(
                 mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
                 omrScannerViewModel.setCapturedResult(omrImageProcessResult)
 
-                Intent(
-                    context,
-                    ScanResultActivity::class.java
-                ).apply {
-                    putExtra(ScanResultActivity.ARG_EXAM_ENTITY, examEntity)
-                    putExtra(
-                        ScanResultActivity.ARG_DESTINATION_SCREEN,
-                        ScanResultActivity.SCAN_RESULT_SCREEN
-                    )
-                    putExtra(
-                        ScanResultActivity.ARG_IMAGE_PROCESS_RESULT,
-                        omrImageProcessResult
-                    )
-                }.apply {
-                    context.startActivity(this)
-                }
+                ScanResultActivity.launchScanResultScreen(
+                    context = context,
+                    examEntity,
+                    omrImageProcessResult
+                )
             }
 
             imageProxy.close()

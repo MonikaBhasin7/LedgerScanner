@@ -1,5 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.activity
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -22,18 +24,53 @@ import dagger.hilt.android.AndroidEntryPoint
 // ===========================================================================
 // 👤 Author: Monika Bhasin
 // 📅 Created: 31/12/25
-// ===========================================================================class ScanBaseActivity {
+// ===========================================================================
 
 @AndroidEntryPoint
 class ScanResultActivity : BaseActivity() {
 
     companion object {
         const val TAG = "ScanResultActivity"
-        const val ARG_EXAM_ENTITY = "exam_entity"
-        const val ARG_DESTINATION_SCREEN = "destination_screen"
-        const val ARG_IMAGE_PROCESS_RESULT = "image_process_result"
-        const val SCAN_RESULT_SCREEN = "scan_result_screen"
-        const val SCANNED_SHEETS_SCREEN = "scanned_sheets_screen"
+        private const val ARG_EXAM_ENTITY = "exam_entity"
+        private const val ARG_DESTINATION_SCREEN = "destination_screen"
+        private const val ARG_IMAGE_PROCESS_RESULT = "image_process_result"
+        private const val SCAN_RESULT_SCREEN = "scan_result_screen"
+        private const val SCANNED_SHEETS_SCREEN = "scanned_sheets_screen"
+
+        /**
+         * Launch ScanResultScreen to show scan results
+         * @param context The context to launch from
+         * @param examEntity The exam entity
+         * @param imageProcessResult The OMR scan result to display
+         */
+        fun launchScanResultScreen(
+            context: Context,
+            examEntity: ExamEntity,
+            imageProcessResult: OmrImageProcessResult
+        ) {
+            val intent = Intent(context, ScanResultActivity::class.java).apply {
+                putExtra(ARG_EXAM_ENTITY, examEntity)
+                putExtra(ARG_DESTINATION_SCREEN, SCAN_RESULT_SCREEN)
+                putExtra(ARG_IMAGE_PROCESS_RESULT, imageProcessResult)
+            }
+            context.startActivity(intent)
+        }
+
+        /**
+         * Launch ScannedSheetsScreen to show all scanned sheets for an exam
+         * @param context The context to launch from
+         * @param examEntity The exam entity
+         */
+        fun launchScannedSheetsScreen(
+            context: Context,
+            examEntity: ExamEntity
+        ) {
+            val intent = Intent(context, ScanResultActivity::class.java).apply {
+                putExtra(ARG_EXAM_ENTITY, examEntity)
+                putExtra(ARG_DESTINATION_SCREEN, SCANNED_SHEETS_SCREEN)
+            }
+            context.startActivity(intent)
+        }
     }
 
     private var examEntity: ExamEntity? = null

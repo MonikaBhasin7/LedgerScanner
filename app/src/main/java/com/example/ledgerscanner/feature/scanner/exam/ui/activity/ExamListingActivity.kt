@@ -78,6 +78,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.White
+import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
@@ -227,14 +228,16 @@ class ExamListingActivity : ComponentActivity() {
                 ExamList(
                     examListResponse = examListResponse,
                     examStatistics = examStatistics,
-                    onExamClick = { exam ->
-                        startActivity(
-                            Intent(context, CreateExamActivity::class.java).apply {
-                                putExtra(
-                                    CreateExamActivity.CONFIG, CreateExamConfig(
-                                        examEntity = exam,
-                                    )
-                                )
+                    onExamClick = { examEntity, examAction ->
+                        handleExamAction(
+                            context,
+                            examEntity,
+                            examAction,
+                            showDeleteDialog = {
+                                showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
+                            },
+                            showDuplicateDialog = {
+                                showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
                             }
                         )
                     },
@@ -337,8 +340,7 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             ExamAction.ViewResults -> {
-                // TODO: Navigate to results screen
-                Toast.makeText(context, "View Results - Coming soon", Toast.LENGTH_SHORT).show()
+
             }
 
             ExamAction.MarkCompleted -> {
@@ -371,7 +373,7 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamList(
         examListResponse: UiState<List<ExamEntity>>,
         examStatistics: Map<Int, ExamStatistics>,
-        onExamClick: (ExamEntity) -> Unit,
+        onExamClick: (ExamEntity, ExamAction) -> Unit,
         onRetry: () -> Unit,
         onActionClick: (ExamEntity, ExamAction) -> Unit,
         onLoadStats: (Int) -> Unit
@@ -414,7 +416,7 @@ class ExamListingActivity : ComponentActivity() {
                         ExamCardRow(
                             item = item,
                             examStatistics = examStatistics[item.id],
-                            onClick = { onExamClick(item) },
+                            onClick = { onExamClick(item, it) },
                             onActionClick = {
                                 onActionClick(item, it)
                             }
@@ -466,7 +468,7 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamCardRow(
         item: ExamEntity,
         examStatistics: ExamStatistics?,
-        onClick: () -> Unit,
+        onClick: (ExamAction) -> Unit,
         onActionClick: (ExamAction) -> Unit,
     ) {
         val actions = examListViewModel.getExamActionForStatus(item.status)
@@ -488,7 +490,7 @@ class ExamListingActivity : ComponentActivity() {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onClick() }
+                        .genericClick { actions.quickAction?.action?.let { onClick(it) } }
                 ) {
                     ExamIcon()
 

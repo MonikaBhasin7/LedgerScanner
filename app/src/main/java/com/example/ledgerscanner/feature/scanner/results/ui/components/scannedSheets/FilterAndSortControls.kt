@@ -164,11 +164,11 @@ private fun FilterChip(
             .background(if (isSelected) selectedColor else Color.White)
             .border(1.5.dp, unselectedColor, RoundedCornerShape(24.dp))
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Text(
             text = label,
-            style = AppTypography.text14SemiBold,
+            style = AppTypography.text12SemiBold,
             color = if (isSelected) Color.White else unselectedColor
         )
     }
