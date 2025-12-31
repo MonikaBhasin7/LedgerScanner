@@ -1,5 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.scan.model
 
+import com.example.ledgerscanner.database.entity.ScanResultEntity
+
 // Add to a new file or in your model package
 enum class SheetFilter {
     ALL,
@@ -14,3 +16,8 @@ enum class SheetSort(val displayName: String) {
     SCORE_LOW("Score (Low to High)"),
     STUDENT_NAME("Student Name")
 }
+
+data class ScannedSheetDataHolder(
+    val filterList: MutableList<ScanResultEntity>? = null,
+    val originalList: MutableList<ScanResultEntity>? = null,
+)

@@ -7,6 +7,7 @@ import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
+import com.example.ledgerscanner.feature.scanner.scan.model.ScannedSheetDataHolder
 import com.example.ledgerscanner.feature.scanner.scan.model.SheetFilter
 import com.example.ledgerscanner.feature.scanner.scan.model.SheetSort
 import com.example.ledgerscanner.feature.scanner.scan.model.StudentDetailsForScanResult
@@ -18,11 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-data class ScannedSheetDataHolder(
-    val filterList: MutableList<ScanResultEntity>? = null,
-    val originalList: MutableList<ScanResultEntity>? = null,
-)
 
 @HiltViewModel
 class ScannedSheetsViewModel @Inject constructor(
