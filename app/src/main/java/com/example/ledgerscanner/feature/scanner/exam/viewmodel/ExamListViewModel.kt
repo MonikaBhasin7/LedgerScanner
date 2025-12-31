@@ -25,14 +25,10 @@ import javax.inject.Inject
 @HiltViewModel
 class ExamListViewModel @Inject constructor(
     val repository: ExamRepository,
-    val scanResultRepository: ScanResultRepository
 ) : ViewModel() {
 
     private val _examList = MutableStateFlow<UiState<List<ExamEntity>>>(UiState.Loading())
     val examList: MutableStateFlow<UiState<List<ExamEntity>>> = _examList
-
-    private val _examStatsCache = MutableStateFlow<Map<Int, ExamStatistics>>(emptyMap())
-    val examStatsCache = _examStatsCache.asStateFlow()
 
     private val _deleteExamState = MutableStateFlow<UiState<Unit>>(UiState.Loading())
     val deleteExamState = _deleteExamState.asStateFlow()
@@ -63,21 +59,6 @@ class ExamListViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _examList.value = UiState.Error(e.message ?: "Something went wrong")
-            }
-        }
-    }
-
-    // Load stats for specific exam (called when item becomes visible)
-    fun loadStatsForExam(examId: Int) {
-        viewModelScope.launch {
-            try {
-                scanResultRepository.getStatistics(examId).collect { stats ->
-                    _examStatsCache.update { currentCache ->
-                        currentCache + (examId to stats)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ExamListViewModel", "Error loading stats for exam $examId", e)
             }
         }
     }

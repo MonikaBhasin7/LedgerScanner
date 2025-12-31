@@ -102,7 +102,7 @@ fun ScanSessionScreen(
             })
     }
     val onViewResults: () -> Unit = {
-        navController.navigate("all_scanned_sheets/${examEntity.id}")
+        navController.navigate(ScanBaseActivity.SCANNED_SHEETS_SCREEN)
     }
     val onStartScanning: () -> Unit = {
         navController.navigate(ScanBaseActivity.SCANNER_SCREEN)

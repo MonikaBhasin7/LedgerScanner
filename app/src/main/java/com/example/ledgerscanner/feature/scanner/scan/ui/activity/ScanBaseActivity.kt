@@ -14,6 +14,7 @@ import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScanResultScreen
+import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannedSheetsScreen
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannerScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
@@ -30,6 +31,7 @@ class ScanBaseActivity : BaseActivity() {
         const val SCANNER_SCREEN = "scanner_screen"
         const val SCANNER_SESSION_SCREEN = "scan_session_screen"
         const val SCAN_RESULT_SCREEN = "scan_result_screen"
+        const val SCANNED_SHEETS_SCREEN = "scanned_sheets_screen"
     }
 
     private var examEntity: ExamEntity? = null
@@ -59,12 +61,6 @@ class ScanBaseActivity : BaseActivity() {
                         val navController = rememberNavController()
                         NavHost(navController, startDestination = SCANNER_SESSION_SCREEN) {
                             composable(SCANNER_SESSION_SCREEN) {
-//                                ScanResultScreen(
-//                                    navController,
-//                                    examEntity!!,
-//                                    omrScannerViewModel,
-//                                    scannedSheetsViewModel
-//                                )
                                 ScanSessionScreen(
                                     navController,
                                     omrScannerViewModel,
@@ -81,6 +77,13 @@ class ScanBaseActivity : BaseActivity() {
                                     navController,
                                     examEntity!!,
                                     omrScannerViewModel,
+                                    scannedSheetsViewModel
+                                )
+                            }
+                            composable(SCANNED_SHEETS_SCREEN) {
+                                ScannedSheetsScreen(
+                                    navController,
+                                    examEntity!!,
                                     scannedSheetsViewModel
                                 )
                             }

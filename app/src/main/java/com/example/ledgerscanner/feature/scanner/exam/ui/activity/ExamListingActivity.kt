@@ -92,6 +92,7 @@ import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDi
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
+import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -101,6 +102,7 @@ import java.util.Locale
 class ExamListingActivity : ComponentActivity() {
 
     private val examListViewModel: ExamListViewModel by viewModels()
+    private val scannedSheetsViewModel: ScannedSheetsViewModel by viewModels()
 
     companion object {
         private const val EXTRA_TEMPLATE = "template"
@@ -128,7 +130,7 @@ class ExamListingActivity : ComponentActivity() {
         var showDeleteAndDuplicateDialog by remember { mutableStateOf<ExamActionDialog?>(null) }
         val deleteState by viewModel.deleteExamState.collectAsState()
         val duplicateState by viewModel.duplicateExamState.collectAsState()
-        val examStatistics by viewModel.examStatsCache.collectAsState()
+        val examStatistics by scannedSheetsViewModel.examStatsCache.collectAsState()
 
 
         // Handle filter changes - starts collecting from DB
@@ -237,7 +239,7 @@ class ExamListingActivity : ComponentActivity() {
                         )
                     },
                     onLoadStats = {
-                        viewModel.loadStatsForExam(it)
+                        scannedSheetsViewModel.loadStatsForExam(it)
                     },
                     onRetry = {
                         examListViewModel.getExamList(examFilter)
