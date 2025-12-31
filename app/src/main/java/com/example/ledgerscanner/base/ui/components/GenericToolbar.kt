@@ -28,6 +28,7 @@ import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
+import com.example.ledgerscanner.base.utils.ui.genericClick
 
 sealed class ToolbarAction {
     // Icon only
@@ -83,7 +84,7 @@ fun GenericToolbar(
                 onBackClick?.let {
                     Box(
                         modifier = Modifier
-                            .clickable { onBackClick() }
+                            .genericClick { onBackClick() }
                             .padding(start = 8.dp, end = 10.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(color = Blue100)
