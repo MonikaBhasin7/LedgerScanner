@@ -15,7 +15,7 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.results.ui.screen.ScanResultScreen
 import com.example.ledgerscanner.feature.scanner.results.ui.screen.ScannedSheetsScreen
-import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -39,7 +39,7 @@ class ScanResultActivity : BaseActivity() {
     private var examEntity: ExamEntity? = null
     private var omrImageProcessResult: OmrImageProcessResult? = null
     private var destinationScreen: String = SCANNED_SHEETS_SCREEN // Default
-    private val scannedSheetsViewModel: ScannedSheetsViewModel by viewModels()
+    private val scanResultViewModel: ScanResultViewModel by viewModels()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,14 +81,14 @@ class ScanResultActivity : BaseActivity() {
                                     navController,
                                     examEntity!!,
                                     omrImageProcessResult!!,
-                                    scannedSheetsViewModel
+                                    scanResultViewModel
                                 )
                             }
                             composable(SCANNED_SHEETS_SCREEN) {
                                 ScannedSheetsScreen(
                                     navController,
                                     examEntity!!,
-                                    scannedSheetsViewModel
+                                    scanResultViewModel
                                 )
                             }
                         }

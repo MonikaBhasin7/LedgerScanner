@@ -32,7 +32,7 @@ import com.example.ledgerscanner.feature.scanner.results.ui.components.result.Qu
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.SaveStatusDialog
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ScoreSummaryCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.StudentDetailsSection
-import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 
 @Composable
@@ -40,7 +40,7 @@ fun ScanResultScreen(
     navController: NavHostController,
     examEntity: ExamEntity,
     imageProcessResult: OmrImageProcessResult,
-    scannedSheetsViewModel: ScannedSheetsViewModel,
+    scanResultViewModel: ScanResultViewModel,
 ) {
     val context = LocalContext.current
     val handleBack = rememberBackHandler(navController)
@@ -50,12 +50,12 @@ fun ScanResultScreen(
         mutableStateOf(StudentDetailsForScanResult(null, null, null))
     }
 
-    val totalSheetCounts by scannedSheetsViewModel.sheetsCountByExamId.collectAsState()
-    val saveSheetResponse by scannedSheetsViewModel.saveSheetState.collectAsState()
+    val totalSheetCounts by scanResultViewModel.sheetsCountByExamId.collectAsState()
+    val saveSheetResponse by scanResultViewModel.saveSheetState.collectAsState()
     var onScanNextSelected by remember { mutableStateOf(false) }
 
     val saveAndContinue: () -> Unit = {
-        scannedSheetsViewModel.saveSheet(
+        scanResultViewModel.saveSheet(
             studentDetailsRef.value,
             imageProcessResult,
             examEntity.id
@@ -63,7 +63,7 @@ fun ScanResultScreen(
     }
 
     LaunchedEffect(Unit) {
-        scannedSheetsViewModel.resetSaveSheetState()
+        scanResultViewModel.resetSaveSheetState()
     }
 
     LaunchedEffect(saveSheetResponse) {
@@ -87,7 +87,7 @@ fun ScanResultScreen(
             ActionButtonsSection(
                 onSaveAndContinue = saveAndContinue,
                 onRetryScan = {
-                    scannedSheetsViewModel.resetSaveSheetState()
+                    scanResultViewModel.resetSaveSheetState()
                     handleBack()
                 },
                 onScanNext = {
@@ -139,7 +139,7 @@ fun ScanResultScreen(
             onScanNextSelected = onScanNextSelected,
             onDismiss = {
                 if (saveSheetResponse is UiState.Success) {
-                    scannedSheetsViewModel.resetSaveSheetState()
+                    scanResultViewModel.resetSaveSheetState()
                     navController.popBackStack()
                 }
             }

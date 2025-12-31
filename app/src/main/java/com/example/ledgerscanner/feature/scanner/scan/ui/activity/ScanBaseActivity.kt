@@ -15,7 +15,7 @@ import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
-import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannerScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import com.example.omrscanner.ui.screens.ScanSessionScreen
@@ -35,7 +35,7 @@ class ScanBaseActivity : BaseActivity() {
     private var examEntity: ExamEntity? = null
 
     private val omrScannerViewModel: OmrScannerViewModel by viewModels()
-    private val scannedSheetsViewModel: ScannedSheetsViewModel by viewModels()
+    private val scanResultViewModel: ScanResultViewModel by viewModels()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,7 +61,7 @@ class ScanBaseActivity : BaseActivity() {
                             composable(SCANNER_SESSION_SCREEN) {
                                 ScanSessionScreen(
                                     navController,
-                                    scannedSheetsViewModel,
+                                    scanResultViewModel,
                                     examEntity!!,
                                     onViewResults = {
                                         Intent(

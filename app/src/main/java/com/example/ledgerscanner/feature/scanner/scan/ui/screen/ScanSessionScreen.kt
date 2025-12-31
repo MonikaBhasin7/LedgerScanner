@@ -66,14 +66,13 @@ import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
-import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
-import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanSessionScreen(
     navController: NavHostController,
-    scannedSheetsViewModel: ScannedSheetsViewModel,
+    scanResultViewModel: ScanResultViewModel,
     examEntity: ExamEntity,
     onViewResults: () -> Unit
 ) {
@@ -137,7 +136,7 @@ fun ScanSessionScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             ReadyState(
-                scannedSheetsViewModel = scannedSheetsViewModel,
+                scanResultViewModel = scanResultViewModel,
                 examId = examEntity.id,
                 onViewAnswerKey = onViewAnswerKey,
                 onViewResults = onViewResults,
@@ -222,15 +221,15 @@ private fun ExamHeader(
 
 @Composable
 private fun ReadyState(
-    scannedSheetsViewModel: ScannedSheetsViewModel,
+    scanResultViewModel: ScanResultViewModel,
     examId: Int,
     onViewAnswerKey: () -> Unit,
     onViewResults: () -> Unit
 ) {
-    val sheetsCountByExamId by scannedSheetsViewModel.sheetsCountByExamId.collectAsState()
+    val sheetsCountByExamId by scanResultViewModel.sheetsCountByExamId.collectAsState()
 
     LaunchedEffect(Unit) {
-        scannedSheetsViewModel.getCountByExamId(examId)
+        scanResultViewModel.getCountByExamId(examId)
     }
 
     Column(

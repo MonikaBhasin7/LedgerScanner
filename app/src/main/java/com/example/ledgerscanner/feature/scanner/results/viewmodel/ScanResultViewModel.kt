@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class ScannedSheetsViewModel @Inject constructor(
+class ScanResultViewModel @Inject constructor(
     private val scanResultRepository: ScanResultRepository
 ) : ViewModel() {
 
@@ -48,9 +48,73 @@ class ScannedSheetsViewModel @Inject constructor(
     private val _viewMode = MutableStateFlow(ScannedSheetViewMode.LIST)
     val viewMode = _viewMode.asStateFlow()
 
+    private val _selectedSheets = MutableStateFlow<Set<Int>>(emptySet())
+    val selectedSheets = _selectedSheets.asStateFlow()
+
+    private val _selectionMode = MutableStateFlow(false)
+    val selectionMode = _selectionMode.asStateFlow()
+
+    private val _deleteState = MutableStateFlow<UiState<Unit>>(UiState.Idle())
+    val deleteState = _deleteState.asStateFlow()
+
+    fun toggleSheetSelection(sheetId: Int) {
+        _selectedSheets.update { currentSet ->
+            if (currentSet.contains(sheetId)) {
+                currentSet - sheetId
+            } else {
+                currentSet + sheetId
+            }
+        }
+    }
+
+    fun selectAll(sheets: List<ScanResultEntity>) {
+        _selectedSheets.value = sheets.map { it.id }.toSet()
+        _selectionMode.value = true
+    }
+
+    fun deselectAll() {
+        _selectedSheets.value = emptySet()
+        _selectionMode.value = false
+    }
+
+    fun enterSelectionMode() {
+        _selectionMode.value = true
+    }
+
+    fun exitSelectionMode() {
+        _selectionMode.value = false
+        _selectedSheets.value = emptySet()
+    }
+
+    fun deleteSelectedSheets() {
+        viewModelScope.launch {
+            try {
+                _deleteState.value = UiState.Loading()
+
+                val selectedIds = _selectedSheets.value
+                if (selectedIds.size == 1) {
+                    scanResultRepository.deleteSheet(selectedIds.first())
+                } else {
+                    scanResultRepository.deleteMultipleSheets(selectedIds.toList())
+                }
+                _deleteState.value = UiState.Success(Unit)
+
+                exitSelectionMode()
+
+            } catch (e: Exception) {
+                _deleteState.value = UiState.Error(e.message ?: "Failed to delete sheets")
+            }
+        }
+    }
+
+    fun resetDeleteState() {
+        _deleteState.value = UiState.Idle()
+    }
+
     fun setViewMode(mode: ScannedSheetViewMode) {
         _viewMode.value = mode
     }
+
     fun setFilter(filter: SheetFilter) {
         _selectedFilter.value = filter
         applyFilterAndSort()

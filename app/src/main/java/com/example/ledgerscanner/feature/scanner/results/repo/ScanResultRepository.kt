@@ -125,4 +125,16 @@ class ScanResultRepository @Inject constructor(
     suspend fun getStatistics(examId: Int): Flow<ExamStatistics> {
         return scanResultDao.getStatisticsByExamId(examId)
     }
+
+    suspend fun deleteSheet(sheetId: Int) {
+        withContext(Dispatchers.IO) {
+            scanResultDao.deleteById(sheetId)
+        }
+    }
+
+    suspend fun deleteMultipleSheets(sheetIds: List<Int>) {
+        withContext(Dispatchers.IO) {
+            scanResultDao.deleteByIds(sheetIds)
+        }
+    }
 }

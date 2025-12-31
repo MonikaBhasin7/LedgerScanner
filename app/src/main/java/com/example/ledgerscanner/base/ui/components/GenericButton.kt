@@ -26,6 +26,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
+import com.example.ledgerscanner.base.ui.theme.Red600
 import com.example.ledgerscanner.base.ui.theme.White
 
 @Composable
@@ -46,26 +47,37 @@ fun GenericButton(
             White,
             null
         )
+
         ButtonType.SECONDARY -> Triple(
             Color.Transparent,
             Blue500,
             Blue500
         )
+
         ButtonType.WARNING -> Triple(
             Color(0xFFFF9800), // Orange
             White,
             null
         )
+
+        ButtonType.DANGER -> Triple(
+            Red600,
+            White,
+            Color.Transparent
+        )
+
         ButtonType.SUCCESS -> Triple(
             Green500,
             White,
             null
         )
+
         ButtonType.NEUTRAL -> Triple(
             Color.Transparent,
             Grey600,
             Grey400
         )
+
         ButtonType.TERTIARY -> Triple(
             Grey100,
             Grey600,
@@ -88,6 +100,7 @@ fun GenericButton(
                 textStyle = AppTypography.label3Medium
             )
         }
+
         ButtonSize.MEDIUM -> {
             SizeConfig(
                 contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp),
@@ -96,6 +109,7 @@ fun GenericButton(
                 textStyle = AppTypography.label2SemiBold
             )
         }
+
         ButtonSize.LARGE -> {
             SizeConfig(
                 contentPadding = PaddingValues(vertical = 16.dp, horizontal = 24.dp),
@@ -139,9 +153,10 @@ enum class ButtonType {
     PRIMARY,    // Blue filled
     SECONDARY,  // Blue outlined
     WARNING,    // Orange filled
+    DANGER,     // Red filled
     SUCCESS,    // Green filled
     NEUTRAL,    // Grey outlined
-    TERTIARY    // Grey filled
+    TERTIARY   // Grey filled
 }
 
 enum class ButtonSize {

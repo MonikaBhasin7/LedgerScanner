@@ -24,11 +24,14 @@ interface ScanResultDao {
     @Delete
     suspend fun delete(scanResult: ScanResultEntity)
 
-    @Query("DELETE FROM scan_results WHERE id = :id")
-    suspend fun deleteById(id: Int)
-
     @Query("DELETE FROM scan_results WHERE examId = :examId")
     suspend fun deleteAllByExamId(examId: Int)
+
+    @Query("DELETE FROM scan_results WHERE id = :sheetId")
+    suspend fun deleteById(sheetId: Int)
+
+    @Query("DELETE FROM scan_results WHERE id IN (:sheetIds)")
+    suspend fun deleteByIds(sheetIds: List<Int>)
 
     // ============ Single Item ============
 
@@ -65,7 +68,8 @@ interface ScanResultDao {
     @Query("SELECT MIN(scorePercent) FROM scan_results WHERE examId = :examId")
     suspend fun getLowestScore(examId: Int): Float?
 
-    @Query("""
+    @Query(
+        """
         SELECT AVG(scorePercent) 
         FROM (
             SELECT scorePercent 
@@ -75,14 +79,17 @@ interface ScanResultDao {
             LIMIT 2 - (SELECT COUNT(*) FROM scan_results WHERE examId = :examId) % 2 
             OFFSET (SELECT (COUNT(*) - 1) / 2 FROM scan_results WHERE examId = :examId)
         )
-    """)
+    """
+    )
     suspend fun getMedianScore(examId: Int): Float?
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*) * 100.0 / (SELECT COUNT(*) FROM scan_results WHERE examId = :examId)
         FROM scan_results 
         WHERE examId = :examId AND scorePercent >= :passingPercent
-    """)
+    """
+    )
     suspend fun getPassRate(examId: Int, passingPercent: Float = 40f): Float?
 
     // ============ Sorting ============
@@ -93,7 +100,8 @@ interface ScanResultDao {
     @Query("SELECT * FROM scan_results WHERE examId = :examId ORDER BY scannedAt DESC")
     fun getOrderedByDate(examId: Int): Flow<List<ScanResultEntity>>
 
-    @Query("""
+    @Query(
+        """
         SELECT 
             COALESCE(AVG(scorePercent), 0) as avgScore,
             COALESCE(MAX(scorePercent), 0) as topScore,
@@ -101,6 +109,7 @@ interface ScanResultDao {
             COUNT(*) as sheetsCount
         FROM scan_results 
         WHERE examId = :examId
-    """)
+    """
+    )
     fun getStatisticsByExamId(examId: Int): Flow<ExamStatistics>
 }

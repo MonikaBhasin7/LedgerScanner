@@ -21,6 +21,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,9 +49,13 @@ fun FilterAndSortControls(
     selectedSort: SheetSort,
     viewMode: ScannedSheetViewMode,
     sheets: List<ScanResultEntity>,
+    selectionMode: Boolean,
+    selectedCount: Int,
     onFilterChange: (SheetFilter) -> Unit,
     onSortChange: (SheetSort) -> Unit,
-    onViewModeChange: (ScannedSheetViewMode) -> Unit
+    onViewModeChange: (ScannedSheetViewMode) -> Unit,
+    onSelectAll: () -> Unit,
+    onDeselectAll: () -> Unit
 ) {
     val totalCount = sheets.size
     val highScoreCount = sheets.count { it.scorePercent >= 75 }
@@ -67,53 +72,59 @@ fun FilterAndSortControls(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Select All",
-                style = AppTypography.text15SemiBold,
-                color = Blue600,
-                modifier = Modifier.clickable { /* TODO */ }
-            )
+            if (selectionMode) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$selectedCount selected",
+                        style = AppTypography.text15SemiBold,
+                        color = Blue600
+                    )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SortDropdown(selectedSort, onSortChange)
-                ViewModeToggle(viewMode, onViewModeChange)
+                    TextButton(onClick = onDeselectAll) {
+                        Text(
+                            text = "Cancel",
+                            style = AppTypography.text14Regular,
+                            color = Grey600
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "Select All",
+                    style = AppTypography.text15SemiBold,
+                    color = Blue600,
+                    modifier = Modifier.clickable { onSelectAll() }
+                )
+            }
+
+            if (!selectionMode) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SortDropdown(selectedSort, onSortChange)
+                    ViewModeToggle(viewMode, onViewModeChange)
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        if (!selectionMode) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            FilterChip(
-                "All ($totalCount)",
-                selectedFilter == SheetFilter.ALL,
-                { onFilterChange(SheetFilter.ALL) },
-                Grey900,
-                Grey600
-            )
-            FilterChip(
-                "High Score ($highScoreCount)",
-                selectedFilter == SheetFilter.HIGH_SCORE,
-                { onFilterChange(SheetFilter.HIGH_SCORE) },
-                Green600,
-                Green600
-            )
-            FilterChip(
-                "Low Score ($lowScoreCount)",
-                selectedFilter == SheetFilter.LOW_SCORE,
-                { onFilterChange(SheetFilter.LOW_SCORE) },
-                Red600,
-                Red600
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FilterChip("All ($totalCount)", selectedFilter == SheetFilter.ALL, { onFilterChange(SheetFilter.ALL) }, Grey900, Grey600)
+                FilterChip("High Score ($highScoreCount)", selectedFilter == SheetFilter.HIGH_SCORE, { onFilterChange(SheetFilter.HIGH_SCORE) }, Green600, Green600)
+                FilterChip("Low Score ($lowScoreCount)", selectedFilter == SheetFilter.LOW_SCORE, { onFilterChange(SheetFilter.LOW_SCORE) }, Red600, Red600)
+            }
         }
     }
 }
-
 @Composable
 private fun ViewModeToggle(
     viewMode: ScannedSheetViewMode,
