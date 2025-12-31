@@ -171,7 +171,7 @@ fun ScannedSheetsScreen(
                 DeleteConfirmationDialog(
                     count = selectedSheets.size,
                     onConfirm = {
-                        scanResultViewModel.deleteSelectedSheets(examEntity.id)
+                        scanResultViewModel.deleteSelectedSheets()
                         showDeleteConfirmDialog = false
                     },
                     onDismiss = {
