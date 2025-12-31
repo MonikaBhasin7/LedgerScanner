@@ -11,12 +11,12 @@ import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.base.utils.image.toColoredWarped
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.scan.model.AnchorDetectionResult
+import com.example.ledgerscanner.feature.scanner.results.model.AnchorDetectionResult
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
-import com.example.ledgerscanner.feature.scanner.scan.model.BubbleResult
-import com.example.ledgerscanner.feature.scanner.scan.model.EvaluationResult
+import com.example.ledgerscanner.feature.scanner.results.model.BubbleResult
+import com.example.ledgerscanner.feature.scanner.results.model.EvaluationResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrProcessingContext
+import com.example.ledgerscanner.feature.scanner.results.model.OmrProcessingContext
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor

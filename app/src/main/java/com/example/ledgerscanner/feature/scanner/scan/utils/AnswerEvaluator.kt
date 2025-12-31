@@ -3,9 +3,9 @@ package com.example.ledgerscanner.feature.scanner.scan.utils
 import android.util.Log
 import androidx.annotation.WorkerThread
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.scan.model.AnswerModel
-import com.example.ledgerscanner.feature.scanner.scan.model.BubbleResult
-import com.example.ledgerscanner.feature.scanner.scan.model.EvaluationResult
+import com.example.ledgerscanner.feature.scanner.results.model.AnswerModel
+import com.example.ledgerscanner.feature.scanner.results.model.BubbleResult
+import com.example.ledgerscanner.feature.scanner.results.model.EvaluationResult
 import javax.inject.Inject
 
 class AnswerEvaluator @Inject constructor() {

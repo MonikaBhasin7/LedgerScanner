@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui.screen
+package com.example.ledgerscanner.feature.scanner.results.ui.screen
 
 import android.graphics.Bitmap
 import android.widget.Toast
@@ -83,23 +83,22 @@ import com.example.ledgerscanner.base.ui.theme.Red500
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.scan.model.AnswerModel
-import com.example.ledgerscanner.feature.scanner.scan.model.AnswerStatus
-import com.example.ledgerscanner.feature.scanner.scan.model.EvaluationResult
-import com.example.ledgerscanner.feature.scanner.scan.model.StudentDetailsForScanResult
-import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
-import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.model.AnswerModel
+import com.example.ledgerscanner.feature.scanner.results.model.AnswerStatus
+import com.example.ledgerscanner.feature.scanner.results.model.EvaluationResult
+import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsForScanResult
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 
 @Composable
 fun ScanResultScreen(
     navController: NavHostController,
     examEntity: ExamEntity,
-    omrScannerViewModel: OmrScannerViewModel,
+    imageProcessResult: OmrImageProcessResult,
     scannedSheetsViewModel: ScannedSheetsViewModel,
 ) {
     val context = LocalContext.current
     val handleBack = rememberBackHandler(navController)
-    val omrImageProcessResult by omrScannerViewModel.omrImageProcessResult.collectAsState()
 
     var questionDetailsExpanded by remember { mutableStateOf(false) }
     val studentDetailsRef =
@@ -110,7 +109,7 @@ fun ScanResultScreen(
         val details = studentDetailsRef.value
         scannedSheetsViewModel.saveSheet(
             details,
-            omrImageProcessResult,
+            imageProcessResult,
             examEntity.id
         )
     }
@@ -163,7 +162,7 @@ fun ScanResultScreen(
             sheetCount = totalSheetCounts,
         )
     }, containerColor = Grey100) { paddingValues ->
-        omrImageProcessResult?.let {
+        imageProcessResult?.let {
             Column(
                 modifier = Modifier
                     .padding(paddingValues)
@@ -177,7 +176,7 @@ fun ScanResultScreen(
 
                 // Student Details
                 StudentDetailsSection(
-                    omrImageProcessResult?.barcodeId,
+                    imageProcessResult?.barcodeId,
                     studentDetailsRef = studentDetailsRef
                 )
 
@@ -185,14 +184,14 @@ fun ScanResultScreen(
 
                 // Score Summary
                 ScoreSummaryCard(
-                    omrImageProcessResult?.evaluation
+                    imageProcessResult?.evaluation
                 )
 
                 Spacer(Modifier.height(16.dp))
 
                 // Question Details
                 QuestionDetailsSection(
-                    evaluation = omrImageProcessResult?.evaluation,
+                    evaluation = imageProcessResult?.evaluation,
                     expanded = questionDetailsExpanded,
                     onToggle = { questionDetailsExpanded = !questionDetailsExpanded }
                 )

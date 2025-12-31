@@ -2,6 +2,8 @@ package com.example.ledgerscanner.feature.scanner.scan.model
 
 import android.graphics.Bitmap
 import android.os.Parcelable
+import com.example.ledgerscanner.feature.scanner.results.model.BubbleResult
+import com.example.ledgerscanner.feature.scanner.results.model.EvaluationResult
 import kotlinx.parcelize.Parcelize
 
 sealed class OmrResult(

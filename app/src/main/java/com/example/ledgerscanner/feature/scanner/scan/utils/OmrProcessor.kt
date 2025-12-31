@@ -8,8 +8,8 @@ import com.example.ledgerscanner.base.utils.image.ImageConversionUtils
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
-import com.example.ledgerscanner.feature.scanner.scan.model.BubbleResult
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrDetectionResult
+import com.example.ledgerscanner.feature.scanner.results.model.BubbleResult
+import com.example.ledgerscanner.feature.scanner.results.model.OmrDetectionResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import org.opencv.core.Core
 import org.opencv.core.Mat

@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.scan.ui.activity
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -13,11 +14,10 @@ import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScanResultScreen
-import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannedSheetsScreen
+import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannerScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
-import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
 import com.example.omrscanner.ui.screens.ScanSessionScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -30,8 +30,6 @@ class ScanBaseActivity : BaseActivity() {
         const val ARG_EXAM_ENTITY = "exam_entity"
         const val SCANNER_SCREEN = "scanner_screen"
         const val SCANNER_SESSION_SCREEN = "scan_session_screen"
-        const val SCAN_RESULT_SCREEN = "scan_result_screen"
-        const val SCANNED_SHEETS_SCREEN = "scanned_sheets_screen"
     }
 
     private var examEntity: ExamEntity? = null
@@ -63,28 +61,29 @@ class ScanBaseActivity : BaseActivity() {
                             composable(SCANNER_SESSION_SCREEN) {
                                 ScanSessionScreen(
                                     navController,
-                                    omrScannerViewModel,
                                     scannedSheetsViewModel,
-                                    examEntity!!
+                                    examEntity!!,
+                                    onViewResults = {
+                                        Intent(
+                                            this@ScanBaseActivity,
+                                            ScanResultActivity::class.java
+                                        ).apply {
+                                            putExtra(ScanResultActivity.ARG_EXAM_ENTITY, examEntity)
+                                            putExtra(
+                                                ScanResultActivity.ARG_DESTINATION_SCREEN,
+                                                ScanResultActivity.SCANNED_SHEETS_SCREEN
+                                            )
+                                        }.apply {
+                                            startActivity(this)
+                                        }
+                                    }
                                 )
                             }
                             composable(SCANNER_SCREEN) {
-                                ScannerScreen(navController, omrScannerViewModel, examEntity!!)
-//                                ScanResultScreen(navController, examEntity!!)
-                            }
-                            composable(SCAN_RESULT_SCREEN) { backStackEntry ->
-                                ScanResultScreen(
+                                ScannerScreen(
                                     navController,
-                                    examEntity!!,
                                     omrScannerViewModel,
-                                    scannedSheetsViewModel
-                                )
-                            }
-                            composable(SCANNED_SHEETS_SCREEN) {
-                                ScannedSheetsScreen(
-                                    navController,
-                                    examEntity!!,
-                                    scannedSheetsViewModel
+                                    examEntity!!
                                 )
                             }
                         }

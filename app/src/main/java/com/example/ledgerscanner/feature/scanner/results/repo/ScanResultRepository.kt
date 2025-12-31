@@ -1,12 +1,12 @@
-package com.example.ledgerscanner.feature.scanner.scan.repo
+package com.example.ledgerscanner.feature.scanner.results.repo
 
 import android.content.Context
 import com.example.ledgerscanner.base.utils.StorageUtils
 import com.example.ledgerscanner.database.dao.ScanResultDao
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsForScanResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
-import com.example.ledgerscanner.feature.scanner.scan.model.StudentDetailsForScanResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

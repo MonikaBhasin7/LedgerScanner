@@ -92,7 +92,7 @@ import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDi
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
-import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Date

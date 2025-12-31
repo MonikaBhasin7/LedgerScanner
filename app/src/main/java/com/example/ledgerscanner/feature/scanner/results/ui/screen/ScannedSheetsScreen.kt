@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.ui.screen
+package com.example.ledgerscanner.feature.scanner.results.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GridView
@@ -52,7 +51,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,40 +58,32 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.ledgerscanner.R
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.AppTypography
-import com.example.ledgerscanner.base.ui.theme.Blue50
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Blue600
 import com.example.ledgerscanner.base.ui.theme.Blue700
 import com.example.ledgerscanner.base.ui.theme.Blue75
-import com.example.ledgerscanner.base.ui.theme.Green50
 import com.example.ledgerscanner.base.ui.theme.Green500
 import com.example.ledgerscanner.base.ui.theme.Green600
-import com.example.ledgerscanner.base.ui.theme.Green700
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
 import com.example.ledgerscanner.base.ui.theme.Grey700
 import com.example.ledgerscanner.base.ui.theme.Grey900
-import com.example.ledgerscanner.base.ui.theme.Orange50
 import com.example.ledgerscanner.base.ui.theme.Orange600
-import com.example.ledgerscanner.base.ui.theme.Orange700
-import com.example.ledgerscanner.base.ui.theme.Red50
 import com.example.ledgerscanner.base.ui.theme.Red600
-import com.example.ledgerscanner.base.ui.theme.Red700
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
-import com.example.ledgerscanner.feature.scanner.scan.model.ScannedSheetViewMode
-import com.example.ledgerscanner.feature.scanner.scan.model.SheetFilter
-import com.example.ledgerscanner.feature.scanner.scan.model.SheetSort
-import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.model.ScannedSheetViewMode
+import com.example.ledgerscanner.feature.scanner.results.model.SheetFilter
+import com.example.ledgerscanner.feature.scanner.results.model.SheetSort
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -135,68 +125,114 @@ fun ScannedSheetsScreen(
                     val filteredSheets = dataHolder?.filterList ?: listOf()
                     val hasAnySheets = dataHolder?.originalList?.isNotEmpty()
 
-                    Column {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
                         // Only show stats and filters if there are sheets in database
                         if (hasAnySheets == true) {
-                            ExamStatsHeader(examEntity, examStats[examEntity.id])
+                            item {
+                                ExamStatsHeader(examEntity, examStats[examEntity.id])
+                            }
 
-                            FilterAndSortControls(
-                                selectedFilter = selectedFilter,
-                                selectedSort = selectedSort,
-                                viewMode = viewMode,
-                                sheets = dataHolder.originalList,
-                                onFilterChange = { scannedSheetsViewModel.setFilter(it) },
-                                onSortChange = { scannedSheetsViewModel.setSort(it) },
-                                onViewModeChange = { scannedSheetsViewModel.setViewMode(it) }
-                            )
+                            // Filter and Sort Controls
+                            item {
+                                FilterAndSortControls(
+                                    selectedFilter = selectedFilter,
+                                    selectedSort = selectedSort,
+                                    viewMode = viewMode,
+                                    sheets = dataHolder.originalList,
+                                    onFilterChange = { scannedSheetsViewModel.setFilter(it) },
+                                    onSortChange = { scannedSheetsViewModel.setSort(it) },
+                                    onViewModeChange = { scannedSheetsViewModel.setViewMode(it) }
+                                )
+                            }
                         }
 
                         // Content area
                         when {
                             hasAnySheets == false -> {
                                 // True empty state - no sheets at all
-                                EmptyState()
+                                item {
+                                    EmptyState()
+                                }
                             }
+
                             filteredSheets.isEmpty() -> {
                                 // Filtered empty state
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = "🔍",
-                                            fontSize = 48.sp
-                                        )
-                                        Text(
-                                            text = when (selectedFilter) {
-                                                SheetFilter.HIGH_SCORE -> "No high score sheets"
-                                                SheetFilter.LOW_SCORE -> "No low score sheets"
-                                                else -> "No sheets found"
-                                            },
-                                            style = AppTypography.body2Medium,
-                                            color = Grey600,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Text(
-                                            text = "Try changing the filter",
-                                            style = AppTypography.body3Regular,
-                                            color = Grey500,
-                                            textAlign = TextAlign.Center
-                                        )
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Text(
+                                                text = "🔍",
+                                                fontSize = 48.sp
+                                            )
+                                            Text(
+                                                text = when (selectedFilter) {
+                                                    SheetFilter.HIGH_SCORE -> "No high score sheets"
+                                                    SheetFilter.LOW_SCORE -> "No low score sheets"
+                                                    else -> "No sheets found"
+                                                },
+                                                style = AppTypography.body2Medium,
+                                                color = Grey600,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = "Try changing the filter",
+                                                style = AppTypography.body3Regular,
+                                                color = Grey500,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
                                     }
                                 }
                             }
+
                             else -> {
                                 // Update list rendering
                                 when (viewMode) {
-                                    ScannedSheetViewMode.LIST -> ScannedSheetsList(sheets = filteredSheets)
-                                    ScannedSheetViewMode.GRID -> ScannedSheetsGrid(sheets = filteredSheets)
+                                    ScannedSheetViewMode.LIST -> {
+                                        // Add items directly to parent LazyColumn
+                                        items(filteredSheets) { sheet ->
+                                            ScannedSheetCard(
+                                                sheet = sheet,
+                                                modifier = Modifier.padding(
+                                                    horizontal = 16.dp,
+                                                    vertical = 6.dp
+                                                )
+                                            )
+                                        }
+                                    }
+
+                                    ScannedSheetViewMode.GRID -> {
+                                        // Grid view - add in chunks of 2
+                                        items(filteredSheets.chunked(2)) { rowSheets ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                rowSheets.forEach { sheet ->
+                                                    ScannedSheetGridItem(
+                                                        sheet = sheet,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                }
+                                                // Fill empty space if odd number
+                                                if (rowSheets.size == 1) {
+                                                    Spacer(modifier = Modifier.weight(1f))
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -333,10 +369,11 @@ private fun ScannedSheetsGrid(sheets: List<ScanResultEntity>) {
 @Composable
 private fun ScannedSheetGridItem(
     sheet: ScanResultEntity,
+    modifier: Modifier = Modifier,
     onViewDetails: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onViewDetails() },
         shape = RoundedCornerShape(12.dp),
@@ -458,6 +495,7 @@ private fun CompactScoreIndicator(
         )
     }
 }
+
 @Composable
 private fun FilterChip(
     label: String,
@@ -637,25 +675,13 @@ private fun StatItem(
 }
 
 @Composable
-private fun ScannedSheetsList(sheets: List<ScanResultEntity>) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(sheets) { sheet ->
-            ScannedSheetCard(sheet = sheet)
-        }
-    }
-}
-
-@Composable
 private fun ScannedSheetCard(
     sheet: ScanResultEntity,
+    modifier: Modifier = Modifier,
     onViewDetails: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
@@ -963,29 +989,5 @@ private fun ErrorState(message: String?) {
                 textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-// Helper functions
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    return sdf.format(Date(timestamp))
-}
-
-private fun getScoreBackgroundColor(score: Float): Color {
-    return when {
-        score >= 75 -> Green50
-        score >= 50 -> Blue50
-        score >= 40 -> Orange50
-        else -> Red50
-    }
-}
-
-private fun getScoreTextColor(score: Float): Color {
-    return when {
-        score >= 75 -> Green700
-        score >= 50 -> Blue700
-        score >= 40 -> Orange700
-        else -> Red700
     }
 }

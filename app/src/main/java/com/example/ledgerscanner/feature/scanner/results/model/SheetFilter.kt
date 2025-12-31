@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.model
+package com.example.ledgerscanner.feature.scanner.results.model
 
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 

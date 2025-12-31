@@ -67,15 +67,15 @@ import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
-import com.example.ledgerscanner.feature.scanner.scan.viewmodel.ScannedSheetsViewModel
+import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScannedSheetsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanSessionScreen(
     navController: NavHostController,
-    omrScannerViewModel: OmrScannerViewModel,
     scannedSheetsViewModel: ScannedSheetsViewModel,
-    examEntity: ExamEntity
+    examEntity: ExamEntity,
+    onViewResults: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -101,9 +101,7 @@ fun ScanSessionScreen(
                 )
             })
     }
-    val onViewResults: () -> Unit = {
-        navController.navigate(ScanBaseActivity.SCANNED_SHEETS_SCREEN)
-    }
+
     val onStartScanning: () -> Unit = {
         navController.navigate(ScanBaseActivity.SCANNER_SCREEN)
     }

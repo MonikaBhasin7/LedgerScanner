@@ -2,10 +2,10 @@ package com.example.ledgerscanner.base.utils.image
 
 import android.util.Log
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
-import com.example.ledgerscanner.feature.scanner.scan.model.AnswerStatus
+import com.example.ledgerscanner.feature.scanner.results.model.AnswerStatus
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
-import com.example.ledgerscanner.feature.scanner.scan.model.BubbleResult
-import com.example.ledgerscanner.feature.scanner.scan.model.EvaluationResult
+import com.example.ledgerscanner.feature.scanner.results.model.BubbleResult
+import com.example.ledgerscanner.feature.scanner.results.model.EvaluationResult
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.MatOfPoint2f

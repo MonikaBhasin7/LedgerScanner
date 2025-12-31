@@ -1,7 +1,8 @@
-package com.example.ledgerscanner.feature.scanner.scan.model
+package com.example.ledgerscanner.feature.scanner.results.model
 
 import android.graphics.Bitmap
 import android.os.Parcelable
+import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import kotlinx.parcelize.Parcelize
 import org.opencv.core.Mat
 

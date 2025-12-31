@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.scan.viewmodel
+package com.example.ledgerscanner.feature.scanner.results.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -6,13 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.results.model.ScannedSheetDataHolder
+import com.example.ledgerscanner.feature.scanner.results.model.ScannedSheetViewMode
+import com.example.ledgerscanner.feature.scanner.results.model.SheetFilter
+import com.example.ledgerscanner.feature.scanner.results.model.SheetSort
+import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsForScanResult
+import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
-import com.example.ledgerscanner.feature.scanner.scan.model.ScannedSheetDataHolder
-import com.example.ledgerscanner.feature.scanner.scan.model.ScannedSheetViewMode
-import com.example.ledgerscanner.feature.scanner.scan.model.SheetFilter
-import com.example.ledgerscanner.feature.scanner.scan.model.SheetSort
-import com.example.ledgerscanner.feature.scanner.scan.model.StudentDetailsForScanResult
-import com.example.ledgerscanner.feature.scanner.scan.repo.ScanResultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -198,14 +198,3 @@ class ScannedSheetsViewModel @Inject constructor(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-

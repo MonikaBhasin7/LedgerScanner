@@ -12,7 +12,7 @@ import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.QuickActionButton
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
-import com.example.ledgerscanner.feature.scanner.scan.repo.ScanResultRepository
+import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
