@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,8 @@ import androidx.core.view.doOnLayout
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
+import com.example.ledgerscanner.App
+import com.example.ledgerscanner.Temporary
 import com.example.ledgerscanner.base.enums.PermissionStatus
 import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
@@ -58,6 +61,7 @@ import com.example.ledgerscanner.base.utils.image.ImageUtils
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.components.BrightnessQualityBadge
 import com.example.ledgerscanner.feature.scanner.scan.ui.custom_ui.OverlayView
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import kotlinx.coroutines.Dispatchers
@@ -132,16 +136,29 @@ private fun CameraViewOrPermissionCard(
     cameraPermissionStatus: PermissionStatus,
     onPermissionRequest: () -> Unit,
 ) {
+    val brightnessQuality by omrScannerViewModel.brightnessQuality.collectAsState()
     when (cameraPermissionStatus) {
         PermissionStatus.PermissionGranted -> {
-            CameraPreview(
-                context = context,
-                lifecycleOwner = lifecycleOwner,
-                omrScannerViewModel = omrScannerViewModel,
-                imageCapture = imageCapture,
-                examEntity = examEntity,
-                navController = navController
-            )
+            Box(modifier = Modifier.fillMaxSize()) {
+                CameraPreview(
+                    context = context,
+                    lifecycleOwner = lifecycleOwner,
+                    omrScannerViewModel = omrScannerViewModel,
+                    imageCapture = imageCapture,
+                    examEntity = examEntity,
+                    navController = navController
+                )
+
+                // Overlay brightness quality indicator
+                brightnessQuality?.let { report ->
+                    BrightnessQualityBadge(
+                        report = report,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 80.dp)
+                    )
+                }
+            }
         }
 
         else -> {
@@ -319,6 +336,8 @@ private fun setupImageAnalysis(
             if (omrImageProcessResult.success && isCapturing.compareAndSet(false, true)) {
                 mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
                 omrScannerViewModel.setCapturedResult(omrImageProcessResult)
+
+                Temporary.omrImageProcessResult = omrImageProcessResult
 
                 ScanResultActivity.launchScanResultScreen(
                     context = context,

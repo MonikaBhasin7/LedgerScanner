@@ -17,7 +17,11 @@ import com.example.ledgerscanner.feature.scanner.results.model.BubbleResult
 import com.example.ledgerscanner.feature.scanner.results.model.EvaluationResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.results.model.OmrProcessingContext
+import com.example.ledgerscanner.feature.scanner.scan.model.BrightnessQualityReport
+import com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
+import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
+import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,12 +38,17 @@ import javax.inject.Inject
 class OmrScannerViewModel @Inject constructor(
     private val omrProcessor: OmrProcessor,
     private val templateProcessor: TemplateProcessor,
-    private val answerEvaluator: AnswerEvaluator
+    private val answerEvaluator: AnswerEvaluator,
+    private val imageQualityChecker: ImageQualityChecker,
+    private val bubbleAnalyzer: BubbleAnalyzer
 ) : ViewModel() {
 
     // Keep this for the result screen
     private val _omrImageProcessResult = MutableStateFlow<OmrImageProcessResult?>(null)
     val omrImageProcessResult = _omrImageProcessResult.asStateFlow()
+
+    private val _brightnessQuality = MutableStateFlow<BrightnessQualityReport?>(null)
+    val brightnessQuality = _brightnessQuality.asStateFlow()
 
     fun setCapturedResult(result: OmrImageProcessResult) {
         _omrImageProcessResult.value = result
@@ -70,6 +79,22 @@ class OmrScannerViewModel @Inject constructor(
                 ImageConversionUtils.imageProxyToGrayMatUpright(image).also {
                     if (debug) processingContext.debugBitmaps["image_proxy_gray_mat"] = it.toBitmapSafe()
                 }
+
+            // Step 2.5: CHECK BRIGHTNESS QUALITY (NEW)
+            val brightnessReport = imageQualityChecker.checkBrightness(
+                processingContext.grayMat!!,
+                analyzeHistogram = true
+            )
+            _brightnessQuality.value = brightnessReport
+
+            // Log brightness quality
+            Log.d(TAG, "Brightness Quality: ${brightnessReport.brightnessCheck.level}, " +
+                    "Value: ${brightnessReport.brightnessCheck.value.toInt()}")
+
+            // Optionally warn if quality is poor/failed (but continue processing)
+            if (brightnessReport.brightnessCheck.level <= QualityLevel.POOR) {
+                Log.w(TAG, "Poor brightness detected: ${brightnessReport.brightnessCheck.suggestion}")
+            }
 
             // Step 3: Detect anchor centers
             val anchorDetectionResult = detectAnchorCenters(
@@ -174,7 +199,7 @@ class OmrScannerViewModel @Inject constructor(
             ) to centers
         }
 
-        val detectionResult = omrProcessor.detectFilledBubbles(
+        val detectionResult = bubbleAnalyzer.detectFilledBubbles(
             template,
             processingContext.warpedMat!!
         )

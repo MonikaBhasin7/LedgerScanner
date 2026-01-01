@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.ledgerscanner.Temporary
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
@@ -51,7 +52,7 @@ class ScanResultActivity : BaseActivity() {
             val intent = Intent(context, ScanResultActivity::class.java).apply {
                 putExtra(ARG_EXAM_ENTITY, examEntity)
                 putExtra(ARG_DESTINATION_SCREEN, SCAN_RESULT_SCREEN)
-                putExtra(ARG_IMAGE_PROCESS_RESULT, imageProcessResult)
+//                putExtra(ARG_IMAGE_PROCESS_RESULT, imageProcessResult)
             }
             context.startActivity(intent)
         }
@@ -95,8 +96,18 @@ class ScanResultActivity : BaseActivity() {
         destinationScreen = intent.getStringExtra(ARG_DESTINATION_SCREEN)
             ?: SCANNED_SHEETS_SCREEN
 
+
         if (destinationScreen == SCAN_RESULT_SCREEN) {
-            omrImageProcessResult = intent.getParcelableExtra(ARG_IMAGE_PROCESS_RESULT) ?: run {
+//            omrImageProcessResult = intent.getParcelableExtra(ARG_IMAGE_PROCESS_RESULT) ?: run {
+//                Toast.makeText(
+//                    this@ScanResultActivity, "Having issue in processing the image!",
+//                    Toast.LENGTH_SHORT
+//                ).show()
+//                finish()
+//                return
+//            }
+
+            omrImageProcessResult = Temporary.omrImageProcessResult ?: run {
                 Toast.makeText(
                     this@ScanResultActivity, "Having issue in processing the image!",
                     Toast.LENGTH_SHORT
