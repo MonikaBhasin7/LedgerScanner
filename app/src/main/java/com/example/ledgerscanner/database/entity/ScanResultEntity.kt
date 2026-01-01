@@ -47,9 +47,9 @@ data class ScanResultEntity(
     val blankCount: Int,
     val scorePercent: Float,
 
-//    // NEW: Confidence tracking
-//    val questionConfidences: Map<Int, Double>? = null,
-//    val avgConfidence: Double? = null,
-//    val minConfidence: Double? = null,
-//    val lowConfidenceQuestions: List<Int>? = null
+   // NEW: Confidence tracking
+    val questionConfidences: Map<Int, Double>? = null,
+    val avgConfidence: Double? = null,
+    val minConfidence: Double? = null,
+    val lowConfidenceQuestions: List<Int>? = null
 ) : Parcelable

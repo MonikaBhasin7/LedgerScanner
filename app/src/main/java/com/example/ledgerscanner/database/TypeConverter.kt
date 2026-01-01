@@ -96,4 +96,17 @@ class TypeConverter {
             gson.fromJson(it, type)
         }
     }
+
+    @TypeConverter
+    fun fromDoubleMap(value: Map<Int, Double>?): String? {
+        return value?.let { Gson().toJson(it) }
+    }
+
+    @TypeConverter
+    fun toDoubleMap(value: String?): Map<Int, Double>? {
+        return value?.let {
+            val type = object : TypeToken<Map<Int, Double>>() {}.type
+            Gson().fromJson(it, type)
+        }
+    }
 }

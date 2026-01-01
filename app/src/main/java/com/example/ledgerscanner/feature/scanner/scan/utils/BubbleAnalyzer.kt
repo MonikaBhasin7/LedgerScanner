@@ -28,7 +28,7 @@ class BubbleAnalyzer @Inject constructor() {
         const val TAG = "BubbleAnalyzer"
 
         // Bubble detection thresholds
-        private const val MIN_CONFIDENCE = 0.60 // Minimum confidence to mark as filled
+        const val MIN_CONFIDENCE = 0.60 // Minimum confidence to mark as filled
         private const val CENTER_RADIUS_FACTOR = 0.5
         private const val GAUSSIAN_BLUR_SIZE = 5.0
         private const val GAUSSIAN_BLUR_SIGMA = 1.5
