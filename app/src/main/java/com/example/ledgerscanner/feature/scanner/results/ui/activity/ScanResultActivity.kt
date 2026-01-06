@@ -8,14 +8,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.Scaffold
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.ledgerscanner.Temporary
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.results.ui.screen.ManualCorrectionScreen
 import com.example.ledgerscanner.feature.scanner.results.ui.screen.ScanResultScreen
 import com.example.ledgerscanner.feature.scanner.results.ui.screen.ScannedSheetsScreen
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
@@ -138,6 +141,19 @@ class ScanResultActivity : BaseActivity() {
                                     examEntity!!,
                                     scanResultViewModel
                                 )
+                            }
+                            composable(
+                                route = "manual_correction/{examId}?questions={questions}",
+                                arguments = listOf(
+                                    navArgument("examId") { type = NavType.IntType },
+                                    navArgument("questions") { type = NavType.StringType }
+                                )
+                            ) { backStackEntry ->
+                                val examId = backStackEntry.arguments?.getInt("examId") ?: 0
+                                val questionsString = backStackEntry.arguments?.getString("questions") ?: ""
+                                val questionIndices = questionsString.split(",").mapNotNull { it.toIntOrNull() }
+
+
                             }
                         }
                     }

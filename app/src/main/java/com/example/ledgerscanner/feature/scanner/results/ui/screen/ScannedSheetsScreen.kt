@@ -135,6 +135,9 @@ fun ScannedSheetsScreen(
                                                     scanResultViewModel.enterSelectionMode()
                                                     scanResultViewModel.toggleSheetSelection(sheet.id)
                                                 },
+                                                onViewDetails = {
+
+                                                },
                                                 modifier = Modifier.padding(
                                                     horizontal = 16.dp,
                                                     vertical = 6.dp

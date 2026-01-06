@@ -29,6 +29,7 @@ import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsFor
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ActionButtonsSection
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.OmrSheetPreview
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.QuestionDetailsSection
+import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ReviewRequiredCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.SaveStatusDialog
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ScoreSummaryCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.StudentDetailsSection
@@ -124,6 +125,15 @@ fun ScanResultScreen(
             ScoreSummaryCard(imageProcessResult.evaluation)
 
             Spacer(Modifier.height(16.dp))
+
+            Spacer(Modifier.height(16.dp))
+
+            ReviewRequiredCard(
+                imageProcessResult,
+                onReviewClick = {
+                },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
 
             QuestionDetailsSection(
                 evaluation = imageProcessResult.evaluation,

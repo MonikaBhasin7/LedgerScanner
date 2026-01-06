@@ -1,20 +1,26 @@
 package com.example.ledgerscanner.feature.scanner.scan.di
 
-import android.content.Context
-import com.example.ledgerscanner.database.dao.ScanResultDao
-import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
+import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
+import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
-import dagger.hilt.android.qualifiers.ApplicationContext
 
+/**
+ * Provides scanning and OMR processing utilities.
+ *
+ * Activity-scoped because these are:
+ * - Stateless utilities
+ * - Only needed during active scanning
+ * - Created fresh per scan session
+ */
 @Module
 @InstallIn(ActivityComponent::class)
-class ActivityDiModule {
+object ScanProcessingModule {
 
     @Provides
     fun provideOmrProcessor(): OmrProcessor = OmrProcessor()
@@ -24,4 +30,10 @@ class ActivityDiModule {
 
     @Provides
     fun provideAnswerEvaluator(): AnswerEvaluator = AnswerEvaluator()
+
+    @Provides
+    fun provideImageQualityChecker(): ImageQualityChecker = ImageQualityChecker()
+
+    @Provides
+    fun provideBubbleAnalyzer(): BubbleAnalyzer = BubbleAnalyzer()
 }
