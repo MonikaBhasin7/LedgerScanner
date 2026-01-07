@@ -13,7 +13,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.ledgerscanner.Temporary
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
@@ -49,12 +48,12 @@ class ScanResultActivity : BaseActivity() {
         fun launchScanResultScreen(
             context: Context,
             examEntity: ExamEntity,
-            imageProcessResult: ScanResultEntity?
+            scanResultEntity: ScanResultEntity?
         ) {
             val intent = Intent(context, ScanResultActivity::class.java).apply {
                 putExtra(ARG_EXAM_ENTITY, examEntity)
                 putExtra(ARG_DESTINATION_SCREEN, SCAN_RESULT_SCREEN)
-//                putExtra(ARG_IMAGE_PROCESS_RESULT, imageProcessResult)
+                putExtra(ARG_IMAGE_PROCESS_RESULT, scanResultEntity)
             }
             context.startActivity(intent)
         }
@@ -100,16 +99,7 @@ class ScanResultActivity : BaseActivity() {
 
 
         if (destinationScreen == SCAN_RESULT_SCREEN) {
-//            omrImageProcessResult = intent.getParcelableExtra(ARG_IMAGE_PROCESS_RESULT) ?: run {
-//                Toast.makeText(
-//                    this@ScanResultActivity, "Having issue in processing the image!",
-//                    Toast.LENGTH_SHORT
-//                ).show()
-//                finish()
-//                return
-//            }
-
-            scanResultEntity = Temporary.omrImageProcessResult ?: run {
+            scanResultEntity = intent.getParcelableExtra(ARG_IMAGE_PROCESS_RESULT) ?: run {
                 Toast.makeText(
                     this@ScanResultActivity, "Having issue in processing the image!",
                     Toast.LENGTH_SHORT
@@ -149,10 +139,10 @@ class ScanResultActivity : BaseActivity() {
                                 )
                             ) { backStackEntry ->
                                 val examId = backStackEntry.arguments?.getInt("examId") ?: 0
-                                val questionsString = backStackEntry.arguments?.getString("questions") ?: ""
-                                val questionIndices = questionsString.split(",").mapNotNull { it.toIntOrNull() }
-
-
+                                val questionsString =
+                                    backStackEntry.arguments?.getString("questions") ?: ""
+                                val questionIndices =
+                                    questionsString.split(",").mapNotNull { it.toIntOrNull() }
                             }
                         }
                     }

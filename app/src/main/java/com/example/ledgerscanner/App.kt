@@ -17,7 +17,3 @@ class App : Application() {
     }
 
 }
-
-object Temporary {
-    var omrImageProcessResult : ScanResultEntity?= null
-}

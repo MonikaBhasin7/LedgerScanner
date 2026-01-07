@@ -54,13 +54,21 @@ class OmrScannerViewModel @Inject constructor(
     private val _brightnessQuality = MutableStateFlow<BrightnessQualityReport?>(null)
     val brightnessQuality = _brightnessQuality.asStateFlow()
 
+    private val _isScanningEnabled = MutableStateFlow(true)
+    val isScanningEnabled = _isScanningEnabled.asStateFlow()
+
     fun setCapturedResult(result: ScanResultEntity?) {
         _omrImageProcessResult.value = result
+        _isScanningEnabled.value = false
     }
-
-    fun resetImageProcessResult() {
+    fun enableScanning() {
+        _isScanningEnabled.value = true
         _omrImageProcessResult.value = null
         _brightnessQuality.value = null
+    }
+
+    fun disableScanning() {
+        _isScanningEnabled.value = false
     }
 
     suspend fun processOmrFrame(

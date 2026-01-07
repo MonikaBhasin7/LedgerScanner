@@ -9,7 +9,6 @@ import android.media.MediaActionSound
 import android.net.Uri
 import android.provider.Settings
 import android.widget.FrameLayout
-import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -48,7 +47,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
-import com.example.ledgerscanner.Temporary
 import com.example.ledgerscanner.base.enums.PermissionStatus
 import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
@@ -195,7 +193,11 @@ private fun CameraPreview(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
-                    isCapturing.set(false) // Reset when returning to screen
+                    omrScannerViewModel.enableScanning()
+                }
+
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
+                    omrScannerViewModel.disableScanning()
                 }
 
                 else -> {}
@@ -324,6 +326,12 @@ private fun setupImageAnalysis(
 
     analysisUseCase.setAnalyzer(cameraExecutor) { imageProxy ->
         scope.launch(Dispatchers.Main) {
+            // Skip if scanning is disabled
+            if (!omrScannerViewModel.isScanningEnabled.value) {
+                imageProxy.close()
+                return@launch
+            }
+
             val displayed = ImageUtils.computeDisplayedImageRect(
                 viewW = previewView.width.toFloat(),
                 viewH = previewView.height.toFloat(),
@@ -335,7 +343,7 @@ private fun setupImageAnalysis(
 
             overlay.setPreviewRect(displayed)
 
-            var scanResult = omrScannerViewModel.processOmrFrame(
+            val scanResult = omrScannerViewModel.processOmrFrame(
                 context,
                 imageProxy,
                 examEntity,
@@ -348,19 +356,12 @@ private fun setupImageAnalysis(
                 }
             )
             when (scanResult) {
-                is UiState.Error -> {
-
-                }
-
-                is UiState.Idle, is UiState.Loading -> {}
+                is UiState.Error, is UiState.Idle, is UiState.Loading -> {}
                 is UiState.Success -> {
                     if (isCapturing.compareAndSet(false, true)) {
                         mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
                         omrScannerViewModel.setCapturedResult(scanResult.data)
 
-                        Temporary.omrImageProcessResult = scanResult.data
-
-                        omrScannerViewModel.resetImageProcessResult()
                         ScanResultActivity.launchScanResultScreen(
                             context = context,
                             examEntity,
