@@ -10,6 +10,7 @@ import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.annotation.WorkerThread
 import org.opencv.android.Utils
 import org.opencv.core.CvType
@@ -17,10 +18,29 @@ import org.opencv.core.Mat
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import androidx.core.graphics.createBitmap
+import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 
 object ImageUtils {
+
+    /**
+     * Helper function to load bitmap from file path
+     */
+    fun loadBitmapFromPath(context: Context, path: String): Bitmap? {
+        return try {
+            val file = File(path)
+            if (file.exists()) {
+                BitmapFactory.decodeFile(file.absolutePath)
+            } else {
+                Log.e("OmrSheetPreview", "File not found: $path")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("OmrSheetPreview", "Error loading bitmap from path: $path", e)
+            null
+        }
+    }
     @WorkerThread
     fun loadBitmapCorrectOrientation(
         context: Context,

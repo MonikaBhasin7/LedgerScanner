@@ -1,23 +1,27 @@
 package com.example.ledgerscanner.feature.scanner.scan.viewmodel
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.RectF
 import android.util.Log
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
 import com.example.ledgerscanner.base.errors.ErrorMessages
+import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.utils.StorageUtils
 import com.example.ledgerscanner.base.utils.image.ImageConversionUtils
 import com.example.ledgerscanner.base.utils.image.OpenCvUtils
 import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.base.utils.image.toColoredWarped
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.results.model.AnchorDetectionResult
-import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.results.model.BubbleResult
 import com.example.ledgerscanner.feature.scanner.results.model.EvaluationResult
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.results.model.OmrProcessingContext
+import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.BrightnessQualityReport
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
@@ -44,41 +48,47 @@ class OmrScannerViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Keep this for the result screen
-    private val _omrImageProcessResult = MutableStateFlow<OmrImageProcessResult?>(null)
+    private val _omrImageProcessResult = MutableStateFlow<ScanResultEntity?>(null)
     val omrImageProcessResult = _omrImageProcessResult.asStateFlow()
 
     private val _brightnessQuality = MutableStateFlow<BrightnessQualityReport?>(null)
     val brightnessQuality = _brightnessQuality.asStateFlow()
 
-    fun setCapturedResult(result: OmrImageProcessResult) {
+    fun setCapturedResult(result: ScanResultEntity?) {
         _omrImageProcessResult.value = result
     }
 
-    // Return the result directly instead of updating StateFlow
+    fun resetImageProcessResult() {
+        _omrImageProcessResult.value = null
+        _brightnessQuality.value = null
+    }
+
     suspend fun processOmrFrame(
+        context: Context,
         image: ImageProxy,
         examEntity: ExamEntity,
-        anchorSquaresOnPreviewScreen: List<RectF>,
-        previewRect: RectF,
-        debug: Boolean = false
-    ): Pair<OmrImageProcessResult, List<AnchorPoint>> = withContext(Dispatchers.Default) {
-
+        anchorRegions: List<RectF>,
+        previewBounds: RectF,
+        debug: Boolean = false,
+        onAnchorsDetected: (List<AnchorPoint>) -> Unit
+    ): UiState<ScanResultEntity> = withContext(Dispatchers.Default) {
         val processingContext = OmrProcessingContext()
 
         try {
             // Step 1: Validate inputs
-            if (!(anchorSquaresOnPreviewScreen.isNotEmpty() && previewRect.width() > 0f)) {
-                return@withContext OmrImageProcessResult(
-                    success = false,
-                    reason = ErrorMessages.ANCHORS_NOT_DETECTED
-                ) to emptyList()
+            if (!(anchorRegions.isNotEmpty() && previewBounds.width() > 0f)) {
+                onAnchorsDetected(emptyList())
+                return@withContext UiState.Error(ErrorMessages.ANCHORS_NOT_DETECTED)
             }
 
             // Step 2: Convert image to grayscale Mat
             processingContext.grayMat =
                 ImageConversionUtils.imageProxyToGrayMatUpright(image).also {
-                    if (debug) processingContext.debugBitmaps["image_proxy_gray_mat"] = it.toBitmapSafe()
+                    if (debug) processingContext.debugBitmaps["image_proxy_gray_mat"] =
+                        it.toBitmapSafe()
                 }
+
+            processingContext.rawBitmap = processingContext.grayMat?.toBitmapSafe()
 
             // Step 2.5: CHECK BRIGHTNESS QUALITY (NEW)
             val brightnessReport = imageQualityChecker.checkBrightness(
@@ -88,30 +98,29 @@ class OmrScannerViewModel @Inject constructor(
             _brightnessQuality.value = brightnessReport
 
             // Log brightness quality
-            Log.d(TAG, "Brightness Quality: ${brightnessReport.brightnessCheck.level}, " +
-                    "Value: ${brightnessReport.brightnessCheck.value.toInt()}")
+            Log.d(
+                TAG, "Brightness Quality: ${brightnessReport.brightnessCheck.level}, " +
+                        "Value: ${brightnessReport.brightnessCheck.value.toInt()}"
+            )
 
             // Optionally warn if quality is poor/failed (but continue processing)
             if (brightnessReport.brightnessCheck.level <= QualityLevel.POOR) {
-                Log.w(TAG, "Poor brightness detected: ${brightnessReport.brightnessCheck.suggestion}")
+                Log.w(
+                    TAG,
+                    "Poor brightness detected: ${brightnessReport.brightnessCheck.suggestion}"
+                )
             }
 
             // Step 3: Detect anchor centers
             val anchorDetectionResult = detectAnchorCenters(
-                overlayRects = anchorSquaresOnPreviewScreen,
-                previewRect = previewRect,
+                overlayRects = anchorRegions,
+                previewRect = previewBounds,
                 grayMat = processingContext.grayMat!!,
                 debugBitmaps = processingContext.debugBitmaps,
                 debug = debug
             )
 
-            if (!anchorDetectionResult.success) {
-                return@withContext OmrImageProcessResult(
-                    success = false,
-                    reason = ErrorMessages.ANCHORS_EXPECTED_COUNT_MISMATCH,
-                    debugBitmaps = processingContext.debugBitmaps
-                ) to anchorDetectionResult.centers
-            }
+            onAnchorsDetected(anchorDetectionResult.centers)
 
             // Step 4: Warp image
             val (warpedMat, warpedDebugBitmap) = omrProcessor.warpWithTemplateAndGetWarped(
@@ -125,22 +134,135 @@ class OmrScannerViewModel @Inject constructor(
             }
 
             // Step 5: Process bubbles and evaluate
-            return@withContext processBubblesAndEvaluate(
+            val omrImageProcessResult = processBubblesAndEvaluate(
                 processingContext = processingContext,
                 examEntity = examEntity,
                 centers = anchorDetectionResult.centers,
                 debug = debug
             )
 
+            return@withContext getScanEntityObject(context, examEntity, omrImageProcessResult)
+
         } catch (e: Exception) {
             Log.e(TAG, "Error processing OMR frame", e)
-            return@withContext OmrImageProcessResult(
-                success = false,
-                reason = "Error: ${e.message}",
-                debugBitmaps = processingContext.debugBitmaps
-            ) to emptyList()
+            return@withContext UiState.Error(e.message ?: ErrorMessages.SCAN_RESULTS_LOAD_FAILED)
         } finally {
             processingContext.release()
+        }
+    }
+
+    suspend fun getScanEntityObject(
+        context: Context,
+        examEntity: ExamEntity,
+        omrImageProcessResult: OmrImageProcessResult
+    ): UiState<ScanResultEntity> {
+        try {
+            require(omrImageProcessResult.success) {
+                ErrorMessages.IMAGE_PROCESSING_FAILED
+            }
+
+            val evaluation = omrImageProcessResult.evaluation
+                ?: return UiState.Error(ErrorMessages.EVALUATION_FAILED)
+
+            val detectedBubbles = omrImageProcessResult.detectedBubbles
+                ?: return UiState.Error(ErrorMessages.BUBBLE_DETECTION_FAILED)
+
+            // Save images
+            val scannedImagePath = omrImageProcessResult.finalBitmap?.let { bitmap ->
+                StorageUtils.saveImageToStorage(
+                    context,
+                    bitmap,
+                    "scan_${System.currentTimeMillis()}.jpg"
+                )
+            } ?: return UiState.Error(ErrorMessages.IMAGE_SAVE_FAILED)
+
+            val thumbnailPath = omrImageProcessResult.finalBitmap.let { bitmap ->
+                val thumbnail = StorageUtils.createThumbnail(bitmap, 300, 400)
+                StorageUtils.saveImageToStorage(
+                    context,
+                    thumbnail,
+                    "thumb_${System.currentTimeMillis()}.jpg"
+                )
+            }
+
+            val debugImagePaths = mutableMapOf<String, String>()
+            omrImageProcessResult.debugBitmaps.forEach { (label, bitmap) ->
+                try {
+                    val debugPath = StorageUtils.saveImageToStorage(
+                        context,
+                        bitmap,
+                        "debug_${label}_${System.currentTimeMillis()}.jpg"
+                    )
+                    debugImagePaths[label] = debugPath
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to save debug image: $label", e)
+                    // Continue saving other images even if one fails
+                }
+            }
+
+            val rawImagePath = omrImageProcessResult.rawBitmap?.let { bitmap ->
+                StorageUtils.saveImageToStorage(
+                    context,
+                    bitmap,
+                    "raw_${System.currentTimeMillis()}.jpg"
+                )
+            } ?: return UiState.Error(ErrorMessages.IMAGE_SAVE_FAILED)
+
+            // Convert detected bubbles to answers
+            val studentAnswers = mutableMapOf<Int, List<Int>>()
+
+            evaluation.answerMap.forEach { (key, item) ->
+                studentAnswers[key] = item.userSelected.toList()
+            }
+
+            val questionConfidences = mutableMapOf<Int, Double?>()
+            detectedBubbles.groupBy { it.questionIndex }.forEach { (qIndex, bubbles) ->
+                val maxConfidence = bubbles.maxOfOrNull { it.confidence }
+                questionConfidences[qIndex] = maxConfidence
+            }
+
+            val allConfidences = detectedBubbles.map { it.confidence }
+            val avgConfidence = if (allConfidences.isNotEmpty()) {
+                allConfidences.average()
+            } else null
+
+            val minConfidence = allConfidences.minOrNull()
+
+
+            val lowConfidenceQuestions = questionConfidences
+                .filter { (it.value ?: 0.0) < BubbleAnalyzer.MIN_CONFIDENCE }
+
+
+            return UiState.Success(
+                ScanResultEntity(
+                    examId = examEntity.id,
+                    barCode = null, //todo monika change
+                    scannedImagePath = scannedImagePath,
+                    thumbnailPath = thumbnailPath,
+                    clickedRawImagePath = rawImagePath,
+                    debugImagesPath = debugImagePaths,
+                    scannedAt = System.currentTimeMillis(),
+                    studentAnswers = studentAnswers,
+                    multipleMarksDetected = evaluation.multipleMarksQuestions,
+                    score = evaluation.marksObtained.toInt(),
+                    totalQuestions = evaluation.totalQuestions,
+                    correctCount = evaluation.correctCount,
+                    wrongCount = evaluation.incorrectCount,
+                    blankCount = evaluation.unansweredCount,
+                    scorePercent = evaluation.percentage,
+                    questionConfidences = questionConfidences,
+                    avgConfidence = avgConfidence,
+                    minConfidence = minConfidence,
+                    lowConfidenceQuestions = lowConfidenceQuestions,
+                )
+            )
+        } catch (e: IllegalArgumentException) {
+            return UiState.Error(ErrorMessages.IMAGE_PROCESSING_FAILED)
+        } catch (e: IllegalStateException) {
+            return UiState.Error(e.message ?: ErrorMessages.SCAN_RESULT_SAVE_FAILED)
+        } catch (e: Exception) {
+            Log.e("ScanResultRepository", "Error creating scan entity", e)
+            return UiState.Error(ErrorMessages.SCAN_RESULT_SAVE_FAILED)
         }
     }
 
@@ -179,13 +301,13 @@ class OmrScannerViewModel @Inject constructor(
         examEntity: ExamEntity,
         centers: List<AnchorPoint>,
         debug: Boolean
-    ): Pair<OmrImageProcessResult, List<AnchorPoint>> {
+    ): OmrImageProcessResult {
         if (centers.size != EXPECTED_ANCHOR_COUNT) {
             return OmrImageProcessResult(
                 success = false,
                 reason = "Expected $EXPECTED_ANCHOR_COUNT anchors, found ${centers.size}",
                 debugBitmaps = processingContext.debugBitmaps
-            ) to centers
+            )
         }
 
         val template = examEntity.template
@@ -196,7 +318,7 @@ class OmrScannerViewModel @Inject constructor(
                 success = false,
                 reason = "Bubble count mismatch: expected ${template.totalBubbles()}, got ${bubblePoints.size}",
                 debugBitmaps = processingContext.debugBitmaps
-            ) to centers
+            )
         }
 
         val detectionResult = bubbleAnalyzer.detectFilledBubbles(
@@ -224,8 +346,9 @@ class OmrScannerViewModel @Inject constructor(
             debugBitmaps = processingContext.debugBitmaps,
             finalBitmap = finalBitmap,
             detectedBubbles = detectionResult.bubbles,
-            evaluation = evaluationResult
-        ) to centers
+            evaluation = evaluationResult,
+            rawBitmap = processingContext.rawBitmap
+        )
     }
 
     private fun addBubbleDetectionDebugBitmap(

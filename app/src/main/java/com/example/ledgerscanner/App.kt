@@ -1,6 +1,7 @@
 package com.example.ledgerscanner
 
 import android.app.Application
+import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import dagger.hilt.android.HiltAndroidApp
 
@@ -18,5 +19,5 @@ class App : Application() {
 }
 
 object Temporary {
-    var omrImageProcessResult : OmrImageProcessResult?= null
+    var omrImageProcessResult : ScanResultEntity?= null
 }

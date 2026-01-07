@@ -25,6 +25,7 @@ import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsForScanResult
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ActionButtonsSection
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.OmrSheetPreview
@@ -34,13 +35,12 @@ import com.example.ledgerscanner.feature.scanner.results.ui.components.result.Sa
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ScoreSummaryCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.StudentDetailsSection
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 
 @Composable
 fun ScanResultScreen(
     navController: NavHostController,
     examEntity: ExamEntity,
-    imageProcessResult: OmrImageProcessResult,
+    scanResultEntity: ScanResultEntity,
     scanResultViewModel: ScanResultViewModel,
 ) {
     val context = LocalContext.current
@@ -58,7 +58,7 @@ fun ScanResultScreen(
     val saveAndContinue: () -> Unit = {
         scanResultViewModel.saveSheet(
             studentDetailsRef.value,
-            imageProcessResult,
+            scanResultEntity,
             examEntity.id
         )
     }
@@ -109,34 +109,36 @@ fun ScanResultScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             OmrSheetPreview(
-                imageProcessResult.finalBitmap,
-                imageProcessResult.debugBitmaps
+                scanResultEntity.clickedRawImagePath,
+                scanResultEntity.scannedImagePath,
+                scanResultEntity.debugImagesPath
             )
 
             Spacer(Modifier.height(16.dp))
 
             StudentDetailsSection(
-                barcodeId = imageProcessResult.barcodeId,
+                barcodeId = scanResultEntity.barCode,
                 studentDetailsRef = studentDetailsRef
             )
 
             Spacer(Modifier.height(16.dp))
 
-            ScoreSummaryCard(imageProcessResult.evaluation)
+            ScoreSummaryCard(scanResultEntity, examEntity)
 
             Spacer(Modifier.height(16.dp))
 
             Spacer(Modifier.height(16.dp))
 
             ReviewRequiredCard(
-                imageProcessResult,
+                scanResultEntity,
                 onReviewClick = {
                 },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             QuestionDetailsSection(
-                evaluation = imageProcessResult.evaluation,
+                scanResultEntity = scanResultEntity,
+                examEntity = examEntity,
                 expanded = questionDetailsExpanded,
                 onToggle = { questionDetailsExpanded = !questionDetailsExpanded }
             )

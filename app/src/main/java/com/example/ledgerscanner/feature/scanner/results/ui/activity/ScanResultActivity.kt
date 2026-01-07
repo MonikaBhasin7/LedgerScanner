@@ -18,11 +18,10 @@ import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.results.ui.screen.ManualCorrectionScreen
+import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.results.ui.screen.ScanResultScreen
 import com.example.ledgerscanner.feature.scanner.results.ui.screen.ScannedSheetsScreen
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import dagger.hilt.android.AndroidEntryPoint
 
 // ===========================================================================
@@ -50,7 +49,7 @@ class ScanResultActivity : BaseActivity() {
         fun launchScanResultScreen(
             context: Context,
             examEntity: ExamEntity,
-            imageProcessResult: OmrImageProcessResult
+            imageProcessResult: ScanResultEntity?
         ) {
             val intent = Intent(context, ScanResultActivity::class.java).apply {
                 putExtra(ARG_EXAM_ENTITY, examEntity)
@@ -78,7 +77,7 @@ class ScanResultActivity : BaseActivity() {
     }
 
     private var examEntity: ExamEntity? = null
-    private var omrImageProcessResult: OmrImageProcessResult? = null
+    private var scanResultEntity: ScanResultEntity? = null
     private var destinationScreen: String = SCANNED_SHEETS_SCREEN // Default
     private val scanResultViewModel: ScanResultViewModel by viewModels()
 
@@ -110,7 +109,7 @@ class ScanResultActivity : BaseActivity() {
 //                return
 //            }
 
-            omrImageProcessResult = Temporary.omrImageProcessResult ?: run {
+            scanResultEntity = Temporary.omrImageProcessResult ?: run {
                 Toast.makeText(
                     this@ScanResultActivity, "Having issue in processing the image!",
                     Toast.LENGTH_SHORT
@@ -131,7 +130,7 @@ class ScanResultActivity : BaseActivity() {
                                 ScanResultScreen(
                                     navController,
                                     examEntity!!,
-                                    omrImageProcessResult!!,
+                                    scanResultEntity!!,
                                     scanResultViewModel
                                 )
                             }

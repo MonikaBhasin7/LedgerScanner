@@ -134,7 +134,9 @@ data class AnchorDetectionResult(
 class OmrProcessingContext {
     var grayMat: Mat? = null
     var warpedMat: Mat? = null
-    val debugBitmaps = hashMapOf<String, Bitmap>()
+    val debugBitmaps = mutableMapOf<String, Bitmap>()
+
+    var rawBitmap: Bitmap? = null
 
     fun release() {
         grayMat?.release()

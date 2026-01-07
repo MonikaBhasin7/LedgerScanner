@@ -9,6 +9,7 @@ import android.media.MediaActionSound
 import android.net.Uri
 import android.provider.Settings
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -43,14 +44,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.view.doOnLayout
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
-import com.example.ledgerscanner.App
 import com.example.ledgerscanner.Temporary
 import com.example.ledgerscanner.base.enums.PermissionStatus
 import com.example.ledgerscanner.base.extensions.BorderStyle
 import com.example.ledgerscanner.base.extensions.customBorder
+import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.Activity.BaseActivity
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.theme.AppTypography
@@ -60,7 +62,6 @@ import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.utils.image.ImageUtils
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.components.BrightnessQualityBadge
 import com.example.ledgerscanner.feature.scanner.scan.ui.custom_ui.OverlayView
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
@@ -74,8 +75,8 @@ private const val CORNER_RADIUS_DP = 12
 @Composable
 fun ScannerScreen(
     navController: NavHostController,
-    omrScannerViewModel: OmrScannerViewModel,
-    examEntity: ExamEntity
+    examEntity: ExamEntity,
+    omrScannerViewModel: OmrScannerViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val activity = remember { context as? BaseActivity }
@@ -128,7 +129,7 @@ fun ScannerScreen(
 @Composable
 private fun CameraViewOrPermissionCard(
     context: Context,
-    lifecycleOwner: androidx.lifecycle.LifecycleOwner,
+    lifecycleOwner: LifecycleOwner,
     omrScannerViewModel: OmrScannerViewModel,
     imageCapture: ImageCapture,
     examEntity: ExamEntity,
@@ -190,8 +191,20 @@ private fun CameraPreview(
 
     val isCapturing = remember { AtomicBoolean(false) }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                    isCapturing.set(false) // Reset when returning to screen
+                }
+
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             cameraExecutor.shutdown()
             mediaActionSound.release()
         }
@@ -322,28 +335,39 @@ private fun setupImageAnalysis(
 
             overlay.setPreviewRect(displayed)
 
-            val (omrImageProcessResult, detectedAnchors) = omrScannerViewModel.processOmrFrame(
+            var scanResult = omrScannerViewModel.processOmrFrame(
+                context,
                 imageProxy,
                 examEntity,
                 overlay.getAnchorSquaresOnScreen(),
-                previewRect = overlay.getPreviewRect(),
-                debug = true
+                previewBounds = overlay.getPreviewRect(),
+                debug = true,
+                onAnchorsDetected = {
+                    // Update overlay with detected anchors
+                    overlay.setDetectedAnchors(it)
+                }
             )
+            when (scanResult) {
+                is UiState.Error -> {
 
-            // Update overlay with detected anchors
-            overlay.setDetectedAnchors(detectedAnchors)
+                }
 
-            if (omrImageProcessResult.success && isCapturing.compareAndSet(false, true)) {
-                mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
-                omrScannerViewModel.setCapturedResult(omrImageProcessResult)
+                is UiState.Idle, is UiState.Loading -> {}
+                is UiState.Success -> {
+                    if (isCapturing.compareAndSet(false, true)) {
+                        mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
+                        omrScannerViewModel.setCapturedResult(scanResult.data)
 
-                Temporary.omrImageProcessResult = omrImageProcessResult
+                        Temporary.omrImageProcessResult = scanResult.data
 
-                ScanResultActivity.launchScanResultScreen(
-                    context = context,
-                    examEntity,
-                    omrImageProcessResult
-                )
+                        omrScannerViewModel.resetImageProcessResult()
+                        ScanResultActivity.launchScanResultScreen(
+                            context = context,
+                            examEntity,
+                            scanResult.data
+                        )
+                    }
+                }
             }
 
             imageProxy.close()

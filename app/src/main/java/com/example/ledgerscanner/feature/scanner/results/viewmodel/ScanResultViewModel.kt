@@ -12,7 +12,6 @@ import com.example.ledgerscanner.feature.scanner.results.model.SheetFilter
 import com.example.ledgerscanner.feature.scanner.results.model.SheetSort
 import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsForScanResult
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,28 +188,26 @@ class ScanResultViewModel @Inject constructor(
 
     fun saveSheet(
         details: StudentDetailsForScanResult,
-        omrImageProcessResult: OmrImageProcessResult?,
+        scanResultEntity: ScanResultEntity?,
         examId: Int
     ) {
         viewModelScope.launch {
             try {
                 _saveSheetState.value = UiState.Loading()
 
-                if (omrImageProcessResult == null || !omrImageProcessResult.success) {
+                if (scanResultEntity == null) {
                     _saveSheetState.value = UiState.Error("Invalid scan result")
                     return@launch
                 }
 
                 val insertedId = scanResultRepository.saveSheet(
                     details = details,
-                    omrImageProcessResult = omrImageProcessResult,
-                    examId = examId
+                    scanResultEntity = scanResultEntity
                 )
 
                 if (insertedId > 0) {
                     _saveSheetState.value = UiState.Success(insertedId)
-                    val count = scanResultRepository.getCountByExamIdOnce(examId)
-                    _sheetsCountByExamId.value = UiState.Success(count)
+                    getCountByExamId(examId)
                 } else {
                     _saveSheetState.value = UiState.Error("Failed to save scan result")
                 }

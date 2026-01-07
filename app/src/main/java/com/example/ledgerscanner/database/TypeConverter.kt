@@ -109,4 +109,23 @@ class TypeConverter {
             Gson().fromJson(it, type)
         }
     }
+
+    /**
+     * Convert Map<String, String> to JSON String for database storage
+     */
+    @TypeConverter
+    fun fromStringMap(value: Map<String, String>?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    /**
+     * Convert JSON String from database to Map<String, String>
+     */
+    @TypeConverter
+    fun toStringMap(value: String?): Map<String, String>? {
+        return value?.let {
+            val type = object : TypeToken<Map<String, String>>() {}.type
+            gson.fromJson(it, type)
+        }
+    }
 }

@@ -17,7 +17,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,7 +27,7 @@ import com.example.ledgerscanner.base.ui.theme.Orange50
 import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.Orange700
 import com.example.ledgerscanner.base.ui.theme.Orange800
-import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
+import com.example.ledgerscanner.database.entity.ScanResultEntity
 
 // ===========================================================================
 // 👤 Author: Monika Bhasin
@@ -37,25 +36,12 @@ import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResul
 
 @Composable
 fun ReviewRequiredCard(
-    omrImageProcessResult: OmrImageProcessResult,
+    omrImageProcessResult: ScanResultEntity,
     onReviewClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-
-    val lowConfidenceQuestions = remember(omrImageProcessResult.detectedBubbles) {
-        omrImageProcessResult.detectedBubbles
-            ?.groupBy { it.questionIndex }
-            ?.mapNotNull { (qIndex, bubbles) ->
-                val maxConf = bubbles.maxOfOrNull { it.confidence } ?: 0.0
-                if (maxConf < 0.60) {
-                    qIndex to maxConf
-                } else null
-            }
-            ?.sortedBy { it.second } // Lowest confidence first
-            ?: emptyList()
-    }
-
-    if (lowConfidenceQuestions.isNotEmpty()) {
+    val lowConfidenceQuestions = omrImageProcessResult.lowConfidenceQuestions
+    if (!lowConfidenceQuestions.isNullOrEmpty()) {
         Card(
             modifier = modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -93,13 +79,14 @@ fun ReviewRequiredCard(
                     color = Grey800
                 )
 
-                Text(
-                    text = lowConfidenceQuestions.joinToString(", ") { (qNum, conf) ->
-                        "Q${qNum + 1} (${(conf * 100).toInt()}%)"
-                    },
-                    style = AppTypography.text14SemiBold,
-                    color = Orange700
-                )
+                lowConfidenceQuestions.forEach { (qNum, conf) ->
+                    Text(
+                        text = "Q${qNum + 1} (${(conf?.times(100))?.toInt()}%)",
+                        style = AppTypography.text14SemiBold,
+                        color = Orange700
+                    )
+                }
+
 
                 TextButton(
                     onClick = onReviewClick,

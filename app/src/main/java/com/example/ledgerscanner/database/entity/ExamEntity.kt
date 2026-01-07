@@ -20,4 +20,8 @@ data class ExamEntity(
     val marksPerCorrect: Float? = null,
     val marksPerWrong: Float? = null,
     val createdAt: Long,
-): Parcelable
+) : Parcelable {
+    fun getMaxMarks(): Float {
+        return totalQuestions * (marksPerCorrect ?: 0f)
+    }
+}

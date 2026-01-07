@@ -34,7 +34,6 @@ class ScanBaseActivity : BaseActivity() {
 
     private var examEntity: ExamEntity? = null
 
-    private val omrScannerViewModel: OmrScannerViewModel by viewModels()
     private val scanResultViewModel: ScanResultViewModel by viewModels()
 
 
@@ -74,7 +73,6 @@ class ScanBaseActivity : BaseActivity() {
                             composable(SCANNER_SCREEN) {
                                 ScannerScreen(
                                     navController,
-                                    omrScannerViewModel,
                                     examEntity!!
                                 )
                             }

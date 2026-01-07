@@ -10,7 +10,7 @@ sealed class OmrResult(
     open val success: Boolean,
     open val reason: String?,
     open val finalBitmap: Bitmap?,
-    open val debugBitmaps: HashMap<String, Bitmap>
+    open val debugBitmaps: Map<String, Bitmap>
 ) : Parcelable
 
 @Parcelize
@@ -18,7 +18,8 @@ data class OmrImageProcessResult(
     override val success: Boolean,
     override val reason: String? = null,
     override val finalBitmap: Bitmap? = null,
-    override val debugBitmaps: HashMap<String, Bitmap> = hashMapOf(),
+    override val debugBitmaps: Map<String, Bitmap> = mutableMapOf(),
+    val rawBitmap: Bitmap? = null,
     val detectedBubbles: List<BubbleResult>? = null,// Detection results
     val evaluation: EvaluationResult? = null, // Evaluation results (optional)
     val barcodeId: String? = null
@@ -29,7 +30,7 @@ data class OmrTemplateResult(
     override val success: Boolean,
     override val reason: String? = null,
     override val finalBitmap: Bitmap? = null,
-    override val debugBitmaps: HashMap<String, Bitmap> = hashMapOf(),
+    override val debugBitmaps: Map<String, Bitmap> = mutableMapOf(),
     val templateJson: String? = null,
     val template: Template? = null
 ) : OmrResult(success, reason, finalBitmap, debugBitmaps)
