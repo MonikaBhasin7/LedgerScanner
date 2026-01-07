@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.example.ledgerscanner.base.extensions.toCleanString
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue500
@@ -69,7 +70,7 @@ fun ScoreSummaryCard(scanResultEntity: ScanResultEntity, examEntity: ExamEntity)
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "${scanResultEntity.score}/${examEntity.getMaxMarks()}",
+                    text = "${scanResultEntity.score}/${examEntity.getMaxMarks().toCleanString()}",
                     style = AppTypography.title2ExtraBold,
                     color = Black,
                 )
@@ -77,7 +78,7 @@ fun ScoreSummaryCard(scanResultEntity: ScanResultEntity, examEntity: ExamEntity)
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = "(${scanResultEntity.scorePercent}%)",
+                    text = "(${scanResultEntity.scorePercent.toCleanString()}%)",
                     style = AppTypography.h4Bold,
                     color = Blue500
                 )
