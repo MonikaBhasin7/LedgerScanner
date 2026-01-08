@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.UiState
@@ -23,6 +24,7 @@ import com.example.ledgerscanner.base.ui.components.LoadingDialog
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.results.model.ScannedSheetViewMode
+import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
 import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets.DeleteActionButton
 import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets.DeleteConfirmationDialog
 import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets.EmptyState
@@ -41,6 +43,7 @@ fun ScannedSheetsScreen(
     examEntity: ExamEntity,
     scanResultViewModel: ScanResultViewModel
 ) {
+    val context = LocalContext.current
     val scannedSheets by scanResultViewModel.scannedSheets.collectAsState()
     val examStats by scanResultViewModel.examStatsCache.collectAsState()
     val selectedFilter by scanResultViewModel.selectedFilter.collectAsState()
@@ -136,7 +139,11 @@ fun ScannedSheetsScreen(
                                                     scanResultViewModel.toggleSheetSelection(sheet.id)
                                                 },
                                                 onViewDetails = {
-
+                                                    ScanResultActivity.launchScanResultScreen(
+                                                        context,
+                                                        examEntity,
+                                                        sheet
+                                                    )
                                                 },
                                                 modifier = Modifier.padding(
                                                     horizontal = 16.dp,
@@ -188,17 +195,20 @@ fun ScannedSheetsScreen(
                 is UiState.Loading -> {
                     LoadingDialog(message = "Deleting sheets...")
                 }
+
                 is UiState.Success -> {
                     LaunchedEffect(Unit) {
                         scanResultViewModel.resetDeleteState()
                     }
                 }
+
                 is UiState.Error -> {
                     ErrorDialog(
                         message = (deleteState as UiState.Error).message,
                         onDismiss = { scanResultViewModel.resetDeleteState() }
                     )
                 }
+
                 else -> {}
             }
         }

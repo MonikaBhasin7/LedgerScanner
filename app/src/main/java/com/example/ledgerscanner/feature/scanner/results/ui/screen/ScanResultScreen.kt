@@ -23,6 +23,7 @@ import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.Grey100
+import com.example.ledgerscanner.base.utils.navigateBackOrFinish
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.database.entity.ScanResultEntity
@@ -42,6 +43,7 @@ fun ScanResultScreen(
     examEntity: ExamEntity,
     scanResultEntity: ScanResultEntity,
     scanResultViewModel: ScanResultViewModel,
+    isViewMode: Boolean,
 ) {
     val context = LocalContext.current
     val handleBack = rememberBackHandler(navController)
@@ -152,7 +154,7 @@ fun ScanResultScreen(
             onDismiss = {
                 if (saveSheetResponse is UiState.Success) {
                     scanResultViewModel.resetSaveSheetState()
-                    navController.popBackStack()
+                    handleBack()
                 }
             }
         )

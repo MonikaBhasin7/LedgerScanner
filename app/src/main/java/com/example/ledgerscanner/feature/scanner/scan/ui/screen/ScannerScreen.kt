@@ -358,16 +358,14 @@ private fun setupImageAnalysis(
             when (scanResult) {
                 is UiState.Error, is UiState.Idle, is UiState.Loading -> {}
                 is UiState.Success -> {
-                    if (isCapturing.compareAndSet(false, true)) {
-                        mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
-                        omrScannerViewModel.setCapturedResult(scanResult.data)
+                    mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
+                    omrScannerViewModel.setCapturedResult(scanResult.data)
 
-                        ScanResultActivity.launchScanResultScreen(
-                            context = context,
-                            examEntity,
-                            scanResult.data
-                        )
-                    }
+                    ScanResultActivity.launchScanResultScreen(
+                        context = context,
+                        examEntity,
+                        scanResult.data
+                    )
                 }
             }
 
