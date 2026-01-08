@@ -91,9 +91,10 @@ import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionConfi
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionsPopup
 import com.example.ledgerscanner.feature.scanner.exam.ui.dialog.TemplatePickerDialog
 import com.example.ledgerscanner.feature.scanner.exam.viewmodel.ExamListViewModel
-import com.example.ledgerscanner.feature.scanner.scan.model.Template
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
+import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -189,6 +190,13 @@ class ExamListingActivity : ComponentActivity() {
                             text = "Create Exam",
                             onClick = {
                                 startActivity(Intent(context, CreateExamActivity::class.java))
+                            }
+                        ),
+                        ToolbarAction.IconText(
+                            icon = Icons.Default.Addchart,
+                            text = "Create Template",
+                            onClick = {
+                                startActivity(Intent(context, CreateTemplateActivity::class.java))
                             }
                         )
                     )

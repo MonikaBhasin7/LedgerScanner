@@ -10,6 +10,7 @@ import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
 import com.example.ledgerscanner.feature.scanner.scan.model.Gap
 import com.example.ledgerscanner.feature.scanner.scan.model.HoughParams
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrSheetType
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.OptionBox
 import com.example.ledgerscanner.feature.scanner.scan.model.Question
@@ -39,8 +40,49 @@ class TemplateProcessor @Inject constructor() {
         const val TAG = "TemplateProcessor"
     }
 
+    /**
+     * Unified template generation that supports both bubble and grid-based OMR sheets
+     *
+     * @param sheetType Type of OMR sheet (BUBBLE_BASED or GRID_BASED)
+     * @param questionsPerColumn For BUBBLE_BASED: questions per column
+     * @param numberOfColumns For BUBBLE_BASED: number of columns
+     * @param totalQuestions For GRID_BASED: total questions
+     * @param optionsPerQuestion Options per question (default 4)
+     */
     @WorkerThread
     fun generateTemplateJson(
+        inputBitmap: Bitmap,
+        sheetType: OmrSheetType,
+        questionsPerColumn: Int = 25,
+        numberOfColumns: Int = 2,
+        optionsPerQuestion: Int = 4,
+        totalQuestions: Int = 108,
+        debug: Boolean = true
+    ): OmrTemplateResult {
+        return when (sheetType) {
+            OmrSheetType.BUBBLE_BASED -> generateBubbleTemplateJson(
+                inputBitmap = inputBitmap,
+                questionsPerColumn = questionsPerColumn,
+                numberOfColumns = numberOfColumns,
+                optionsPerQuestion = optionsPerQuestion,
+                debug = debug
+            )
+
+            OmrSheetType.GRID_BASED -> generateGridTemplateJson(
+                inputBitmap = inputBitmap,
+                totalQuestions = totalQuestions,
+                optionsPerQuestion = optionsPerQuestion,
+                debug = debug
+            )
+        }
+    }
+
+    /**
+     * Generates template for bubble-based OMR sheets (circular bubbles)
+     * This is your existing generateTemplateJson renamed
+     */
+    @WorkerThread
+    private fun generateBubbleTemplateJson(
         inputBitmap: Bitmap,
         questionsPerColumn: Int = 25,
         numberOfColumns: Int = 2,
@@ -52,11 +94,11 @@ class TemplateProcessor @Inject constructor() {
         var grayMat: Mat? = null
         try {
             Log.d(
-                TAG, "Starting template generation: $questionsPerColumn questions/column × " +
+                TAG,
+                "Starting BUBBLE template generation: $questionsPerColumn questions/column × " +
                         "$numberOfColumns columns × $optionsPerQuestion options = " +
                         "${questionsPerColumn * numberOfColumns * optionsPerQuestion} total bubbles"
             )
-
 
             // 1. Convert bitmap to grayscale
             srcMat = Mat().apply {
@@ -64,10 +106,10 @@ class TemplateProcessor @Inject constructor() {
             }
             grayMat = Mat().apply {
                 Imgproc.cvtColor(srcMat, this, Imgproc.COLOR_BGR2GRAY)
-                if (debug) debugMap["gray"] = this.toBitmapSafe()
+                if (debug) debugMap["1_gray"] = this.toBitmapSafe()
             }
 
-            // 3. Detect anchors
+            // 2. Detect anchors
             val anchorPoints: List<AnchorPoint> = detectAnchorPoints(
                 srcMat,
                 grayMat,
@@ -84,7 +126,7 @@ class TemplateProcessor @Inject constructor() {
                 },
             ) ?: listOf()
 
-            // 4. Detect bubbles
+            // 3. Detect bubbles (circular)
             val bubbles = detectAndFetchBubblesWithinAnchors(
                 grayMat = grayMat,
                 anchorPoints = anchorPoints,
@@ -97,7 +139,7 @@ class TemplateProcessor @Inject constructor() {
                 }
             )
 
-            // 5. Validate bubble count
+            // 4. Validate bubble count
             val expectedBubbles = questionsPerColumn * numberOfColumns * optionsPerQuestion
             if (bubbles.size != expectedBubbles) {
                 return OmrTemplateResult(
@@ -114,10 +156,10 @@ class TemplateProcessor @Inject constructor() {
                 )
             }
 
-            // 6. Sort bubbles into 2D array (handles multiple columns automatically)
+            // 5. Sort bubbles into 2D array (handles multiple columns automatically)
             val bubbles2DArray = sortBubblesColumnWise(bubbles, optionsPerQuestion)
 
-            // 7. Validate structure
+            // 6. Validate structure
             val totalQuestions = questionsPerColumn * numberOfColumns
             if (bubbles2DArray.size != totalQuestions) {
                 return OmrTemplateResult(
@@ -136,15 +178,14 @@ class TemplateProcessor @Inject constructor() {
                 )
             }
 
-            // 8. Generate template JSON
+            // 7. Generate template JSON
             val templatePair = generateTemplateJsonSimple(
                 anchorPoints,
                 bubbles2DArray,
                 srcMat.size()
             )
 
-
-            // 9. Create final debug bitmap
+            // 8. Create final debug bitmap
             val finalBitmap = OpenCvUtils.drawPoints(
                 grayMat.toColoredWarped(),
                 points = anchorPoints,
@@ -165,7 +206,7 @@ class TemplateProcessor @Inject constructor() {
                 template = templatePair.template
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error generating template", e)
+            Log.e(TAG, "Error generating bubble template", e)
             return OmrTemplateResult(
                 success = false,
                 reason = "${e.javaClass.simpleName}: ${e.message}",
@@ -175,6 +216,365 @@ class TemplateProcessor @Inject constructor() {
             srcMat?.release()
             grayMat?.release()
         }
+    }
+
+    /**
+     * Generates template for grid-based OMR sheets (rectangular cells)
+     */
+    @WorkerThread
+    private fun generateGridTemplateJson(
+        inputBitmap: Bitmap,
+        totalQuestions: Int = 108,
+        optionsPerQuestion: Int = 4,
+        debug: Boolean = true
+    ): OmrTemplateResult {
+        val debugMap = hashMapOf<String, Bitmap>()
+        var srcMat: Mat? = null
+        var grayMat: Mat? = null
+
+        try {
+            Log.d(
+                TAG,
+                "Starting GRID template generation: $totalQuestions questions × $optionsPerQuestion options = ${totalQuestions * optionsPerQuestion} total cells"
+            )
+
+            // 1. Convert bitmap to grayscale
+            srcMat = Mat().apply {
+                Utils.bitmapToMat(inputBitmap, this)
+            }
+            grayMat = Mat().apply {
+                Imgproc.cvtColor(srcMat, this, Imgproc.COLOR_BGR2GRAY)
+                if (debug) debugMap["1_gray"] = this.toBitmapSafe()
+            }
+
+            // 2. Detect anchors
+            val anchorPoints: List<AnchorPoint> = detectAnchorPoints(
+                srcMat,
+                grayMat,
+                debug,
+                debugMapAdditionCallback = { title, bitmap ->
+                    debugMap[title] = bitmap
+                },
+                failedCallback = { reason ->
+                    return OmrTemplateResult(
+                        success = false,
+                        reason = reason,
+                        debugBitmaps = debugMap
+                    )
+                },
+            ) ?: listOf()
+
+            // 3. Detect cells (rectangular) instead of bubbles (circular)
+            val cells = detectAndFetchCellsWithinAnchors(
+                grayMat = grayMat,
+                anchorPoints = anchorPoints,
+                totalQuestions = totalQuestions,
+                optionsPerQuestion = optionsPerQuestion,
+                debug = debug,
+                debugMapAdditionCallback = { title, bitmap ->
+                    debugMap[title] = bitmap
+                }
+            )
+
+            // 4. Validate cell count
+            val expectedCells = totalQuestions * optionsPerQuestion
+//            if (cells.size != expectedCells) {
+//                return OmrTemplateResult(
+//                    success = false,
+//                    reason = "Expected exactly $expectedCells cells " +
+//                            "($totalQuestions questions × $optionsPerQuestion options), " +
+//                            "but found ${cells.size} cells.\n\n" +
+//                            "Please ensure:\n" +
+//                            "• The OMR sheet has exactly $totalQuestions questions\n" +
+//                            "• Each question has exactly $optionsPerQuestion options\n" +
+//                            "• All cells are clearly visible with distinct borders\n" +
+//                            "• The sheet is well-lit and properly aligned",
+//                    debugBitmaps = debugMap
+//                )
+//            }
+
+            // 5. Sort cells into 2D array
+            val cells2DArray = sortCellsSequential(cells, optionsPerQuestion)
+
+            // 6. Validate structure
+//            if (cells2DArray.size != totalQuestions) {
+//                return OmrTemplateResult(
+//                    success = false,
+//                    reason = "Expected $totalQuestions questions after sorting, got ${cells2DArray.size}",
+//                    debugBitmaps = debugMap
+//                )
+//            }
+
+            val invalidRows = cells2DArray.filter { it.size != optionsPerQuestion }
+//            if (invalidRows.isNotEmpty()) {
+//                return OmrTemplateResult(
+//                    success = false,
+//                    reason = "Found ${invalidRows.size} questions with incorrect cell count " +
+//                            "(expected $optionsPerQuestion per question)",
+//                    debugBitmaps = debugMap
+//                )
+//            }
+
+            // 7. Generate template JSON
+            val templatePair = generateTemplateJsonSimple(
+                anchorPoints,
+                cells2DArray,
+                srcMat.size()
+            )
+
+            // 8. Create final debug bitmap
+            val finalBitmap = OpenCvUtils.drawPoints(
+                grayMat.toColoredWarped(),
+                points = anchorPoints,
+                bubbles2DArray = cells2DArray,
+                radius = templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r?.roundToInt(),
+            ).let {
+                val bitmap = it.toBitmapSafe()
+                debugMap["9_final"] = bitmap
+                it.release()
+                bitmap
+            }
+
+            return OmrTemplateResult(
+                success = true,
+                debugBitmaps = debugMap,
+                finalBitmap = finalBitmap,
+                templateJson = templatePair.templateJson,
+                template = templatePair.template
+            )
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error generating grid template", e)
+            return OmrTemplateResult(
+                success = false,
+                reason = "${e.javaClass.simpleName}: ${e.message}",
+                debugBitmaps = debugMap
+            )
+        } finally {
+            srcMat?.release()
+            grayMat?.release()
+        }
+    }
+
+    /**
+     * Detects rectangular cells within the anchored frame (for grid-based OMR sheets)
+     * Similar to bubble detection but looks for rectangles instead of circles
+     */
+    private fun detectAndFetchCellsWithinAnchors(
+        grayMat: Mat,
+        anchorPoints: List<AnchorPoint>,
+        totalQuestions: Int,
+        optionsPerQuestion: Int,
+        debug: Boolean = false,
+        debugMapAdditionCallback: (String, Bitmap) -> Unit,
+    ): List<Bubble> {
+        var mask: Mat? = null
+        var masked: Mat? = null
+        var binary: Mat? = null
+        var anchorMat: MatOfPoint? = null
+
+        try {
+            // 1. Make mask
+            mask = Mat.zeros(grayMat.size(), CvType.CV_8UC1)
+            anchorMat = MatOfPoint(*anchorPoints.map { Point(it.x, it.y) }.toTypedArray())
+            Imgproc.fillConvexPoly(mask, anchorMat, Scalar(255.0))
+
+            // 2. Apply mask
+            masked = Mat()
+            Core.bitwise_and(grayMat, mask, masked)
+            if (debug) debugMapAdditionCallback("2_masked_region", masked.toBitmapSafe())
+
+            // 3. Apply threshold to get binary image
+            binary = Mat()
+            Imgproc.threshold(masked, binary, 127.0, 255.0, Imgproc.THRESH_BINARY_INV)
+            if (debug) debugMapAdditionCallback("3_binary", binary.toBitmapSafe())
+
+            // 4. Calculate expected cell count
+            val exactExpectedCells = totalQuestions * optionsPerQuestion
+            Log.d(
+                TAG,
+                "Expected: $exactExpectedCells cells ($totalQuestions questions × $optionsPerQuestion options)"
+            )
+
+            // 5. Calculate estimated cell size
+            val maskedArea = Imgproc.contourArea(anchorMat)
+            val estimatedCellArea = maskedArea / (exactExpectedCells * 1.5) // 1.5 accounts for gaps
+            val estimatedCellSize = sqrt(estimatedCellArea)
+
+            Log.d(TAG, "Estimated cell size: ${estimatedCellSize.roundToInt()}")
+
+            // 6. Find contours
+            val contours = mutableListOf<MatOfPoint>()
+            val hierarchy = Mat()
+            Imgproc.findContours(
+                binary,
+                contours,
+                hierarchy,
+                Imgproc.RETR_TREE,
+                Imgproc.CHAIN_APPROX_SIMPLE
+            )
+
+            Log.d(TAG, "Found ${contours.size} total contours")
+
+            // 7. Filter contours for valid cells
+            val detectedCells = mutableListOf<Bubble>()
+
+            for (contour in contours) {
+                val rect = Imgproc.boundingRect(contour)
+
+                if (isValidCell(rect, estimatedCellSize)) {
+                    // Store as Bubble (reusing existing structure)
+                    // Center point and "radius" (half of average dimension)
+                    val centerX = rect.x + rect.width / 2.0
+                    val centerY = rect.y + rect.height / 2.0
+                    val avgDimension = (rect.width + rect.height) / 2.0
+                    val pseudoRadius = avgDimension / 2.0
+
+                    detectedCells.add(Bubble(centerX, centerY, pseudoRadius))
+                }
+            }
+
+            Log.d(TAG, "Detected ${detectedCells.size} valid cells (expected $exactExpectedCells)")
+
+            // 8. Draw detected cells for debugging
+            if (debug) {
+                val debugMat = masked.toColoredWarped()
+                for (cell in detectedCells) {
+                    // Draw rectangle around each detected cell
+                    val size = (cell.r * 2).toInt()
+                    val topLeft = Point(cell.x - cell.r, cell.y - cell.r)
+                    val bottomRight = Point(cell.x + cell.r, cell.y + cell.r)
+                    Imgproc.rectangle(debugMat, topLeft, bottomRight, Scalar(0.0, 255.0, 0.0), 2)
+                }
+                debugMapAdditionCallback("4_detected_cells", debugMat.toBitmapSafe())
+                debugMat.release()
+            }
+
+            hierarchy.release()
+
+            return detectedCells.sortedWith(compareBy({ it.y.roundToInt() }, { it.x }))
+
+        } finally {
+            mask?.release()
+            masked?.release()
+            binary?.release()
+            anchorMat?.release()
+        }
+    }
+
+    /**
+     * Validates if a rectangle is likely a response cell
+     */
+    private fun isValidCell(rect: org.opencv.core.Rect, estimatedSize: Double): Boolean {
+        val area = rect.width * rect.height
+
+        // Filter by area (should be close to estimated size)
+        val minArea = (estimatedSize * estimatedSize) * 0.3
+        val maxArea = (estimatedSize * estimatedSize) * 3.0
+
+        if (area < minArea || area > maxArea) {
+            return false
+        }
+
+        // Filter by aspect ratio (cells should be roughly square)
+        val aspectRatio = rect.width.toFloat() / rect.height.toFloat()
+        if (aspectRatio < 0.6 || aspectRatio > 1.7) {
+            return false
+        }
+
+        // Filter by minimum size (avoid noise)
+        if (rect.width < 10 || rect.height < 10) {
+            return false
+        }
+
+        return true
+    }
+
+    /**
+     * Sorts cells sequentially for grid-based layouts
+     * Questions flow down each section, then move to next section
+     *
+     * Example: Q1-27 in left section, Q28-54 in middle, Q55-108 in right
+     */
+    private fun sortCellsSequential(
+        cells: List<Bubble>,
+        optionsPerQuestion: Int = 4
+    ): List<List<Bubble>> {
+        if (cells.isEmpty()) return emptyList()
+
+        // Sort all cells by X coordinate first (to identify sections/columns)
+        val sortedByX = cells.sortedBy { it.x }
+
+        // Group cells into vertical sections based on X-coordinate gaps
+        val sections = groupIntoVerticalSections(sortedByX, optionsPerQuestion)
+
+        Log.d(TAG, "Identified ${sections.size} vertical sections")
+
+        // Process each section: sort by Y, then group by rows
+        val allQuestions = mutableListOf<List<Bubble>>()
+
+        for ((sectionIndex, sectionCells) in sections.withIndex()) {
+            // Sort this section by Y coordinate (top to bottom)
+            val sortedByY = sectionCells.sortedBy { it.y }
+
+            // Group into rows
+            val rows = groupIntoRows(sortedByY)
+
+            Log.d(TAG, "Section $sectionIndex: ${rows.size} questions")
+
+            // Each row should have optionsPerQuestion cells
+            for (row in rows) {
+                if (row.size == optionsPerQuestion) {
+                    allQuestions.add(row.sortedBy { it.x }) // Sort options left-to-right
+                } else {
+                    Log.w(
+                        TAG,
+                        "Section $sectionIndex: Row has ${row.size} cells (expected $optionsPerQuestion)"
+                    )
+                }
+            }
+        }
+
+        return allQuestions
+    }
+
+    /**
+     * Groups cells into vertical sections (columns) based on X-coordinate clustering
+     */
+    private fun groupIntoVerticalSections(
+        sortedByX: List<Bubble>,
+        optionsPerQuestion: Int
+    ): List<List<Bubble>> {
+        if (sortedByX.isEmpty()) return emptyList()
+
+        val sections = mutableListOf<MutableList<Bubble>>()
+        var currentSection = mutableListOf(sortedByX.first())
+
+        // Calculate average cell spacing
+        val xGaps = mutableListOf<Double>()
+        for (i in 0 until sortedByX.size - 1) {
+            xGaps.add(sortedByX[i + 1].x - sortedByX[i].x)
+        }
+        val avgGap = xGaps.average()
+        val sectionThreshold = avgGap * 3.0 // Large gap indicates section boundary
+
+        for (i in 1 until sortedByX.size) {
+            val gap = sortedByX[i].x - sortedByX[i - 1].x
+
+            if (gap > sectionThreshold) {
+                // New section detected
+                sections.add(currentSection)
+                currentSection = mutableListOf(sortedByX[i])
+            } else {
+                currentSection.add(sortedByX[i])
+            }
+        }
+
+        if (currentSection.isNotEmpty()) {
+            sections.add(currentSection)
+        }
+
+        return sections
     }
 
     @Throws

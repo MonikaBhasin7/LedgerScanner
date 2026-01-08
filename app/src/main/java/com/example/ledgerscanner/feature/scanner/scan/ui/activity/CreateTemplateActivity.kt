@@ -67,6 +67,7 @@ import com.example.ledgerscanner.base.ui.theme.Red50
 import com.example.ledgerscanner.base.ui.theme.Red500
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.image.ImageUtils
+import com.example.ledgerscanner.feature.scanner.scan.model.OmrSheetType
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.dialog.WarpedImageDialog
@@ -156,7 +157,8 @@ class CreateTemplateActivity : BaseActivity() {
                                 TemplateProcessor().generateTemplateJson(
                                     it,
                                     questionsPerColumn = questionsPerColumn,
-                                    numberOfColumns = numberOfColumns
+                                    numberOfColumns = numberOfColumns,
+                                    sheetType = OmrSheetType.GRID_BASED
                                 )
                             }
                         createTemplateViewModel.setTemplateResult(result)
