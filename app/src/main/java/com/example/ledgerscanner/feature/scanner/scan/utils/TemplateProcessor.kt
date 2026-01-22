@@ -99,42 +99,42 @@ class TemplateProcessor @Inject constructor() {
 
             // 5. Validate bubble count
             val expectedBubbles = questionsPerColumn * numberOfColumns * optionsPerQuestion
-            if (bubbles.size != expectedBubbles) {
-                return OmrTemplateResult(
-                    success = false,
-                    reason = "Expected exactly $expectedBubbles bubbles " +
-                            "($questionsPerColumn questions/column × $numberOfColumns columns × $optionsPerQuestion options), " +
-                            "but found ${bubbles.size} bubbles.\n\n" +
-                            "Please ensure:\n" +
-                            "• The OMR sheet has exactly $questionsPerColumn questions per column\n" +
-                            "• There are exactly $numberOfColumns columns\n" +
-                            "• Each question has exactly $optionsPerQuestion options\n" +
-                            "• All bubbles are clearly visible and well-lit",
-                    debugBitmaps = debugMap
-                )
-            }
+//            if (bubbles.size != expectedBubbles) {
+//                return OmrTemplateResult(
+//                    success = false,
+//                    reason = "Expected exactly $expectedBubbles bubbles " +
+//                            "($questionsPerColumn questions/column × $numberOfColumns columns × $optionsPerQuestion options), " +
+//                            "but found ${bubbles.size} bubbles.\n\n" +
+//                            "Please ensure:\n" +
+//                            "• The OMR sheet has exactly $questionsPerColumn questions per column\n" +
+//                            "• There are exactly $numberOfColumns columns\n" +
+//                            "• Each question has exactly $optionsPerQuestion options\n" +
+//                            "• All bubbles are clearly visible and well-lit",
+//                    debugBitmaps = debugMap
+//                )
+//            }
 
             // 6. Sort bubbles into 2D array (handles multiple columns automatically)
             val bubbles2DArray = sortBubblesColumnWise(bubbles, optionsPerQuestion)
 
             // 7. Validate structure
             val totalQuestions = questionsPerColumn * numberOfColumns
-            if (bubbles2DArray.size != totalQuestions) {
-                return OmrTemplateResult(
-                    success = false,
-                    reason = "Expected $totalQuestions questions after sorting, got ${bubbles2DArray.size}",
-                    debugBitmaps = debugMap
-                )
-            }
+//            if (bubbles2DArray.size != totalQuestions) {
+//                return OmrTemplateResult(
+//                    success = false,
+//                    reason = "Expected $totalQuestions questions after sorting, got ${bubbles2DArray.size}",
+//                    debugBitmaps = debugMap
+//                )
+//            }
             val invalidRows = bubbles2DArray.filter { it.size != optionsPerQuestion }
-            if (invalidRows.isNotEmpty()) {
-                return OmrTemplateResult(
-                    success = false,
-                    reason = "Found ${invalidRows.size} questions with incorrect bubble count " +
-                            "(expected $optionsPerQuestion per question)",
-                    debugBitmaps = debugMap
-                )
-            }
+//            if (invalidRows.isNotEmpty()) {
+//                return OmrTemplateResult(
+//                    success = false,
+//                    reason = "Found ${invalidRows.size} questions with incorrect bubble count " +
+//                            "(expected $optionsPerQuestion per question)",
+//                    debugBitmaps = debugMap
+//                )
+//            }
 
             // 8. Generate template JSON
             val templatePair = generateTemplateJsonSimple(

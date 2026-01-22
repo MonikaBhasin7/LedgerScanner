@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.exam.model
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CheckCircle
@@ -21,6 +22,8 @@ sealed class ExamAction(
     data object ContinueSetup : ExamAction("Continue Setup", Icons.Default.Edit)
     data object ScanSheets : ExamAction("Scan Sheets", Icons.Default.PhotoCamera)
     data object ViewResults : ExamAction("View Results", Icons.Default.BarChart)
+
+    data object ViewReport : ExamAction("View Report", Icons.Default.Analytics)
     data object MarkCompleted : ExamAction("Mark as Completed", Icons.Default.CheckCircle)
     data object EditExam : ExamAction("Edit Exam", Icons.Default.Edit)
     data object Duplicate : ExamAction("Duplicate", Icons.Default.ContentCopy)

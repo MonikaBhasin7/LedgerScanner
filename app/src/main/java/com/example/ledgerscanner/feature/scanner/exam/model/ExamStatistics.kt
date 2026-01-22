@@ -1,12 +1,25 @@
 package com.example.ledgerscanner.feature.scanner.exam.model
 
+
+data class BasicExamStatistics(
+    val avgScore: Float? = null,
+    val topScore: Float? = null,
+    val lowestScore: Float? = null,
+    val sheetsCount: Int = 0
+)
+
 data class ExamStatistics(
     val avgScore: Float? = null,
     val topScore: Float? = null,
     val lowestScore: Float? = null,
     val medianScore: Float? = null,
     val passRate: Float? = null,
-    val sheetsCount: Int = 0
+    val sheetsCount: Int = 0,
+    val totalCorrect: Int = 0,
+    val totalWrong: Int = 0,
+    val totalUnanswered: Int = 0,
+    val questionStats: Map<Int, QuestionStat> = emptyMap(),
+    val scoreDistribution: Map<String, Int> = emptyMap()
 ) {
     fun hasStats(): Boolean {
         return sheetsCount > 0
@@ -46,3 +59,10 @@ data class ExamStatistics(
         } else "--"
     }
 }
+
+data class QuestionStat(
+    val questionNumber: Int,
+    val correctCount: Int,
+    val totalAttempts: Int,
+    val correctPercentage: Float
+)

@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.ledgerscanner.database.entity.ScanResultEntity
+import com.example.ledgerscanner.feature.scanner.exam.model.BasicExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
 import kotlinx.coroutines.flow.Flow
 
@@ -100,6 +101,20 @@ interface ScanResultDao {
     @Query("SELECT * FROM scan_results WHERE examId = :examId ORDER BY scannedAt DESC")
     fun getOrderedByDate(examId: Int): Flow<List<ScanResultEntity>>
 
+//    @Query(
+//        """
+//        SELECT
+//            COALESCE(AVG(scorePercent), 0) as avgScore,
+//            COALESCE(MAX(scorePercent), 0) as topScore,
+//            COALESCE(MIN(scorePercent), 0) as lowestScore,
+//            COUNT(*) as sheetsCount
+//        FROM scan_results
+//        WHERE examId = :examId
+//    """
+//    )
+//    fun getStatisticsByExamId(examId: Int): Flow<ExamStatistics>
+
+
     @Query(
         """
         SELECT 
@@ -111,5 +126,5 @@ interface ScanResultDao {
         WHERE examId = :examId
     """
     )
-    fun getStatisticsByExamId(examId: Int): Flow<ExamStatistics>
+    fun getBasicStatisticsByExamId(examId: Int): Flow<BasicExamStatistics>
 }

@@ -16,7 +16,7 @@ class OverlayView @JvmOverloads constructor(
 
     companion object {
         const val TAG = "OverlayView"
-        private const val ANCHOR_SIZE = 150f
+        private const val ANCHOR_SIZE = 130f
         private const val CORNER_BRACKET_LENGTH = 80f
         private const val CORNER_BRACKET_WIDTH = 6f
     }

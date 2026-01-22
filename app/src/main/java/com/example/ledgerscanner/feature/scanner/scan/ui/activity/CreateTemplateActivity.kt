@@ -202,13 +202,6 @@ class CreateTemplateActivity : BaseActivity() {
                             .padding(16.dp),
                         filterQuality = FilterQuality.High
                     )
-
-                    if (BuildConfig.ENABLE_IMAGE_LOGS && showDebuggableDialog)
-                        WarpedImageDialog(
-                            warpedBitmap = result.finalBitmap,
-                            intermediateBitmaps = result.debugBitmaps,
-                            onDismiss = { showDebuggableDialog = false }
-                        )
                 }
 
                 selectedBitmap != null -> {
@@ -224,6 +217,13 @@ class CreateTemplateActivity : BaseActivity() {
 
                 else -> EmptyPickerPrompt(onPickClick = pickImageLauncher)
             }
+
+            if (result != null && BuildConfig.ENABLE_IMAGE_LOGS && showDebuggableDialog)
+                WarpedImageDialog(
+                    warpedBitmap = result.finalBitmap,
+                    intermediateBitmaps = result.debugBitmaps,
+                    onDismiss = { showDebuggableDialog = false }
+                )
         }
     }
 

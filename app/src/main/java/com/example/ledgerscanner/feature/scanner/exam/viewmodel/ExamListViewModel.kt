@@ -136,6 +136,8 @@ class ExamListViewModel @Inject constructor(
 
             ExamStatus.ACTIVE -> ExamActionPopupConfig(
                 menuItems = buildList {
+                    add(ExamAction.ViewResults)
+                    add(ExamAction.ViewReport)
                     add(ExamAction.MarkCompleted)
                     add(ExamAction.EditExam)
                     add(ExamAction.Duplicate)
