@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Addchart
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Search
@@ -39,6 +40,10 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +61,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.ledgerscanner.auth.LogoutViewModel
+import com.example.ledgerscanner.auth.ui.LoginActivity
 import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.ButtonType
@@ -98,6 +106,7 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplate
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.statistics.activity.ExamStatisticsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -107,6 +116,7 @@ class ExamListingActivity : ComponentActivity() {
 
     private val examListViewModel: ExamListViewModel by viewModels()
     private val scanResultViewModel: ScanResultViewModel by viewModels()
+    private val logoutViewModel: LogoutViewModel by viewModels()
 
     companion object {
         private const val EXTRA_TEMPLATE = "template"
@@ -118,13 +128,40 @@ class ExamListingActivity : ComponentActivity() {
 
         setContent {
             LedgerScannerTheme {
-                ExamListingScreen(examListViewModel)
+                val logoutState by logoutViewModel.logoutState.collectAsState()
+
+                LaunchedEffect(logoutState) {
+                    when (logoutState) {
+                        is UiState.Success -> {
+                            startActivity(Intent(this@ExamListingActivity, LoginActivity::class.java))
+                            finish()
+                            logoutViewModel.reset()
+                        }
+
+                        is UiState.Error -> {
+                            val message = (logoutState as UiState.Error).message
+                            Toast.makeText(this@ExamListingActivity, message, Toast.LENGTH_SHORT)
+                                .show()
+                            logoutViewModel.reset()
+                        }
+
+                        else -> {}
+                    }
+                }
+
+                ExamListingScreen(
+                    viewModel = examListViewModel,
+                    onLogout = { logoutViewModel.logout() }
+                )
             }
         }
     }
 
     @Composable
-    private fun ExamListingScreen(viewModel: ExamListViewModel) {
+    private fun ExamListingScreen(
+        viewModel: ExamListViewModel,
+        onLogout: () -> Unit
+    ) {
         val context = LocalContext.current
         var showTemplatePicker by remember { mutableStateOf(false) }
         var examFilter by remember { mutableStateOf<ExamStatus?>(null) }
@@ -135,6 +172,10 @@ class ExamListingActivity : ComponentActivity() {
         val deleteState by viewModel.deleteExamState.collectAsState()
         val duplicateState by viewModel.duplicateExamState.collectAsState()
         val examStatistics by scanResultViewModel.examStatsCache.collectAsState()
+        val drawerState = androidx.compose.material3.rememberDrawerState(
+            initialValue = androidx.compose.material3.DrawerValue.Closed
+        )
+        val drawerScope = rememberCoroutineScope()
 
 
         // Handle filter changes - starts collecting from DB
@@ -182,28 +223,58 @@ class ExamListingActivity : ComponentActivity() {
             }
         }
 
-        Scaffold(
-            containerColor = White,
-            topBar = {
-                GenericToolbar(
-                    title = "Exams", actions = listOf(
-                        ToolbarAction.IconText(
-                            icon = Icons.Default.Addchart,
-                            text = "Create Exam",
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Menu",
+                            style = AppTypography.h3Bold,
+                            color = Black
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        NavigationDrawerItem(
+                            label = { Text("Logout") },
+                            selected = false,
                             onClick = {
-                                startActivity(Intent(context, CreateExamActivity::class.java))
-                            }
-                        ),
-                        ToolbarAction.IconText(
-                            icon = Icons.Default.Addchart,
-                            text = "Create Template",
-                            onClick = {
-                                startActivity(Intent(context, CreateTemplateActivity::class.java))
-                            }
+                                drawerScope.launch { drawerState.close() }
+                                onLogout()
+                            },
+                            colors = NavigationDrawerItemDefaults.colors(
+                                unselectedContainerColor = White,
+                                selectedContainerColor = Blue100
+                            )
+                        )
+                    }
+                }
+            }
+        ) {
+            Scaffold(
+                containerColor = White,
+                topBar = {
+                    GenericToolbar(
+                        title = "Exams",
+                        navigationIcon = Icons.Default.Menu,
+                        onNavigationClick = { drawerScope.launch { drawerState.open() } },
+                        actions = listOf(
+                            ToolbarAction.IconText(
+                                icon = Icons.Default.Addchart,
+                                text = "Create Exam",
+                                onClick = {
+                                    startActivity(Intent(context, CreateExamActivity::class.java))
+                                }
+                            ),
+                            ToolbarAction.IconText(
+                                icon = Icons.Default.Addchart,
+                                text = "Create Template",
+                                onClick = {
+                                    startActivity(Intent(context, CreateTemplateActivity::class.java))
+                                }
+                            )
                         )
                     )
-                )
-            },
+                },
 //            bottomBar = {
 //                BottomActionBar(
 //                    onCreateExam = {
@@ -217,7 +288,7 @@ class ExamListingActivity : ComponentActivity() {
 //                    }
 //                )
 //            }
-        ) { innerPadding ->
+            ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -272,6 +343,7 @@ class ExamListingActivity : ComponentActivity() {
                     }
                 )
             }
+        }
         }
 
         if (showTemplatePicker) {
