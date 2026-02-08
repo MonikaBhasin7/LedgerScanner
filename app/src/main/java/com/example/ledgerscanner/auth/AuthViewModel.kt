@@ -7,7 +7,6 @@ import com.example.ledgerscanner.base.network.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -32,12 +31,14 @@ class AuthViewModel @Inject constructor(
     }
 
     fun onPhoneChange(value: String) {
-        val updated = currentData().copy(phoneNumber = value, errorMessage = null)
+        val digitsOnly = value.filter { it.isDigit() }.take(10)
+        val updated = currentData().copy(phoneNumber = digitsOnly, errorMessage = null)
         _uiState.value = UiState.Success(updated)
     }
 
     fun onOtpChange(value: String) {
-        val updated = currentData().copy(otp = value, errorMessage = null)
+        val digitsOnly = value.filter { it.isDigit() }.take(6)
+        val updated = currentData().copy(otp = digitsOnly, errorMessage = null)
         _uiState.value = UiState.Success(updated)
     }
 
@@ -45,7 +46,11 @@ class AuthViewModel @Inject constructor(
         val data = currentData()
         val phone = data.phoneNumber.trim()
         if (phone.isBlank()) {
-            _uiState.value = UiState.Error(message = "Phone number is required", data = data)
+            _uiState.value = UiState.Error(message = "Please enter your phone number", data = data)
+            return
+        }
+        if (phone.length != 10) {
+            _uiState.value = UiState.Error(message = "Phone number must be 10 digits", data = data)
             return
         }
         viewModelScope.launch {
@@ -55,7 +60,8 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = UiState.Success(data.copy(otpSent = true, errorMessage = null))
                 }
                 is OperationResult.Error -> {
-                    _uiState.value = UiState.Error(message = result.message, data = data)
+                    val message = result.message.ifBlank { "Failed to send OTP. Try again." }
+                    _uiState.value = UiState.Error(message = message, data = data)
                 }
             }
         }
@@ -65,8 +71,16 @@ class AuthViewModel @Inject constructor(
         val data = currentData()
         val phone = data.phoneNumber.trim()
         val otp = data.otp.trim()
-        if (phone.isBlank() || otp.isBlank()) {
-            _uiState.value = UiState.Error(message = "Phone and OTP are required", data = data)
+        if (phone.isBlank()) {
+            _uiState.value = UiState.Error(message = "Please enter your phone number", data = data)
+            return
+        }
+        if (phone.length != 10) {
+            _uiState.value = UiState.Error(message = "Phone number must be 10 digits", data = data)
+            return
+        }
+        if (otp.length != 6) {
+            _uiState.value = UiState.Error(message = "OTP must be 6 digits", data = data)
             return
         }
         viewModelScope.launch {
@@ -77,7 +91,8 @@ class AuthViewModel @Inject constructor(
                     _loginSuccess.value = true
                 }
                 is OperationResult.Error -> {
-                    _uiState.value = UiState.Error(message = result.message, data = data)
+                    val message = result.message.ifBlank { "Invalid OTP. Please try again." }
+                    _uiState.value = UiState.Error(message = message, data = data)
                 }
             }
         }

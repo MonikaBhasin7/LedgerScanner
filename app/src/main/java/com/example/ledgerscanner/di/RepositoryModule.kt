@@ -9,6 +9,7 @@ import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import com.example.ledgerscanner.feature.scanner.exam.repo.TemplateSelectionRepository
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import com.example.ledgerscanner.network.AuthApi
+import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,7 +53,8 @@ object RepositoryModule {
     @Singleton
     fun provideAuthRepository(
         authApi: AuthApi,
-        tokenStore: TokenStore
+        tokenStore: TokenStore,
+        gson: Gson
     ): AuthRepository =
-        AuthRepository(authApi, tokenStore)
+        AuthRepository(authApi, tokenStore, gson)
 }
