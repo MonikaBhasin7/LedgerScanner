@@ -1,5 +1,12 @@
 package com.example.ledgerscanner.auth.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +38,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.auth.AuthViewModel
 import com.example.ledgerscanner.auth.LoginUiState
@@ -111,6 +120,7 @@ fun LoginScreen(
                 Column(
                     modifier = Modifier
                         .padding(20.dp)
+                        .animateContentSize(animationSpec = tween(220))
                 ) {
                     Text(
                         text = if (data.otpSent) "Verify OTP" else "Login",
@@ -141,6 +151,10 @@ fun LoginScreen(
                                 tint = Grey600
                             )
                         },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next
+                        ),
                         supportingText = {
                             Text(
                                 text = "$phoneCount/10 digits",
@@ -149,36 +163,62 @@ fun LoginScreen(
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isLoading
+                        enabled = true
                     )
 
-                    if (data.otpSent) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        GenericTextField(
-                            value = data.otp,
-                            onValueChange = viewModel::onOtpChange,
-                            label = "OTP",
-                            placeholder = "123456",
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Lock,
-                                    contentDescription = null,
-                                    tint = Grey600
-                                )
-                            },
-                            supportingText = {
-                                Text(
-                                    text = "$otpCount/6 digits",
-                                    style = AppTypography.body4Medium,
-                                    color = if (otpCount == 6) Color(0xFF2E7D32) else Grey600
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isLoading
+                    AnimatedVisibility(
+                        visible = data.otpSent,
+                        enter = fadeIn(animationSpec = tween(180)) + slideInVertically(
+                            animationSpec = tween(180),
+                            initialOffsetY = { it / 4 }
+                        ),
+                        exit = fadeOut(animationSpec = tween(140)) + slideOutVertically(
+                            animationSpec = tween(140),
+                            targetOffsetY = { it / 4 }
                         )
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            GenericTextField(
+                                value = data.otp,
+                                onValueChange = viewModel::onOtpChange,
+                                label = "OTP",
+                                placeholder = "123456",
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Lock,
+                                        contentDescription = null,
+                                        tint = Grey600
+                                    )
+                                },
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = ImeAction.Done
+                                ),
+                                supportingText = {
+                                    Text(
+                                        text = "$otpCount/6 digits",
+                                        style = AppTypography.body4Medium,
+                                        color = if (otpCount == 6) Color(0xFF2E7D32) else Grey600
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = true
+                            )
+                        }
                     }
 
-                    if (!errorMessage.isNullOrBlank()) {
+                    AnimatedVisibility(
+                        visible = !errorMessage.isNullOrBlank(),
+                        enter = fadeIn(animationSpec = tween(160)) + slideInVertically(
+                            animationSpec = tween(160),
+                            initialOffsetY = { it / 6 }
+                        ),
+                        exit = fadeOut(animationSpec = tween(120)) + slideOutVertically(
+                            animationSpec = tween(120),
+                            targetOffsetY = { it / 6 }
+                        )
+                    ) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -197,7 +237,7 @@ fun LoginScreen(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = errorMessage,
+                                    text = errorMessage ?: "",
                                     style = AppTypography.body3Regular,
                                     color = Color(0xFFD32F2F)
                                 )
@@ -209,27 +249,27 @@ fun LoginScreen(
 
                     if (!data.otpSent) {
                         GenericButton(
-                            text = if (isLoading) "Sending OTP..." else "Send OTP",
-                            onClick = { viewModel.requestOtp() },
+                            text = "Send OTP",
+                            onClick = { if (!isLoading) viewModel.requestOtp() },
                             modifier = Modifier.fillMaxWidth(),
                             type = ButtonType.PRIMARY,
-                            enabled = !isLoading && isPhoneValid
+                            enabled = isPhoneValid
                         )
                     } else {
                         GenericButton(
-                            text = if (isLoading) "Verifying..." else "Verify OTP",
-                            onClick = { viewModel.verifyOtp() },
+                            text = "Verify OTP",
+                            onClick = { if (!isLoading) viewModel.verifyOtp() },
                             modifier = Modifier.fillMaxWidth(),
                             type = ButtonType.PRIMARY,
-                            enabled = !isLoading && isOtpValid
+                            enabled = isOtpValid
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         GenericButton(
                             text = "Resend OTP",
-                            onClick = { viewModel.requestOtp() },
+                            onClick = { if (!isLoading) viewModel.requestOtp() },
                             modifier = Modifier.fillMaxWidth(),
                             type = ButtonType.SECONDARY,
-                            enabled = !isLoading
+                            enabled = true
                         )
                     }
 
