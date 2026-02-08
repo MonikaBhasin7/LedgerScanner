@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.network
 
 import com.example.ledgerscanner.BuildConfig
+import com.example.ledgerscanner.auth.AuthState
 import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.network.model.RefreshRequest
 import com.google.gson.Gson
@@ -25,14 +26,23 @@ class TokenAuthenticator @Inject constructor(
     override fun authenticate(route: Route?, response: Response): Request? {
         if (responseCount(response) >= 2) return null
 
-        val refreshToken = tokenStore.getRefreshToken() ?: return null
+        val refreshToken = tokenStore.getRefreshToken()
+        if (refreshToken.isNullOrBlank()) {
+            tokenStore.clear()
+            AuthState.notifyLoggedOut()
+            return null
+        }
 
         if (!isRefreshing.compareAndSet(false, true)) {
             return null
         }
 
         return try {
-            val newTokens = refreshSync(refreshToken) ?: return null
+            val newTokens = refreshSync(refreshToken) ?: run {
+                tokenStore.clear()
+                AuthState.notifyLoggedOut()
+                return null
+            }
             tokenStore.saveTokens(newTokens.first, newTokens.second)
 
             response.request.newBuilder()

@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.auth.LogoutViewModel
+import com.example.ledgerscanner.auth.AuthState
 import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.auth.ui.LoginActivity
 import com.example.ledgerscanner.base.network.OperationResult
@@ -140,7 +141,16 @@ class ExamListingActivity : ComponentActivity() {
 
         setContent {
             LedgerScannerTheme {
+                val globalLoggedOut by AuthState.loggedOut.collectAsState()
                 val logoutState by logoutViewModel.logoutState.collectAsState()
+
+                LaunchedEffect(globalLoggedOut) {
+                    if (globalLoggedOut) {
+                        AuthState.reset()
+                        startActivity(Intent(this@ExamListingActivity, LoginActivity::class.java))
+                        finish()
+                    }
+                }
 
                 LaunchedEffect(logoutState) {
                     when (logoutState) {

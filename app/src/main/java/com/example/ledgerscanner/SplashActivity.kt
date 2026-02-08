@@ -4,10 +4,13 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
+import com.example.ledgerscanner.auth.AuthState
 import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.auth.ui.LoginActivity
 import com.example.ledgerscanner.feature.scanner.exam.ui.activity.ExamListingActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -24,6 +27,16 @@ class SplashActivity : AppCompatActivity() {
 
         splashScreen.setKeepOnScreenCondition {
             openTheScreen
+        }
+
+        lifecycleScope.launch {
+            AuthState.loggedOut.collect { loggedOut ->
+                if (loggedOut) {
+                    AuthState.reset()
+                    startActivity(Intent(this@SplashActivity, LoginActivity::class.java))
+                    finish()
+                }
+            }
         }
 
         openTheScreen = false
