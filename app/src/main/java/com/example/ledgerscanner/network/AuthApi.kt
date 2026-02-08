@@ -17,4 +17,7 @@ interface AuthApi {
 
     @POST("auth/refresh")
     suspend fun refresh(@Body request: RefreshRequest): TokenResponse
+
+    @POST("auth/logout")
+    suspend fun logout(@Body request: RefreshRequest)
 }

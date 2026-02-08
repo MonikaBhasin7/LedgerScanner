@@ -43,5 +43,19 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun logout(): OperationResult<Unit> {
+        val refreshToken = tokenStore.getRefreshToken()
+        return try {
+            if (!refreshToken.isNullOrBlank()) {
+                authApi.logout(RefreshRequest(refreshToken))
+            }
+            tokenStore.clear()
+            OperationResult.Success(Unit)
+        } catch (t: Throwable) {
+            tokenStore.clear()
+            OperationResult.Error(message = t.message ?: "Logout failed", throwable = t)
+        }
+    }
+
     fun isLoggedIn(): Boolean = !tokenStore.getAccessToken().isNullOrBlank()
 }

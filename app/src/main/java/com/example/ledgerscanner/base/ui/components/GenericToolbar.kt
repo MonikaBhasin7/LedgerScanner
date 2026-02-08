@@ -62,6 +62,8 @@ sealed class ToolbarAction {
 fun GenericToolbar(
     title: String,
     onBackClick: (() -> Unit)? = null,
+    navigationIcon: ImageVector? = null,
+    onNavigationClick: (() -> Unit)? = null,
     actions: List<ToolbarAction> = emptyList()
 ) {
     Column {
@@ -81,20 +83,39 @@ fun GenericToolbar(
                 containerColor = Grey100,
             ),
             navigationIcon = {
-                onBackClick?.let {
-                    Box(
-                        modifier = Modifier
-                            .genericClick { onBackClick() }
-                            .padding(start = 8.dp, end = 10.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(color = Blue100)
-                            .padding(8.dp),
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Sharp.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Blue500
-                        )
+                when {
+                    navigationIcon != null && onNavigationClick != null -> {
+                        Box(
+                            modifier = Modifier
+                                .genericClick { onNavigationClick() }
+                                .padding(start = 8.dp, end = 10.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(color = Blue100)
+                                .padding(8.dp),
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = navigationIcon,
+                                contentDescription = null,
+                                tint = Blue500
+                            )
+                        }
+                    }
+
+                    onBackClick != null -> {
+                        Box(
+                            modifier = Modifier
+                                .genericClick { onBackClick() }
+                                .padding(start = 8.dp, end = 10.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(color = Blue100)
+                                .padding(8.dp),
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Sharp.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Blue500
+                            )
+                        }
                     }
                 }
             },
