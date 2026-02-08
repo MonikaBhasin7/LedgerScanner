@@ -29,6 +29,7 @@ class AuthRepository @Inject constructor(
         return try {
             val response = authApi.verifyOtp(OtpVerifyRequest(phoneNumber, otp))
             tokenStore.saveTokens(response.accessToken, response.refreshToken)
+            tokenStore.saveMember(response.member)
             OperationResult.Success(response)
         } catch (t: Throwable) {
             OperationResult.Error(message = parseErrorMessage(t) ?: "OTP verify failed", throwable = t)
