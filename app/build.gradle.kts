@@ -29,9 +29,11 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "false")
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
         }
         debug {
             buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "true")
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
         }
     }
     compileOptions {
@@ -105,4 +107,11 @@ dependencies {
 
     // Hilt for Jetpack Compose navigation
     implementation(libs.androidx.hilt.navigation.compose.v120)
+
+    // Network
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
 }

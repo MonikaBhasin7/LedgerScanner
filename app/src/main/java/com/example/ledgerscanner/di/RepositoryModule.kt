@@ -1,11 +1,14 @@
 package com.example.ledgerscanner.di
 
 import android.content.Context
+import com.example.ledgerscanner.auth.AuthRepository
+import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.dao.ScanResultDao
 import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import com.example.ledgerscanner.feature.scanner.exam.repo.TemplateSelectionRepository
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
+import com.example.ledgerscanner.network.AuthApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,4 +47,12 @@ object RepositoryModule {
         @ApplicationContext context: Context
     ): TemplateSelectionRepository =
         TemplateSelectionRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        authApi: AuthApi,
+        tokenStore: TokenStore
+    ): AuthRepository =
+        AuthRepository(authApi, tokenStore)
 }

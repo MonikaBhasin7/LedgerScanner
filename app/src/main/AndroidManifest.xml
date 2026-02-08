@@ -10,8 +10,11 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".App"
+        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -33,6 +36,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".auth.ui.LoginActivity"
+            android:theme="@style/Theme.LedgerScanner" />
         <activity
             android:name=".feature.scanner.exam.ui.activity.ExamListingActivity"
             android:theme="@style/Theme.LedgerScanner" />
