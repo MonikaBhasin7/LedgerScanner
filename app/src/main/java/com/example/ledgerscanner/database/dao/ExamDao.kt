@@ -14,7 +14,7 @@ interface ExamDao {
     fun getAllExamsFlow(): Flow<List<ExamEntity>>
 
     @Query("SELECT * FROM exams WHERE id = :id LIMIT 1")
-    suspend fun getExamById(id: String): ExamEntity?
+    suspend fun getExamById(id: Int): ExamEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExam(exam: ExamEntity): Long

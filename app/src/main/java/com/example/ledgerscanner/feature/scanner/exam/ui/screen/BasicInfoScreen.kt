@@ -82,7 +82,6 @@ fun BasicInfoScreen(
     val enabled by remember {
         derivedStateOf {
             examName.isNotBlank()
-                    && examDescription.isNotBlank()
                     && selectedTemplate != null
                     && numberOfQuestions != null
                     && numberOfQuestions!! > 0
@@ -96,14 +95,15 @@ fun BasicInfoScreen(
                 enabled = enabled,
                 onNext = {
                     if (autofill && examEntity != null) {
+                        val desc = examDescription.ifBlank { null }
                         if (examEntity?.examName != examName
-                            || examEntity?.description != examDescription
+                            || examEntity?.description != desc
                             || examEntity?.template != selectedTemplate
                             || examEntity?.totalQuestions != numberOfQuestions
                         ) {
                             createExamViewModel.saveBasicInfo(
                                 examName = examName,
-                                description = examDescription,
+                                description = desc,
                                 template = selectedTemplate!!,
                                 numberOfQuestions = numberOfQuestions!!,
                             )
@@ -113,7 +113,7 @@ fun BasicInfoScreen(
                     } else {
                         createExamViewModel.saveBasicInfo(
                             examName = examName,
-                            description = examDescription,
+                            description = examDescription.ifBlank { null },
                             template = selectedTemplate!!,
                             numberOfQuestions = numberOfQuestions!!,
                         )
@@ -180,14 +180,19 @@ fun BasicInfoScreen(
                 onValueChange = { input ->
                     val totalQues = selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
 
-                    // Allow only digits
-                    val filtered = input.filter { it.isDigit() }
+                    // Allow only digits, strip leading zeros
+                    val filtered = input.filter { it.isDigit() }.trimStart('0')
+
+                    if (filtered.isEmpty()) {
+                        numberOfQuestionsText = ""
+                        return@GenericTextField
+                    }
 
                     // Parse number safely
-                    val enteredValue = filtered.toIntOrNull() ?: 0
+                    val enteredValue = filtered.toIntOrNull() ?: return@GenericTextField
 
                     // Validate against total questions
-                    if (enteredValue <= totalQues) {
+                    if (enteredValue in 1..totalQues) {
                         numberOfQuestionsText = filtered
                     }
                 },

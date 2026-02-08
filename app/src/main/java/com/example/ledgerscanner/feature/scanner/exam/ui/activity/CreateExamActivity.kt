@@ -4,6 +4,7 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -13,7 +14,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -73,6 +77,34 @@ class CreateExamActivity : ComponentActivity() {
             val navController = rememberNavController()
             val perStepState by createExamViewModel.perStepState.collectAsState()
             var bottomBarConfig by remember { mutableStateOf(BottomBarConfig()) }
+            var showExitDialog by remember { mutableStateOf(false) }
+
+            BackHandler {
+                if (perStepState.first != ExamStep.BASIC_INFO) {
+                    val prevStep = perStepState.first.prev()
+                    createExamViewModel.updateStepState(prevStep, OperationState.Idle)
+                    navController.popBackStack()
+                } else {
+                    showExitDialog = true
+                }
+            }
+
+            if (showExitDialog) {
+                AlertDialog(
+                    onDismissRequest = { showExitDialog = false },
+                    title = { Text("Discard changes?") },
+                    text = { Text("You have unsaved progress. Are you sure you want to exit?") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showExitDialog = false
+                            finish()
+                        }) { Text("Discard") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showExitDialog = false }) { Text("Cancel") }
+                    }
+                )
+            }
 
             LaunchedEffect(perStepState) {
                 when (val state = perStepState.second) {
@@ -88,18 +120,29 @@ class CreateExamActivity : ComponentActivity() {
                     }
 
                     OperationState.Success -> {
-                        if (perStepState.first == ExamStep.REVIEW) {
+                        val currentStep = perStepState.first
+                        if (currentStep == ExamStep.REVIEW) {
                             finish()
                             return@LaunchedEffect
                         }
-                        navController.navigate(perStepState.first.next().title)
+                        val nextStep = currentStep.next()
+                        createExamViewModel.updateStepState(nextStep, OperationState.Idle)
+                        navController.navigate(nextStep.title)
                     }
                 }
             }
 
             LedgerScannerTheme {
                 Scaffold(topBar = {
-                    GenericToolbar(title = getToolbarTitle(), onBackClick = { finish() })
+                    GenericToolbar(title = getToolbarTitle(), onBackClick = {
+                        if (perStepState.first != ExamStep.BASIC_INFO) {
+                            val prevStep = perStepState.first.prev()
+                            createExamViewModel.updateStepState(prevStep, OperationState.Idle)
+                            navController.popBackStack()
+                        } else {
+                            showExitDialog = true
+                        }
+                    })
                 }, bottomBar = {
                     SaveAndNextBarWidget(
                         enabled = bottomBarConfig.enabled,
@@ -119,7 +162,18 @@ class CreateExamActivity : ComponentActivity() {
                             StepListWidget(
                                 steps = ExamStep.entries,
                                 currentStep = perStepState.first,
-                                onStepSelected = {}
+                                onStepSelected = { index ->
+                                    val targetStep = ExamStep.entries[index]
+                                    if (targetStep.ordinal < perStepState.first.ordinal) {
+                                        createExamViewModel.updateStepState(
+                                            targetStep,
+                                            OperationState.Idle
+                                        )
+                                        navController.navigate(targetStep.title) {
+                                            popUpTo(targetStep.title) { inclusive = true }
+                                        }
+                                    }
+                                }
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))

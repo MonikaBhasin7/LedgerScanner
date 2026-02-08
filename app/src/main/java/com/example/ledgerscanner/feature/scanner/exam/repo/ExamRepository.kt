@@ -12,7 +12,7 @@ import javax.inject.Inject
 class ExamRepository @Inject constructor(private val dao: ExamDao) {
     fun getAllExams(): Flow<List<ExamEntity>> = dao.getAllExamsFlow()
 
-    suspend fun getExam(id: String): ExamEntity? = dao.getExamById(id)
+    suspend fun getExam(id: Int): ExamEntity? = dao.getExamById(id)
 
     suspend fun getExamByStatus(status: ExamStatus?): Flow<List<ExamEntity>> =
         dao.getExamByStatus(status)
@@ -27,7 +27,19 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         description: String?,
         template: Template,
         numberOfQuestions: Int,
+        existingExam: ExamEntity? = null,
     ): ExamEntity {
+        if (existingExam != null) {
+            val updated = existingExam.copy(
+                examName = examName,
+                description = description,
+                template = template,
+                totalQuestions = numberOfQuestions,
+            )
+            dao.insertExam(updated)
+            return updated
+        }
+
         val now = System.currentTimeMillis()
         val exam = ExamEntity(
             id = 0,
@@ -40,8 +52,7 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         )
 
         val rowId: Long = dao.insertExam(exam)
-        val newId = if (rowId >= 0L) rowId.toInt() else 0
-        return exam.copy(id = newId)
+        return exam.copy(id = rowId.toInt())
     }
 
     suspend fun saveAnswerKey(

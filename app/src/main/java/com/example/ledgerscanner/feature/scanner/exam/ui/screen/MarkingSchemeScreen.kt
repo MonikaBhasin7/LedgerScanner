@@ -88,8 +88,12 @@ fun MarkingDefaultsScreen(
             BottomBarConfig(
                 enabled = isValid,
                 onNext = {
-                    if (examEntity?.marksPerWrong.toString() != marksPerWrong
-                        || examEntity?.marksPerCorrect.toString() != marksPerCorrect
+                    val currentCorrect = marksPerCorrect.toFloatOrNull()
+                    val currentWrong = marksPerWrong.toFloatOrNull()
+                    val savedWrong = if (negativeMarking) examEntity?.marksPerWrong else 0f
+
+                    if (currentCorrect != examEntity?.marksPerCorrect
+                        || currentWrong != savedWrong
                     ) {
                         createExamViewModel.saveMarkingScheme(
                             marksPerCorrect,
@@ -120,9 +124,12 @@ fun MarkingDefaultsScreen(
                 GenericTextField(
                     value = marksPerCorrect,
                     onValueChange = {
-                        // Allow only numbers and decimal point
+                        // Allow only numbers and decimal point, max 100
                         if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            marksPerCorrect = it
+                            val value = it.toFloatOrNull()
+                            if (value == null || value <= 100f) {
+                                marksPerCorrect = it
+                            }
                         }
                     },
                     placeholder = "1",
@@ -138,7 +145,9 @@ fun MarkingDefaultsScreen(
                                 .border(1.dp, Grey300, CircleShape)
                                 .genericClick {
                                     val current = marksPerCorrect.toFloatOrNull() ?: 1f
-                                    marksPerCorrect = (current + 1f).toString()
+                                    if (current < 100f) {
+                                        marksPerCorrect = (current + 1f).toString()
+                                    }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -166,9 +175,12 @@ fun MarkingDefaultsScreen(
                 GenericTextField(
                     value = marksPerWrong,
                     onValueChange = {
-                        // Allow only positive numbers and decimal point
+                        // Allow only positive numbers and decimal point, max 100
                         if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            marksPerWrong = it
+                            val value = it.toFloatOrNull()
+                            if (value == null || value <= 100f) {
+                                marksPerWrong = it
+                            }
                         }
                     },
                     placeholder = "0.25",
@@ -187,14 +199,16 @@ fun MarkingDefaultsScreen(
                                     .genericClick {
                                         if (negativeMarking) {
                                             val current = marksPerWrong.toFloatOrNull() ?: 0.25f
-                                            marksPerWrong = (current + 0.25f).toString()
+                                            if (current < 100f) {
+                                                marksPerWrong = (current + 0.25f).toString()
+                                            }
                                         }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Remove,
-                                    contentDescription = "Decrement",
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Increment",
                                     tint = Grey600,
                                     modifier = Modifier.size(16.dp)
                                 )

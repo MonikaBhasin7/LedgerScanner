@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue500
+import com.example.ledgerscanner.base.ui.theme.Green500
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.utils.ui.genericClick
@@ -42,14 +43,15 @@ fun StepListWidget(
             StepItem(
                 label = label.title,
                 isActive = currentStep.title == label.title,
-                onClick = { }
+                isPast = label.ordinal < currentStep.ordinal,
+                onClick = { onStepSelected(index) }
             )
         }
     }
 }
 
 @Composable
-private fun StepItem(label: String, isActive: Boolean, onClick: () -> Unit) {
+private fun StepItem(label: String, isActive: Boolean, isPast: Boolean = false, onClick: () -> Unit) {
     Box(
         modifier = Modifier.Companion
             .genericClick { onClick() }
@@ -60,7 +62,7 @@ private fun StepItem(label: String, isActive: Boolean, onClick: () -> Unit) {
                 modifier = Modifier.Companion
                     .size(10.dp)
                     .clip(CircleShape)
-                    .background(if (isActive) Blue500 else Grey200)
+                    .background(if (isActive) Blue500 else if (isPast) Green500 else Grey200)
             )
 
             Spacer(modifier = Modifier.Companion.width(8.dp))

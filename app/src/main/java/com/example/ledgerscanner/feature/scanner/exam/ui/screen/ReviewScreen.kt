@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -48,15 +49,22 @@ fun ReviewScreen(
     modifier: Modifier = Modifier,
     viewMode: CreateExamConfig.Mode
 ) {
+    val context = LocalContext.current
     val examEntity by createExamViewModel.examEntity.collectAsState()
+
+    val isViewMode = viewMode == CreateExamConfig.Mode.VIEW
 
     LaunchedEffect(Unit) {
         updateBottomBar(
             BottomBarConfig(
                 enabled = true,
-                buttonText = "Save & Publish",
+                buttonText = if (isViewMode) "Close" else "Save & Publish",
                 onNext = {
-                    createExamViewModel.finalizeExam()
+                    if (isViewMode) {
+                        (context as? android.app.Activity)?.finish()
+                    } else {
+                        createExamViewModel.finalizeExam()
+                    }
                 }
             )
         )

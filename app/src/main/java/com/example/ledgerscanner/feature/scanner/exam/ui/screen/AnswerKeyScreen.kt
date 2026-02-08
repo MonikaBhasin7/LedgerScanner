@@ -72,8 +72,8 @@ fun AnswerKeyScreen(
         examEntity?.answerKey?.let { ak ->
             if (ak.isNotEmpty()) {
                 ak.forEach { (key, value) ->
-                    if (key > 0 && key <= answerKeys.size) {
-                        answerKeys[key - 1] = value
+                    if (key in answerKeys.indices) {
+                        answerKeys[key] = value
                     }
                 }
             }
@@ -95,15 +95,16 @@ fun AnswerKeyScreen(
                 onNext = {
                     if (isViewMode) {
                         navController.navigateFromActivity(context)
+                        return@BottomBarConfig
                     }
 
                     val hasChanges = answerKeys.indices.any { index ->
-                        answerKeys[index] != examEntity?.answerKey?.get(index + 1)
+                        answerKeys[index] != examEntity?.answerKey?.get(index)
                     }
 
                     if (hasChanges) {
                         createExamViewModel.saveAnswerKey(
-                            answerKeys = answerKeys.toList() as List<Int>,
+                            answerKeys = answerKeys.filterNotNull(),
                             saveInDb = false
                         )
                     } else {

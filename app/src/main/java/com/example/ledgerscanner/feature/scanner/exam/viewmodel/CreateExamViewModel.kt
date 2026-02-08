@@ -59,6 +59,7 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
                         description,
                         template,
                         numberOfQuestions,
+                        existingExam = _examEntity.value,
                     )
                 changeOperationState(OperationState.Success)
             } catch (e: Exception) {
@@ -124,6 +125,21 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
 
                 val exam = _examEntity.value
                     ?: throw IllegalStateException("Exam entity not found")
+
+                val answerKeySize = exam.answerKey?.size ?: 0
+                if (answerKeySize < exam.totalQuestions) {
+                    changeOperationState(
+                        OperationState.Error(
+                            "Answer key incomplete: $answerKeySize of ${exam.totalQuestions} questions configured"
+                        )
+                    )
+                    return@launch
+                }
+
+                if (exam.marksPerCorrect == null || exam.marksPerCorrect <= 0f) {
+                    changeOperationState(OperationState.Error("Marks per correct answer must be set"))
+                    return@launch
+                }
 
                 val finalizedExam = exam.copy(status = ExamStatus.ACTIVE)
                 repository.saveExam(finalizedExam)
