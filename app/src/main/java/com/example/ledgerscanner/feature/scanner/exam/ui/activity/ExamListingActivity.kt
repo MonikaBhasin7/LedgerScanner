@@ -34,7 +34,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Addchart
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ListAlt
+import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -58,10 +63,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.auth.LogoutViewModel
+import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.auth.ui.LoginActivity
 import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.network.UiState
@@ -93,6 +100,7 @@ import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionDialog
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionPopupConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.exam.model.DrawerItem
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.QuickActionButton
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionConfirmationDialog
@@ -110,6 +118,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ExamListingActivity : ComponentActivity() {
@@ -117,6 +126,9 @@ class ExamListingActivity : ComponentActivity() {
     private val examListViewModel: ExamListViewModel by viewModels()
     private val scanResultViewModel: ScanResultViewModel by viewModels()
     private val logoutViewModel: LogoutViewModel by viewModels()
+
+    @Inject
+    lateinit var tokenStore: TokenStore
 
     companion object {
         private const val EXTRA_TEMPLATE = "template"
@@ -133,7 +145,12 @@ class ExamListingActivity : ComponentActivity() {
                 LaunchedEffect(logoutState) {
                     when (logoutState) {
                         is UiState.Success -> {
-                            startActivity(Intent(this@ExamListingActivity, LoginActivity::class.java))
+                            startActivity(
+                                Intent(
+                                    this@ExamListingActivity,
+                                    LoginActivity::class.java
+                                )
+                            )
                             finish()
                             logoutViewModel.reset()
                         }
@@ -151,7 +168,9 @@ class ExamListingActivity : ComponentActivity() {
 
                 ExamListingScreen(
                     viewModel = examListViewModel,
-                    onLogout = { logoutViewModel.logout() }
+                    onLogout = { logoutViewModel.logout() },
+                    memberName = tokenStore.getMemberName(),
+                    memberPhone = tokenStore.getMemberPhone()
                 )
             }
         }
@@ -160,7 +179,9 @@ class ExamListingActivity : ComponentActivity() {
     @Composable
     private fun ExamListingScreen(
         viewModel: ExamListViewModel,
-        onLogout: () -> Unit
+        onLogout: () -> Unit,
+        memberName: String?,
+        memberPhone: String?
     ) {
         val context = LocalContext.current
         var showTemplatePicker by remember { mutableStateOf(false) }
@@ -172,6 +193,7 @@ class ExamListingActivity : ComponentActivity() {
         val deleteState by viewModel.deleteExamState.collectAsState()
         val duplicateState by viewModel.duplicateExamState.collectAsState()
         val examStatistics by scanResultViewModel.examStatsCache.collectAsState()
+        var showLogoutDialog by remember { mutableStateOf(false) }
         val drawerState = androidx.compose.material3.rememberDrawerState(
             initialValue = androidx.compose.material3.DrawerValue.Closed
         )
@@ -227,25 +249,127 @@ class ExamListingActivity : ComponentActivity() {
             drawerState = drawerState,
             drawerContent = {
                 ModalDrawerSheet {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Menu",
-                            style = AppTypography.h3Bold,
-                            color = Black
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        NavigationDrawerItem(
-                            label = { Text("Logout") },
-                            selected = false,
-                            onClick = {
-                                drawerScope.launch { drawerState.close() }
-                                onLogout()
-                            },
-                            colors = NavigationDrawerItemDefaults.colors(
-                                unselectedContainerColor = White,
-                                selectedContainerColor = Blue100
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Header strip
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Blue500)
+                                .padding(horizontal = 16.dp, vertical = 18.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(White),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = (memberName ?: "U").take(1).uppercase(),
+                                        style = AppTypography.h4Bold,
+                                        color = Blue500
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = memberName ?: "User",
+                                        style = AppTypography.h4Bold,
+                                        color = White
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = memberPhone ?: "",
+                                        style = AppTypography.body4Medium,
+                                        color = White
+                                    )
+                                }
+                            }
+                        }
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Quick Actions",
+                                style = AppTypography.label2SemiBold,
+                                color = Grey600
                             )
-                        )
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            val items = listOf(
+                                DrawerItem("Exams", Icons.Outlined.ListAlt) {
+                                    drawerScope.launch { drawerState.close() }
+                                },
+                                DrawerItem("Create Exam", Icons.Outlined.PostAdd) {
+                                    drawerScope.launch { drawerState.close() }
+                                    context.startActivity(
+                                        Intent(
+                                            context,
+                                            CreateExamActivity::class.java
+                                        )
+                                    )
+                                },
+                                DrawerItem("Create Template", Icons.Outlined.Description) {
+                                    drawerScope.launch { drawerState.close() }
+                                    context.startActivity(
+                                        Intent(
+                                            context,
+                                            CreateTemplateActivity::class.java
+                                        )
+                                    )
+                                },
+                            )
+
+                            items.forEach { item ->
+                                NavigationDrawerItem(
+                                    label = { Text(item.label, style = AppTypography.body2Medium) },
+                                    selected = false,
+                                    icon = {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = null,
+                                            tint = Blue500
+                                        )
+                                    },
+                                    onClick = item.onClick,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = NavigationDrawerItemDefaults.colors(
+                                        unselectedContainerColor = Color.Transparent,
+                                        selectedContainerColor = Blue100,
+                                        unselectedTextColor = Grey900,
+                                        selectedTextColor = Blue500
+                                    )
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Account",
+                                style = AppTypography.label2SemiBold,
+                                color = Grey600
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            NavigationDrawerItem(
+                                label = { Text("Logout", style = AppTypography.body2Medium) },
+                                selected = false,
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Logout,
+                                        contentDescription = null,
+                                        tint = Blue500
+                                    )
+                                },
+                                onClick = {
+                                    drawerScope.launch { drawerState.close() }
+                                showLogoutDialog = true
+                            },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = NavigationDrawerItemDefaults.colors(
+                                    unselectedContainerColor = Color.Transparent,
+                                    selectedContainerColor = Blue100
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -258,20 +382,25 @@ class ExamListingActivity : ComponentActivity() {
                         navigationIcon = Icons.Default.Menu,
                         onNavigationClick = { drawerScope.launch { drawerState.open() } },
                         actions = listOf(
-                            ToolbarAction.IconText(
-                                icon = Icons.Default.Addchart,
-                                text = "Create Exam",
-                                onClick = {
-                                    startActivity(Intent(context, CreateExamActivity::class.java))
-                                }
-                            ),
-                            ToolbarAction.IconText(
-                                icon = Icons.Default.Addchart,
-                                text = "Create Template",
-                                onClick = {
-                                    startActivity(Intent(context, CreateTemplateActivity::class.java))
-                                }
-                            )
+//                            ToolbarAction.IconText(
+//                                icon = Icons.Default.Addchart,
+//                                text = "Create Exam",
+//                                onClick = {
+//                                    startActivity(Intent(context, CreateExamActivity::class.java))
+//                                }
+//                            ),
+//                            ToolbarAction.IconText(
+//                                icon = Icons.Default.Addchart,
+//                                text = "Create Template",
+//                                onClick = {
+//                                    startActivity(
+//                                        Intent(
+//                                            context,
+//                                            CreateTemplateActivity::class.java
+//                                        )
+//                                    )
+//                                }
+//                            )
                         )
                     )
                 },
@@ -289,61 +418,74 @@ class ExamListingActivity : ComponentActivity() {
 //                )
 //            }
             ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                SearchBar(searchQuery, onSearchQueryChange = {
-                    searchQuery = it
-                })
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    SearchBar(searchQuery, onSearchQueryChange = {
+                        searchQuery = it
+                    })
 
-                val isLoading = examListResponse is UiState.Loading
-                FilterChips(
-                    disableClicking = isLoading,
-                    onSelect = { selectedFilter ->
-                        examFilter = selectedFilter
-                    }
-                )
+                    val isLoading = examListResponse is UiState.Loading
+                    FilterChips(
+                        disableClicking = isLoading,
+                        onSelect = { selectedFilter ->
+                            examFilter = selectedFilter
+                        }
+                    )
 
-                ExamList(
-                    examListResponse = examListResponse,
-                    examStatistics = examStatistics,
-                    onExamClick = { examEntity, examAction ->
-                        handleExamAction(
-                            context,
-                            examEntity,
-                            examAction,
-                            showDeleteDialog = {
-                                showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
-                            },
-                            showDuplicateDialog = {
-                                showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
-                            }
-                        )
+                    ExamList(
+                        examListResponse = examListResponse,
+                        examStatistics = examStatistics,
+                        onExamClick = { examEntity, examAction ->
+                            handleExamAction(
+                                context,
+                                examEntity,
+                                examAction,
+                                showDeleteDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
+                                },
+                                showDuplicateDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
+                                }
+                            )
+                        },
+                        onLoadStats = {
+                            scanResultViewModel.loadStatsForExam(it)
+                        },
+                        onRetry = {
+                            examListViewModel.getExamList(examFilter)
+                        },
+                        onActionClick = { examEntity, examAction ->
+                            handleExamAction(
+                                context,
+                                examEntity,
+                                examAction,
+                                showDeleteDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
+                                },
+                                showDuplicateDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+
+            if (showLogoutDialog) {
+                ExamActionConfirmationDialog(
+                    title = "Logout",
+                    message = "Are you sure you want to logout?",
+                    confirmText = "Logout",
+                    onConfirm = {
+                        showLogoutDialog = false
+                        onLogout()
                     },
-                    onLoadStats = {
-                        scanResultViewModel.loadStatsForExam(it)
-                    },
-                    onRetry = {
-                        examListViewModel.getExamList(examFilter)
-                    },
-                    onActionClick = { examEntity, examAction ->
-                        handleExamAction(
-                            context,
-                            examEntity,
-                            examAction,
-                            showDeleteDialog = {
-                                showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
-                            },
-                            showDuplicateDialog = {
-                                showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
-                            }
-                        )
-                    }
+                    onDismiss = { showLogoutDialog = false }
                 )
             }
-        }
         }
 
         if (showTemplatePicker) {
