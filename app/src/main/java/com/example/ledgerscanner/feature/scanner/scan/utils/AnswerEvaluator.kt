@@ -90,9 +90,11 @@ class AnswerEvaluator @Inject constructor() {
         }
 
         // Calculate max marks and percentage
+        // BUG FIX: Allow negative percentage when negative marking is enabled
+        // Previously clamped to 0-100, hiding true score when marks go negative
         val maxMarks = totalQuestions * marksPerCorrect
         val percentage = if (maxMarks > 0) {
-            ((marksObtained / maxMarks) * 100).coerceIn(0f, 100f)
+            ((marksObtained / maxMarks) * 100).coerceAtMost(100f)
         } else {
             0f
         }

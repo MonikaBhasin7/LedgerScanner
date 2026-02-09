@@ -29,11 +29,11 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "false")
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
+            buildConfigField("String", "BASE_URL", "\"http://192.168.1.17:8080/\"")
         }
         debug {
             buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "true")
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
+            buildConfigField("String", "BASE_URL", "\"http://192.168.1.17:8080/\"")
         }
     }
     compileOptions {
@@ -121,5 +121,11 @@ dependencies {
     // Hilt WorkManager integration
     implementation("androidx.hilt:hilt-work:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.2.0")
+
+    // ML Kit Barcode Scanning (bundled - works offline)
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // Coroutines support for Google Play Tasks (needed for ML Kit .await())
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
 }

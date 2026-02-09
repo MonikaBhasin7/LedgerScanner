@@ -312,7 +312,13 @@ class OverlayView @JvmOverloads constructor(
             drawCountdown(canvas)
         }
 
-        postInvalidateOnAnimation()
+        // BUG FIX: Only keep animating when we have detected anchors to pulse
+        // Previously this ran every frame even with no anchors, wasting CPU/battery
+        val hasActiveAnimation = (detectedAnchors != null && detectedAnchors!!.isNotEmpty()) ||
+                (isCapturing && captureCountdown > 0)
+        if (hasActiveAnimation) {
+            postInvalidateOnAnimation()
+        }
     }
 
     private fun calculateExpectedAnchorPositions() {

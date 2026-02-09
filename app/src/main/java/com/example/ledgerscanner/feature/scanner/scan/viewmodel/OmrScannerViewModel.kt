@@ -113,7 +113,16 @@ class OmrScannerViewModel @Inject constructor(
                         "Value: ${brightnessReport.brightnessCheck.value.toInt()}"
             )
 
-            // Optionally warn if quality is poor/failed (but continue processing)
+            // BUG FIX: Block processing when brightness is FAILED
+            // (prevents garbage results from extremely dark/bright images)
+            if (brightnessReport.brightnessCheck.level == QualityLevel.FAILED) {
+                onAnchorsDetected(emptyList())
+                return@withContext UiState.Error(
+                    brightnessReport.brightnessCheck.suggestion
+                        ?: ErrorMessages.IMAGE_PROCESSING_FAILED
+                )
+            }
+
             if (brightnessReport.brightnessCheck.level <= QualityLevel.POOR) {
                 Log.w(
                     TAG,
@@ -131,6 +140,12 @@ class OmrScannerViewModel @Inject constructor(
             )
 
             onAnchorsDetected(anchorDetectionResult.centers)
+
+            // BUG FIX: Require exactly 4 anchors before attempting warp
+            // (previously would pass partial anchors to getPerspectiveTransform → crash/garbage)
+            if (anchorDetectionResult.centers.size != EXPECTED_ANCHOR_COUNT) {
+                return@withContext UiState.Error(ErrorMessages.ANCHORS_NOT_DETECTED)
+            }
 
             // Step 4: Warp image
             val (warpedMat, warpedDebugBitmap) = omrProcessor.warpWithTemplateAndGetWarped(

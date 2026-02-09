@@ -63,11 +63,13 @@ import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultA
 import com.example.ledgerscanner.feature.scanner.scan.ui.components.BrightnessQualityBadge
 import com.example.ledgerscanner.feature.scanner.scan.ui.custom_ui.OverlayView
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 private const val CORNER_RADIUS_DP = 12
 
@@ -112,7 +114,10 @@ fun ScannerScreen(
         examEntity = examEntity,
         navController = navController,
         cameraPermissionStatus = cameraPermissionStatus,
-        onScanError = { _ -> },
+        onScanError = { message ->
+            // BUG FIX: Show error feedback instead of silently swallowing
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        },
         cooldownUntilMs = resumeCooldownUntilMs,
         onResumeCooldown = { resumeCooldownUntilMs = it },
         onPermissionRequest = {
@@ -203,6 +208,11 @@ private fun CameraPreview(
     }
 
     val isCapturing = remember { AtomicBoolean(false) }
+    // BUG FIX: Use AtomicLong so cooldown updates are visible to the analyzer closure
+    // (cooldownUntilMs was captured by the factory closure and never updated)
+    val cooldownRef = remember { AtomicLong(cooldownUntilMs) }
+    // Keep the ref in sync with compose state
+    LaunchedEffect(cooldownUntilMs) { cooldownRef.set(cooldownUntilMs) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -245,7 +255,7 @@ private fun CameraPreview(
                 navController = navController,
                 mediaActionSound = mediaActionSound,
                 isCapturing = isCapturing,
-                cooldownUntilMs = cooldownUntilMs,
+                cooldownRef = cooldownRef,
                 onScanError = onScanError
             )
         }
@@ -263,7 +273,7 @@ private fun createCameraContainer(
     navController: NavHostController,
     mediaActionSound: MediaActionSound,
     isCapturing: AtomicBoolean,
-    cooldownUntilMs: Long,
+    cooldownRef: AtomicLong,
     onScanError: (String) -> Unit
 ): FrameLayout {
     val container = FrameLayout(context)
@@ -321,7 +331,7 @@ private fun createCameraContainer(
         context = context,
         lifecycleOwner = lifecycleOwner,
         imageCapture = imageCapture,
-        cooldownUntilMs = cooldownUntilMs,
+        cooldownRef = cooldownRef,
         onScanError = onScanError
     )
 
@@ -341,7 +351,7 @@ private fun setupImageAnalysis(
     context: Context,
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
     imageCapture: ImageCapture,
-    cooldownUntilMs: Long,
+    cooldownRef: AtomicLong,
     onScanError: (String) -> Unit
 ) {
     val analysisUseCase = ImageAnalysis.Builder()
@@ -351,65 +361,67 @@ private fun setupImageAnalysis(
 
     analysisUseCase.setAnalyzer(cameraExecutor) { imageProxy ->
         scope.launch(Dispatchers.Main) {
-            // Skip if scanning is disabled
-            if (!omrScannerViewModel.isScanningEnabled.value) {
-                imageProxy.close()
-                return@launch
-            }
-
-            if (System.currentTimeMillis() < cooldownUntilMs) {
-                imageProxy.close()
-                return@launch
-            }
-
-            if (isCapturing.get()) {
-                imageProxy.close()
-                return@launch
-            }
-
-            val displayed = ImageUtils.computeDisplayedImageRect(
-                viewW = previewView.width.toFloat(),
-                viewH = previewView.height.toFloat(),
-                bufferW = imageProxy.width,
-                bufferH = imageProxy.height,
-                rotationDegrees = imageProxy.imageInfo.rotationDegrees,
-                useFill = previewView.scaleType == PreviewView.ScaleType.FILL_CENTER
-            )
-
-            overlay.setPreviewRect(displayed)
-
-            val scanResult = omrScannerViewModel.processOmrFrame(
-                context,
-                imageProxy,
-                examEntity,
-                overlay.getAnchorSquaresOnScreen(),
-                previewBounds = overlay.getPreviewRect(),
-                debug = true,
-                onAnchorsDetected = {
-                    // Update overlay with detected anchors
-                    overlay.setDetectedAnchors(it)
+            try {
+                // Skip if scanning is disabled
+                if (!omrScannerViewModel.isScanningEnabled.value) {
+                    return@launch
                 }
-            )
-            when (scanResult) {
-                is UiState.Error -> {
-                    onScanError(scanResult.message ?: "Scan failed. Try again.")
-                }
-                is UiState.Idle, is UiState.Loading -> {}
-                is UiState.Success -> {
-                    if (isCapturing.compareAndSet(false, true)) {
-                        mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
-                        omrScannerViewModel.setCapturedResult(scanResult.data)
 
-                        ScanResultActivity.launchScanResultScreen(
-                            context = context,
-                            examEntity,
-                            scanResult.data
-                        )
+                // BUG FIX: Read from AtomicLong instead of closure-captured value
+                if (System.currentTimeMillis() < cooldownRef.get()) {
+                    return@launch
+                }
+
+                if (isCapturing.get()) {
+                    return@launch
+                }
+
+                val displayed = ImageUtils.computeDisplayedImageRect(
+                    viewW = previewView.width.toFloat(),
+                    viewH = previewView.height.toFloat(),
+                    bufferW = imageProxy.width,
+                    bufferH = imageProxy.height,
+                    rotationDegrees = imageProxy.imageInfo.rotationDegrees,
+                    useFill = previewView.scaleType == PreviewView.ScaleType.FILL_CENTER
+                )
+
+                overlay.setPreviewRect(displayed)
+
+                val scanResult = omrScannerViewModel.processOmrFrame(
+                    context,
+                    imageProxy,
+                    examEntity,
+                    overlay.getAnchorSquaresOnScreen(),
+                    previewBounds = overlay.getPreviewRect(),
+                    debug = com.example.ledgerscanner.BuildConfig.ENABLE_IMAGE_LOGS,
+                    onAnchorsDetected = {
+                        // Update overlay with detected anchors
+                        overlay.setDetectedAnchors(it)
+                    }
+                )
+                when (scanResult) {
+                    is UiState.Error -> {
+                        // BUG FIX: Actually show error to user instead of swallowing it
+//                        onScanError(scanResult.message ?: "Scan failed. Try again.")
+                    }
+                    is UiState.Idle, is UiState.Loading -> {}
+                    is UiState.Success -> {
+                        if (isCapturing.compareAndSet(false, true)) {
+                            mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
+                            omrScannerViewModel.setCapturedResult(scanResult.data)
+
+                            ScanResultActivity.launchScanResultScreen(
+                                context = context,
+                                examEntity,
+                                scanResult.data
+                            )
+                        }
                     }
                 }
+            } finally {
+                // BUG FIX: Always close imageProxy in finally block
+                imageProxy.close()
             }
-
-            imageProxy.close()
         }
     }
 

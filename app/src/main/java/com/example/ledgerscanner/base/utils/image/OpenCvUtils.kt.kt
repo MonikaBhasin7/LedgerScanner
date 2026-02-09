@@ -264,87 +264,87 @@ object OpenCvUtils {
     }
 
     /**
-     * Existing detectAnchorInRoi function - kept unchanged
+     * Detects a square anchor marker within a Region of Interest.
+     * Proper cleanup of ALL OpenCV Mats to prevent memory leaks.
      */
     fun detectAnchorInRoi(roiGray: Mat): Point? {
         val bin = Mat()
-        // simple threshold (anchors are dark); tweak 50..90 as needed
-        Imgproc.threshold(
-            roiGray,
-            bin, 60.0,
-            255.0,
-            Imgproc.THRESH_BINARY_INV
-        )
-
-        val contours = mutableListOf<MatOfPoint>()
         val hierarchy = Mat()
-        Imgproc.findContours(
-            bin,
-            contours,
-            hierarchy,
-            Imgproc.RETR_EXTERNAL,
-            Imgproc.CHAIN_APPROX_SIMPLE
-        )
+        val contours = mutableListOf<MatOfPoint>()
 
-        for (c in contours) {
-            val peri = Imgproc.arcLength(
-                MatOfPoint2f(*c.toArray()),
-                true
+        try {
+            Imgproc.threshold(
+                roiGray,
+                bin, 60.0,
+                255.0,
+                Imgproc.THRESH_BINARY_INV
             )
-            val approx = MatOfPoint2f()
-            Imgproc.approxPolyDP(
-                MatOfPoint2f(*c.toArray()),
-                approx,
-                0.04 * peri,
-                true
+
+            Imgproc.findContours(
+                bin,
+                contours,
+                hierarchy,
+                Imgproc.RETR_EXTERNAL,
+                Imgproc.CHAIN_APPROX_SIMPLE
             )
 
             val roiW = roiGray.cols()
             val roiH = roiGray.rows()
             val roiArea = (roiW * roiH).toDouble()
-            val minArea = 0.002 * roiArea   // 0.2% of ROI
-            val maxArea = 0.25 * roiArea   // 25% of ROI
-            if (approx.total() == 4L) {
+            val minArea = 0.002 * roiArea
+            val maxArea = 0.25 * roiArea
+
+            for (c in contours) {
+                // Create and release temp mats in each iteration
+                val mp2f = MatOfPoint2f(*c.toArray())
+                val peri = Imgproc.arcLength(mp2f, true)
+                val approx = MatOfPoint2f()
+                Imgproc.approxPolyDP(mp2f, approx, 0.04 * peri, true)
+                mp2f.release() // Release immediately after use
+
+                if (approx.total() != 4L) {
+                    approx.release()
+                    continue
+                }
+
                 val approxMP = MatOfPoint(*approx.toArray())
-                // must look like a convex quad
+                approx.release() // Release approx — data copied to approxMP
+
                 if (!Imgproc.isContourConvex(approxMP)) {
                     approxMP.release()
-                    // keep your existing 'continue' here
-                } else {
-                    val rect = Imgproc.boundingRect(approxMP)
-                    val aspect = rect.width.toDouble() / rect.height.toDouble()
-
-                    val area = Imgproc.contourArea(approxMP)
-                    val rectArea = (rect.width * rect.height).toDouble().coerceAtLeast(1.0)
-                    val solidity = area / rectArea
-
-                    // reject circles by circularity (circles ≈ 1.0; squares clearly lower)
-                    val peri2 = Imgproc.arcLength(MatOfPoint2f(*approxMP.toArray()), true)
-                    val circularity =
-                        if (peri2 > 1e-6) 4.0 * Math.PI * area / (peri2 * peri2) else 0.0
-
-                    // Scale-robust checks:
-                    // - near-square aspect
-                    // - filled enough
-                    // - area within [minArea, maxArea] fraction of ROI
-                    // - not a circle
-                    if (aspect in 0.8..1.25 && solidity > 0.70 && area in minArea..maxArea && circularity < 0.85) {
-                        val cx = rect.x + rect.width / 2.0
-                        val cy = rect.y + rect.height / 2.0
-
-                        bin.release()
-                        hierarchy.release()
-                        approxMP.release()
-                        approx.release()
-                        return Point(cx, cy)
-                    }
-                    approxMP.release()
+                    continue
                 }
-                // keep your existing approx.release() if you didn't above
+
+                val rect = Imgproc.boundingRect(approxMP)
+                val aspect = rect.width.toDouble() / rect.height.toDouble()
+                val area = Imgproc.contourArea(approxMP)
+                val rectArea = (rect.width * rect.height).toDouble().coerceAtLeast(1.0)
+                val solidity = area / rectArea
+
+                val peri2Mp = MatOfPoint2f(*approxMP.toArray())
+                val peri2 = Imgproc.arcLength(peri2Mp, true)
+                peri2Mp.release()
+
+                val circularity =
+                    if (peri2 > 1e-6) 4.0 * Math.PI * area / (peri2 * peri2) else 0.0
+
+                if (aspect in 0.8..1.25 && solidity > 0.70 && area in minArea..maxArea && circularity < 0.85) {
+                    val cx = rect.x + rect.width / 2.0
+                    val cy = rect.y + rect.height / 2.0
+                    approxMP.release()
+                    return Point(cx, cy)
+                }
+
+                approxMP.release()
             }
+
+            return null
+
+        } finally {
+            bin.release()
+            hierarchy.release()
+            // Contour Mats are managed by OpenCV findContours — no explicit release needed
         }
-        bin.release(); hierarchy.release()
-        return null
     }
 }
 
