@@ -18,6 +18,7 @@ fun ActionButtonsSection(
     onScanNext: () -> Unit,
     onViewAllSheets: () -> Unit,
     sheetCount: UiState<Int>,
+    isSaveEnabled: Boolean,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -34,6 +35,7 @@ fun ActionButtonsSection(
                 onClick = onSaveAndContinue,
                 size = ButtonSize.LARGE,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = isSaveEnabled
             )
 
             Spacer(Modifier.height(12.dp))

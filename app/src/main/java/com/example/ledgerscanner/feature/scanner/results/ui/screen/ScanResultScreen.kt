@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.screen
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -36,6 +39,7 @@ import com.example.ledgerscanner.feature.scanner.results.ui.components.result.Sa
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ScoreSummaryCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.StudentDetailsSection
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.BarcodeScanActivity
 
 @Composable
 fun ScanResultScreen(
@@ -52,10 +56,25 @@ fun ScanResultScreen(
     val studentDetailsRef = remember {
         mutableStateOf(StudentDetailsForScanResult(null, null, null))
     }
+    val barcodeValueState = remember { mutableStateOf(scanResultEntity.barCode) }
+    val barcodeLockedState = remember { mutableStateOf(!scanResultEntity.barCode.isNullOrBlank()) }
+    val hasBarcode = !barcodeValueState.value.isNullOrBlank()
 
     val totalSheetCounts by scanResultViewModel.sheetsCountByExamId.collectAsState()
     val saveSheetResponse by scanResultViewModel.saveSheetState.collectAsState()
     var onScanNextSelected by remember { mutableStateOf(false) }
+
+
+    val barcodeScanLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data
+        val code = data?.getStringExtra(BarcodeScanActivity.EXTRA_BARCODE)
+        if (!code.isNullOrBlank()) {
+            barcodeValueState.value = code
+            barcodeLockedState.value = true
+        }
+    }
 
     val saveAndContinue: () -> Unit = {
         scanResultViewModel.saveSheet(
@@ -99,6 +118,7 @@ fun ScanResultScreen(
                 },
                 onViewAllSheets = { /* Navigate to scanned sheets */ },
                 sheetCount = totalSheetCounts,
+                isSaveEnabled = hasBarcode,
             )
         },
         containerColor = Grey100
@@ -119,8 +139,21 @@ fun ScanResultScreen(
             Spacer(Modifier.height(16.dp))
 
             StudentDetailsSection(
-                barcodeId = scanResultEntity.barCode,
-                studentDetailsRef = studentDetailsRef
+                barcodeId = barcodeValueState.value,
+                studentDetailsRef = studentDetailsRef,
+                barcodeLocked = barcodeLockedState.value,
+                onBarcodeChange = { value ->
+                    if (!barcodeLockedState.value) {
+                        barcodeValueState.value = value
+                        if (value.isNotBlank()) {
+                            barcodeLockedState.value = true
+                        }
+                    }
+                },
+                onScanBarcode = {
+                    val intent = Intent(context, BarcodeScanActivity::class.java)
+                    barcodeScanLauncher.launch(intent)
+                }
             )
 
             Spacer(Modifier.height(16.dp))

@@ -27,6 +27,9 @@
             android:name=".feature.scanner.exam.ui.activity.CreateExamActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
+            android:name=".feature.scanner.scan.ui.activity.BarcodeScanActivity"
+            android:theme="@style/Theme.LedgerScanner" />
+        <activity
             android:name=".SplashActivity"
             android:exported="true"
             android:theme="@style/SplashTheme">
