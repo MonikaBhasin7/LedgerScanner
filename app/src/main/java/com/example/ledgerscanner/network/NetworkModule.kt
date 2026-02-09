@@ -1,4 +1,5 @@
 package com.example.ledgerscanner.network
+import com.example.ledgerscanner.network.CurlLoggingInterceptor
 
 import com.example.ledgerscanner.BuildConfig
 import com.google.gson.Gson
@@ -27,6 +28,7 @@ object NetworkModule {
         authInterceptor: AuthInterceptor,
         tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
+        val curlLogging = CurlLoggingInterceptor()
         val logging = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
             else HttpLoggingInterceptor.Level.BASIC
@@ -34,6 +36,11 @@ object NetworkModule {
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .authenticator(tokenAuthenticator)
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(curlLogging)
+                }
+            }
             .addInterceptor(logging)
             .build()
     }
