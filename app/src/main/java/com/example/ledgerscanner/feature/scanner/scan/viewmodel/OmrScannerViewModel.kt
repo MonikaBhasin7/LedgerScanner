@@ -24,6 +24,7 @@ import com.example.ledgerscanner.feature.scanner.scan.model.BrightnessQualityRep
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
+import com.example.ledgerscanner.feature.scanner.scan.utils.BarcodeScanner
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
 import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
@@ -44,7 +45,8 @@ class OmrScannerViewModel @Inject constructor(
     private val templateProcessor: TemplateProcessor,
     private val answerEvaluator: AnswerEvaluator,
     private val imageQualityChecker: ImageQualityChecker,
-    private val bubbleAnalyzer: BubbleAnalyzer
+    private val bubbleAnalyzer: BubbleAnalyzer,
+    private val barcodeScanner: BarcodeScanner
 ) : ViewModel() {
 
     // Keep this for the result screen
@@ -141,13 +143,24 @@ class OmrScannerViewModel @Inject constructor(
                 processingContext.debugBitmaps["warped"] = warpedDebugBitmap
             }
 
-            // Step 5: Process bubbles and evaluate
+            // Step 5: Scan barcode from warped image
+            val barcodeValue = try {
+                barcodeScanner.scanBarcode(processingContext.warpedMat!!)
+            } catch (e: Exception) {
+                Log.w(TAG, "Barcode scan failed, continuing without it", e)
+                null
+            }
+            if (barcodeValue != null) {
+                Log.d(TAG, "Barcode detected: $barcodeValue")
+            }
+
+            // Step 6: Process bubbles and evaluate
             val omrImageProcessResult = processBubblesAndEvaluate(
                 processingContext = processingContext,
                 examEntity = examEntity,
                 centers = anchorDetectionResult.centers,
                 debug = debug
-            )
+            ).copy(barcodeId = barcodeValue)
 
             return@withContext getScanEntityObject(context, examEntity, omrImageProcessResult)
 
@@ -244,7 +257,7 @@ class OmrScannerViewModel @Inject constructor(
             return UiState.Success(
                 ScanResultEntity(
                     examId = examEntity.id,
-                    barCode = null, //todo monika change
+                    barCode = omrImageProcessResult.barcodeId,
                     scannedImagePath = scannedImagePath,
                     thumbnailPath = thumbnailPath,
                     clickedRawImagePath = rawImagePath,
