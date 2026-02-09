@@ -212,12 +212,20 @@ class ExamListingActivity : ComponentActivity() {
 
         // Handle filter changes - starts collecting from DB
         LaunchedEffect(examFilter) {
-            examListViewModel.getExamList(examFilter)
+            if (searchQuery.isBlank()) {
+                examListViewModel.getExamList(examFilter)
+            } else {
+                examListViewModel.searchExam(searchQuery)
+            }
         }
 
         // Handle search query changes
         LaunchedEffect(searchQuery) {
-            examListViewModel.searchExam(searchQuery)
+            if (searchQuery.isBlank()) {
+                examListViewModel.getExamList(examFilter)
+            } else {
+                examListViewModel.searchExam(searchQuery)
+            }
         }
 
         // Handle delete state
@@ -802,7 +810,7 @@ class ExamListingActivity : ComponentActivity() {
                     icon = config.secondaryAction.icon,
                     modifier = Modifier.weight(1f),
                     onClick = {
-                        onClick(config.action)
+                        onClick(config.secondaryAction)
                     }
                 )
             }
@@ -883,6 +891,7 @@ class ExamListingActivity : ComponentActivity() {
                 viewModel = examListViewModel,
                 actions = actions,
                 onActionClick = { action ->
+                    showMenu = false
                     onActionClick(action)
                 },
                 onDismiss = { showMenu = false },
