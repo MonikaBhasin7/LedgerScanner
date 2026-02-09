@@ -64,6 +64,7 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.components.BrightnessQu
 import com.example.ledgerscanner.feature.scanner.scan.ui.custom_ui.OverlayView
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -80,6 +81,7 @@ fun ScannerScreen(
     val activity = remember { context as? BaseActivity }
     val lifecycleOwner = LocalLifecycleOwner.current
     val imageCapture = remember { ImageCapture.Builder().build() }
+    var resumeCooldownUntilMs by remember { mutableStateOf(0L) }
 
     // Use rememberSaveable to survive config changes
     var cameraPermissionStatus by rememberSaveable {
@@ -110,6 +112,9 @@ fun ScannerScreen(
         examEntity = examEntity,
         navController = navController,
         cameraPermissionStatus = cameraPermissionStatus,
+        onScanError = { _ -> },
+        cooldownUntilMs = resumeCooldownUntilMs,
+        onResumeCooldown = { resumeCooldownUntilMs = it },
         onPermissionRequest = {
             if (cameraPermissionStatus == PermissionStatus.PermissionPermanentlyDenied) {
                 val intent = Intent(
@@ -133,6 +138,9 @@ private fun CameraViewOrPermissionCard(
     examEntity: ExamEntity,
     navController: NavHostController,
     cameraPermissionStatus: PermissionStatus,
+    onScanError: (String) -> Unit,
+    cooldownUntilMs: Long,
+    onResumeCooldown: (Long) -> Unit,
     onPermissionRequest: () -> Unit,
 ) {
     val brightnessQuality by omrScannerViewModel.brightnessQuality.collectAsState()
@@ -145,7 +153,10 @@ private fun CameraViewOrPermissionCard(
                     omrScannerViewModel = omrScannerViewModel,
                     imageCapture = imageCapture,
                     examEntity = examEntity,
-                    navController = navController
+                    navController = navController,
+                    onScanError = onScanError,
+                    cooldownUntilMs = cooldownUntilMs,
+                    onResumeCooldown = onResumeCooldown
                 )
 
                 // Overlay brightness quality indicator
@@ -157,6 +168,7 @@ private fun CameraViewOrPermissionCard(
                             .padding(top = 80.dp)
                     )
                 }
+
             }
         }
 
@@ -173,7 +185,10 @@ private fun CameraPreview(
     omrScannerViewModel: OmrScannerViewModel,
     imageCapture: ImageCapture,
     examEntity: ExamEntity,
-    navController: NavHostController
+    navController: NavHostController,
+    onScanError: (String) -> Unit,
+    cooldownUntilMs: Long,
+    onResumeCooldown: (Long) -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
@@ -194,6 +209,8 @@ private fun CameraPreview(
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
                     omrScannerViewModel.enableScanning()
+                    isCapturing.set(false)
+                    onResumeCooldown(System.currentTimeMillis() + 1200)
                 }
 
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
@@ -227,7 +244,9 @@ private fun CameraPreview(
                 omrScannerViewModel = omrScannerViewModel,
                 navController = navController,
                 mediaActionSound = mediaActionSound,
-                isCapturing = isCapturing
+                isCapturing = isCapturing,
+                cooldownUntilMs = cooldownUntilMs,
+                onScanError = onScanError
             )
         }
     )
@@ -243,7 +262,9 @@ private fun createCameraContainer(
     omrScannerViewModel: OmrScannerViewModel,
     navController: NavHostController,
     mediaActionSound: MediaActionSound,
-    isCapturing: AtomicBoolean
+    isCapturing: AtomicBoolean,
+    cooldownUntilMs: Long,
+    onScanError: (String) -> Unit
 ): FrameLayout {
     val container = FrameLayout(context)
 
@@ -299,7 +320,9 @@ private fun createCameraContainer(
         isCapturing = isCapturing,
         context = context,
         lifecycleOwner = lifecycleOwner,
-        imageCapture = imageCapture
+        imageCapture = imageCapture,
+        cooldownUntilMs = cooldownUntilMs,
+        onScanError = onScanError
     )
 
     return container
@@ -317,7 +340,9 @@ private fun setupImageAnalysis(
     isCapturing: AtomicBoolean,
     context: Context,
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
-    imageCapture: ImageCapture
+    imageCapture: ImageCapture,
+    cooldownUntilMs: Long,
+    onScanError: (String) -> Unit
 ) {
     val analysisUseCase = ImageAnalysis.Builder()
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -328,6 +353,16 @@ private fun setupImageAnalysis(
         scope.launch(Dispatchers.Main) {
             // Skip if scanning is disabled
             if (!omrScannerViewModel.isScanningEnabled.value) {
+                imageProxy.close()
+                return@launch
+            }
+
+            if (System.currentTimeMillis() < cooldownUntilMs) {
+                imageProxy.close()
+                return@launch
+            }
+
+            if (isCapturing.get()) {
                 imageProxy.close()
                 return@launch
             }
@@ -356,16 +391,21 @@ private fun setupImageAnalysis(
                 }
             )
             when (scanResult) {
-                is UiState.Error, is UiState.Idle, is UiState.Loading -> {}
+                is UiState.Error -> {
+                    onScanError(scanResult.message ?: "Scan failed. Try again.")
+                }
+                is UiState.Idle, is UiState.Loading -> {}
                 is UiState.Success -> {
-                    mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
-                    omrScannerViewModel.setCapturedResult(scanResult.data)
+                    if (isCapturing.compareAndSet(false, true)) {
+                        mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
+                        omrScannerViewModel.setCapturedResult(scanResult.data)
 
-                    ScanResultActivity.launchScanResultScreen(
-                        context = context,
-                        examEntity,
-                        scanResult.data
-                    )
+                        ScanResultActivity.launchScanResultScreen(
+                            context = context,
+                            examEntity,
+                            scanResult.data
+                        )
+                    }
                 }
             }
 

@@ -1,6 +1,7 @@
 package com.example.omrscanner.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -102,7 +103,11 @@ fun ScanSessionScreen(
     }
 
     val onStartScanning: () -> Unit = {
-        navController.navigate(ScanBaseActivity.SCANNER_SCREEN)
+        if (examEntity.template.questions.isEmpty()) {
+            Toast.makeText(context, "Template is missing. Please update the exam.", Toast.LENGTH_SHORT).show()
+        } else {
+            navController.navigate(ScanBaseActivity.SCANNER_SCREEN)
+        }
     }
 
     BackHandler(onBack = handleBack)
