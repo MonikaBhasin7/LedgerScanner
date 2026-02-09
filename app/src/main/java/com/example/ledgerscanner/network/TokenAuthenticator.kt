@@ -38,7 +38,7 @@ class TokenAuthenticator @Inject constructor(
         }
 
         return try {
-            val newTokens = refreshSync(refreshToken) ?: run {
+            val newTokens = refreshTokensBlocking(refreshToken) ?: run {
                 tokenStore.clear()
                 AuthState.notifyLoggedOut()
                 return null
@@ -53,7 +53,7 @@ class TokenAuthenticator @Inject constructor(
         }
     }
 
-    private fun refreshSync(refreshToken: String): Pair<String, String>? {
+    fun refreshTokensBlocking(refreshToken: String): Pair<String, String>? {
         val retrofit = Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL)
             .client(OkHttpClient.Builder().build())

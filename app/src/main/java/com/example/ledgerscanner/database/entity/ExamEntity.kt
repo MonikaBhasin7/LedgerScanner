@@ -20,6 +20,7 @@ data class ExamEntity(
     val marksPerCorrect: Float? = null,
     val marksPerWrong: Float? = null,
     val createdAt: Long,
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
 ) : Parcelable {
     fun getMaxMarks(): Float {
         return totalQuestions * (marksPerCorrect ?: 0f)

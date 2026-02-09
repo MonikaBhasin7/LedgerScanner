@@ -9,6 +9,7 @@ import com.example.ledgerscanner.feature.scanner.exam.repo.ExamRepository
 import com.example.ledgerscanner.feature.scanner.exam.repo.TemplateSelectionRepository
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import com.example.ledgerscanner.network.AuthApi
+import com.example.ledgerscanner.sync.SyncManager
 import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
@@ -31,16 +32,20 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideExamRepository(dao: ExamDao): ExamRepository =
-        ExamRepository(dao)
+    fun provideExamRepository(
+        dao: ExamDao,
+        syncManager: SyncManager
+    ): ExamRepository =
+        ExamRepository(dao, syncManager)
 
     @Provides
     @Singleton
     fun provideScanResultRepository(
         dao: ScanResultDao,
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        syncManager: SyncManager
     ): ScanResultRepository =
-        ScanResultRepository(dao, context)
+        ScanResultRepository(dao, context, syncManager)
 
     @Provides
     @Singleton

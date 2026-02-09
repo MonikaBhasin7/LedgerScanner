@@ -7,6 +7,7 @@ import com.example.ledgerscanner.database.entity.setStudentDetails
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.model.QuestionStat
 import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsForScanResult
+import com.example.ledgerscanner.sync.SyncManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +17,8 @@ import javax.inject.Inject
 
 class ScanResultRepository @Inject constructor(
     private val scanResultDao: ScanResultDao,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val syncManager: SyncManager
 ) {
     suspend fun saveSheet(
         details: StudentDetailsForScanResult,

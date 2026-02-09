@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,32 @@ interface ExamDao {
     @Query("UPDATE exams SET marksPerCorrect=:marksPerCorrect, marksPerWrong=:marksPerWrong WHERE id = :examId")
     suspend fun updateMarkingScheme(examId: Int, marksPerCorrect: Float?, marksPerWrong: Float?)
 
+
+    @Transaction
+    suspend fun updateAnswerKeyAndMarkPending(examId: Int, answerKey: Map<Int, Int>) {
+        updateAnswerKey(examId, answerKey)
+        markExamPending(examId)
+    }
+
+    @Transaction
+    suspend fun updateMarkingSchemeAndMarkPending(
+        examId: Int,
+        marksPerCorrect: Float?,
+        marksPerWrong: Float?
+    ) {
+        updateMarkingScheme(examId, marksPerCorrect, marksPerWrong)
+        markExamPending(examId)
+    }
+
     @Query("DELETE FROM exams WHERE id = :examId")
     suspend fun deleteExam(examId: Int)
+
+    @Query("SELECT * FROM exams WHERE syncStatus = 'PENDING'")
+    suspend fun getUnsyncedExams(): List<ExamEntity>
+
+    @Query("UPDATE exams SET syncStatus = 'SYNCED' WHERE id = :examId")
+    suspend fun markExamSynced(examId: Int)
+
+    @Query("UPDATE exams SET syncStatus = 'PENDING' WHERE id = :examId")
+    suspend fun markExamPending(examId: Int)
 }

@@ -127,4 +127,13 @@ interface ScanResultDao {
     """
     )
     fun getBasicStatisticsByExamId(examId: Int): Flow<BasicExamStatistics>
+
+    @Query("SELECT * FROM scan_results WHERE syncStatus = 'PENDING'")
+    suspend fun getUnsyncedScanResults(): List<ScanResultEntity>
+
+    @Query("UPDATE scan_results SET syncStatus = 'SYNCED' WHERE id = :scanResultId")
+    suspend fun markScanResultSynced(scanResultId: Int)
+
+    @Query("UPDATE scan_results SET syncStatus = 'PENDING' WHERE id = :scanResultId")
+    suspend fun markScanResultPending(scanResultId: Int)
 }

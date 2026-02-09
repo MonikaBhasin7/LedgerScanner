@@ -54,7 +54,8 @@ data class ScanResultEntity(
     val questionConfidences: Map<Int, Double?>? = null,
     val avgConfidence: Double? = null,
     val minConfidence: Double? = null,
-    val lowConfidenceQuestions: Map<Int, Double?>? = null
+    val lowConfidenceQuestions: Map<Int, Double?>? = null,
+    val syncStatus: SyncStatus = SyncStatus.PENDING
 ) : Parcelable
 
 fun ScanResultEntity.setStudentDetails(barCode: String?): ScanResultEntity {

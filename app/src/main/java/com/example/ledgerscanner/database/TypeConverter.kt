@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.database
 
 import androidx.room.TypeConverter
+import com.example.ledgerscanner.database.entity.SyncStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.google.gson.Gson
@@ -9,6 +10,13 @@ import java.util.Date
 
 class TypeConverter {
     private val gson = Gson()
+
+    // ---------------- SyncStatus Enum ----------------
+    @TypeConverter
+    fun fromSyncStatus(value: SyncStatus?): String? = value?.name
+
+    @TypeConverter
+    fun toSyncStatus(value: String?): SyncStatus? = value?.let { SyncStatus.valueOf(it) }
 
     // ---------------- ExamStatus Enum ----------------
     @TypeConverter

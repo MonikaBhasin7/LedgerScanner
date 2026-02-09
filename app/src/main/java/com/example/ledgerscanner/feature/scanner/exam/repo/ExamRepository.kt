@@ -2,14 +2,19 @@ package com.example.ledgerscanner.feature.scanner.exam.repo
 
 import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.database.entity.SyncStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
+import com.example.ledgerscanner.sync.SyncManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-class ExamRepository @Inject constructor(private val dao: ExamDao) {
+class ExamRepository @Inject constructor(
+    private val dao: ExamDao,
+    private val syncManager: SyncManager
+) {
     fun getAllExams(): Flow<List<ExamEntity>> = dao.getAllExamsFlow()
 
     suspend fun getExam(id: Int): ExamEntity? = dao.getExamById(id)
@@ -17,7 +22,11 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
     suspend fun getExamByStatus(status: ExamStatus?): Flow<List<ExamEntity>> =
         dao.getExamByStatus(status)
 
-    suspend fun saveExam(exam: ExamEntity) = dao.insertExam(exam)
+    suspend fun saveExam(exam: ExamEntity): Long {
+        val result = dao.insertExam(exam.copy(syncStatus = SyncStatus.PENDING))
+        syncManager.scheduleImmediateSync()
+        return result
+    }
 
     suspend fun saveExams(exams: List<ExamEntity>) = dao.insertAll(exams)
 
@@ -35,8 +44,10 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
                 description = description,
                 template = template,
                 totalQuestions = numberOfQuestions,
+                syncStatus = SyncStatus.PENDING,
             )
             dao.insertExam(updated)
+            syncManager.scheduleImmediateSync()
             return updated
         }
 
@@ -52,6 +63,7 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
         )
 
         val rowId: Long = dao.insertExam(exam)
+        syncManager.scheduleImmediateSync()
         return exam.copy(id = rowId.toInt())
     }
 
@@ -63,7 +75,8 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
             answerKey = answerKeys,
         )
 
-        dao.updateAnswerKey(examEntity.id, answerKeys)
+        dao.updateAnswerKeyAndMarkPending(examEntity.id, answerKeys)
+        syncManager.scheduleImmediateSync()
 
         return updatedEntity
     }
@@ -79,11 +92,12 @@ class ExamRepository @Inject constructor(private val dao: ExamDao) {
             marksPerWrong = if (negativeMarking) marksPerWrong else 0f
         )
 
-        dao.updateMarkingScheme(
+        dao.updateMarkingSchemeAndMarkPending(
             examEntity.id,
             updatedEntity.marksPerCorrect,
             updatedEntity.marksPerWrong
         )
+        syncManager.scheduleImmediateSync()
 
         return updatedEntity
     }
