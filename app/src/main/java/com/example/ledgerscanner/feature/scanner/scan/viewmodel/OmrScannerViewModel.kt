@@ -26,8 +26,10 @@ import com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.BarcodeScanner
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
+import com.example.ledgerscanner.feature.scanner.scan.utils.FrameStabilityTracker
 import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
+import com.example.ledgerscanner.feature.scanner.scan.utils.StabilityResult
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +48,8 @@ class OmrScannerViewModel @Inject constructor(
     private val answerEvaluator: AnswerEvaluator,
     private val imageQualityChecker: ImageQualityChecker,
     private val bubbleAnalyzer: BubbleAnalyzer,
-    private val barcodeScanner: BarcodeScanner
+    private val barcodeScanner: BarcodeScanner,
+    private val frameStabilityTracker: FrameStabilityTracker
 ) : ViewModel() {
 
     // Keep this for the result screen
@@ -67,6 +70,7 @@ class OmrScannerViewModel @Inject constructor(
         _isScanningEnabled.value = true
         _omrImageProcessResult.value = null
         _brightnessQuality.value = null
+        frameStabilityTracker.reset()
     }
 
     fun disableScanning() {
@@ -80,7 +84,8 @@ class OmrScannerViewModel @Inject constructor(
         anchorRegions: List<RectF>,
         previewBounds: RectF,
         debug: Boolean = false,
-        onAnchorsDetected: (List<AnchorPoint>) -> Unit
+        onAnchorsDetected: (List<AnchorPoint>) -> Unit,
+        onStabilityUpdate: (StabilityResult) -> Unit = {}
     ): UiState<ScanResultEntity> = withContext(Dispatchers.Default) {
         val processingContext = OmrProcessingContext()
 
@@ -144,7 +149,16 @@ class OmrScannerViewModel @Inject constructor(
             // BUG FIX: Require exactly 4 anchors before attempting warp
             // (previously would pass partial anchors to getPerspectiveTransform → crash/garbage)
             if (anchorDetectionResult.centers.size != EXPECTED_ANCHOR_COUNT) {
+                frameStabilityTracker.reset()
+                onStabilityUpdate(StabilityResult(false, 0, FrameStabilityTracker.REQUIRED_STABLE_FRAMES, 0.0))
                 return@withContext UiState.Error(ErrorMessages.ANCHORS_NOT_DETECTED)
+            }
+
+            // Step 3.5: Stability gate — require steady hand before expensive processing
+            val stability = frameStabilityTracker.addFrame(anchorDetectionResult.centers)
+            onStabilityUpdate(stability)
+            if (!stability.isStable) {
+                return@withContext UiState.Idle()
             }
 
             // Step 4: Warp image

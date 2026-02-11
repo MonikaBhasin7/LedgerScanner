@@ -2,6 +2,7 @@ package com.example.ledgerscanner.feature.scanner.scan.di
 
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
+import com.example.ledgerscanner.feature.scanner.scan.utils.FrameStabilityTracker
 import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.TemplateProcessor
@@ -36,4 +37,7 @@ object ScanProcessingModule {
 
     @Provides
     fun provideBubbleAnalyzer(): BubbleAnalyzer = BubbleAnalyzer()
+
+    @Provides
+    fun provideFrameStabilityTracker(): FrameStabilityTracker = FrameStabilityTracker()
 }

@@ -39,6 +39,10 @@ class OverlayView @JvmOverloads constructor(
     private var isCapturing = false
     private var captureCountdown = 0
 
+    // Stability tracking
+    private var stabilityFrameCount = 0
+    private var stabilityRequiredFrames = 7
+
     // Animation
     private var pulseProgress = 0f
     private val pulseSpeed = 0.05f
@@ -141,6 +145,7 @@ class OverlayView @JvmOverloads constructor(
         POOR(Color.parseColor("#FF9800"), "Move closer & center"),
         PARTIAL(Color.parseColor("#FFC107"), "Almost there..."),
         GOOD(Color.parseColor("#8BC34A"), "Hold steady"),
+        STABILIZING(Color.parseColor("#8BC34A"), "Hold steady..."),
         PERFECT(Color.parseColor("#4CAF50"), "✓ Aligned perfectly")
     }
 
@@ -204,6 +209,22 @@ class OverlayView @JvmOverloads constructor(
     fun stopCapture() {
         isCapturing = false
         captureCountdown = 0
+        invalidate()
+    }
+
+    fun setStabilityProgress(stableFrames: Int, requiredFrames: Int) {
+        stabilityFrameCount = stableFrames
+        stabilityRequiredFrames = requiredFrames
+        // Update alignment quality based on stability
+        if (detectedAnchors?.size == 4) {
+            alignmentQuality = if (stableFrames >= requiredFrames) {
+                AlignmentQuality.PERFECT
+            } else if (stableFrames > 0) {
+                AlignmentQuality.STABILIZING
+            } else {
+                AlignmentQuality.GOOD
+            }
+        }
         invalidate()
     }
 
@@ -299,6 +320,9 @@ class OverlayView @JvmOverloads constructor(
         // 7. Draw status message
         drawStatusMessage(canvas)
 
+        // 7.5 Draw stability progress bar
+        drawStabilityProgressBar(canvas)
+
         // 8. Draw guidance hints
 //        drawGuidanceHints(canvas)
 
@@ -315,7 +339,8 @@ class OverlayView @JvmOverloads constructor(
         // BUG FIX: Only keep animating when we have detected anchors to pulse
         // Previously this ran every frame even with no anchors, wasting CPU/battery
         val hasActiveAnimation = (detectedAnchors != null && detectedAnchors!!.isNotEmpty()) ||
-                (isCapturing && captureCountdown > 0)
+                (isCapturing && captureCountdown > 0) ||
+                alignmentQuality == AlignmentQuality.STABILIZING
         if (hasActiveAnimation) {
             postInvalidateOnAnimation()
         }
@@ -429,7 +454,11 @@ class OverlayView @JvmOverloads constructor(
 
     private fun drawStatusMessage(canvas: Canvas) {
         statusTextPaint.color = alignmentQuality.color
-        val message = "${detectedAnchors?.size ?: 0}/4 • ${alignmentQuality.message}"
+        val message = if (alignmentQuality == AlignmentQuality.STABILIZING) {
+            "${detectedAnchors?.size ?: 0}/4 • Hold steady... $stabilityFrameCount/$stabilityRequiredFrames"
+        } else {
+            "${detectedAnchors?.size ?: 0}/4 • ${alignmentQuality.message}"
+        }
         canvas.drawText(message, previewRect.centerX(), previewRect.top + 130f, statusTextPaint)
     }
 
@@ -484,6 +513,31 @@ class OverlayView @JvmOverloads constructor(
 
         // Countdown number
         canvas.drawText(captureCountdown.toString(), centerX, centerY + 40f, countdownTextPaint)
+    }
+
+    private fun drawStabilityProgressBar(canvas: Canvas) {
+        if (alignmentQuality != AlignmentQuality.STABILIZING) return
+
+        val barWidth = previewRect.width() * 0.5f
+        val barHeight = 8f
+        val barX = previewRect.centerX() - barWidth / 2
+        val barY = previewRect.top + 150f
+
+        // Background bar
+        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = Color.parseColor("#40FFFFFF")
+        }
+        canvas.drawRoundRect(barX, barY, barX + barWidth, barY + barHeight, 4f, 4f, bgPaint)
+
+        // Progress fill
+        val progress = stabilityFrameCount.toFloat() / stabilityRequiredFrames.toFloat()
+        val fillWidth = barWidth * progress.coerceIn(0f, 1f)
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = Color.parseColor("#4CAF50")
+        }
+        canvas.drawRoundRect(barX, barY, barX + fillWidth, barY + barHeight, 4f, 4f, fillPaint)
     }
 
     fun getPreviewRect(): RectF = RectF(previewRect)

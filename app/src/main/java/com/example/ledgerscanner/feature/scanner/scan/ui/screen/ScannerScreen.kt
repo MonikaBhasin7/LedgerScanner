@@ -397,6 +397,12 @@ private fun setupImageAnalysis(
                     onAnchorsDetected = {
                         // Update overlay with detected anchors
                         overlay.setDetectedAnchors(it)
+                    },
+                    onStabilityUpdate = { stability ->
+                        overlay.setStabilityProgress(
+                            stability.stableFrameCount,
+                            stability.requiredFrames
+                        )
                     }
                 )
                 when (scanResult) {
