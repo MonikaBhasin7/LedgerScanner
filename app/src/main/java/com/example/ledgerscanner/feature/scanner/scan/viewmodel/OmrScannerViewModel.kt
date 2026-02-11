@@ -23,10 +23,12 @@ import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.BrightnessQualityReport
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrImageProcessResult
 import com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel
+import com.example.ledgerscanner.feature.scanner.scan.utils.AnchorGeometryValidator
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.BarcodeScanner
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
 import com.example.ledgerscanner.feature.scanner.scan.utils.FrameStabilityTracker
+import com.example.ledgerscanner.feature.scanner.scan.utils.GeometryValidationResult
 import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
 import com.example.ledgerscanner.feature.scanner.scan.utils.StabilityResult
@@ -49,7 +51,8 @@ class OmrScannerViewModel @Inject constructor(
     private val imageQualityChecker: ImageQualityChecker,
     private val bubbleAnalyzer: BubbleAnalyzer,
     private val barcodeScanner: BarcodeScanner,
-    private val frameStabilityTracker: FrameStabilityTracker
+    private val frameStabilityTracker: FrameStabilityTracker,
+    private val anchorGeometryValidator: AnchorGeometryValidator
 ) : ViewModel() {
 
     // Keep this for the result screen
@@ -85,7 +88,9 @@ class OmrScannerViewModel @Inject constructor(
         previewBounds: RectF,
         debug: Boolean = false,
         onAnchorsDetected: (List<AnchorPoint>) -> Unit,
-        onStabilityUpdate: (StabilityResult) -> Unit = {}
+        onStabilityUpdate: (StabilityResult) -> Unit = {},
+        onGeometryUpdate: (GeometryValidationResult) -> Unit = {},
+        onBrightnessUpdate: (QualityLevel) -> Unit = {}
     ): UiState<ScanResultEntity> = withContext(Dispatchers.Default) {
         val processingContext = OmrProcessingContext()
 
@@ -111,6 +116,7 @@ class OmrScannerViewModel @Inject constructor(
                 analyzeHistogram = true
             )
             _brightnessQuality.value = brightnessReport
+            onBrightnessUpdate(brightnessReport.brightnessCheck.level)
 
             // Log brightness quality
             Log.d(
@@ -159,6 +165,16 @@ class OmrScannerViewModel @Inject constructor(
             onStabilityUpdate(stability)
             if (!stability.isStable) {
                 return@withContext UiState.Idle()
+            }
+
+            // Step 3.7: Geometry validation — reject curved/uneven sheets
+            val geometry = anchorGeometryValidator.validate(anchorDetectionResult.centers)
+            onGeometryUpdate(geometry)
+            if (!geometry.isValid) {
+                frameStabilityTracker.reset() // force re-stabilize after user adjusts sheet
+                return@withContext UiState.Error(
+                    geometry.rejectionReason ?: "Sheet is not flat. Please flatten it"
+                )
             }
 
             // Step 4: Warp image

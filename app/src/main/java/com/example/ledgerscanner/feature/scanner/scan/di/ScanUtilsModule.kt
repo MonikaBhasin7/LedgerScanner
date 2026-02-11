@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.scan.di
 
+import com.example.ledgerscanner.feature.scanner.scan.utils.AnchorGeometryValidator
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
 import com.example.ledgerscanner.feature.scanner.scan.utils.FrameStabilityTracker
@@ -40,4 +41,7 @@ object ScanProcessingModule {
 
     @Provides
     fun provideFrameStabilityTracker(): FrameStabilityTracker = FrameStabilityTracker()
+
+    @Provides
+    fun provideAnchorGeometryValidator(): AnchorGeometryValidator = AnchorGeometryValidator()
 }

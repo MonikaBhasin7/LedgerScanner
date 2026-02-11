@@ -21,8 +21,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -149,6 +154,32 @@ private fun CameraViewOrPermissionCard(
     onPermissionRequest: () -> Unit,
 ) {
     val brightnessQuality by omrScannerViewModel.brightnessQuality.collectAsState()
+    val cameraRef = remember {
+        java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>(null)
+    }
+    var isTorchOn by remember { mutableStateOf(false) }
+    var autoTorchTriggered by remember { mutableStateOf(false) }
+
+    // Auto-enable torch when brightness is consistently poor/failed
+    LaunchedEffect(brightnessQuality) {
+        val level = brightnessQuality?.brightnessCheck?.level
+        val brightness = brightnessQuality?.brightnessCheck?.value ?: 128.0
+        if (level != null && level <= com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel.POOR
+            && brightness < 80.0 && !autoTorchTriggered
+        ) {
+            val camera = cameraRef.get()
+            if (camera?.cameraInfo?.hasFlashUnit() == true) {
+                camera.cameraControl.enableTorch(true)
+                isTorchOn = true
+                autoTorchTriggered = true
+            }
+        }
+        // Reset auto-torch flag when brightness improves (user moved to bright area)
+        if (level != null && level >= com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel.GOOD) {
+            autoTorchTriggered = false
+        }
+    }
+
     when (cameraPermissionStatus) {
         PermissionStatus.PermissionGranted -> {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -161,7 +192,8 @@ private fun CameraViewOrPermissionCard(
                     navController = navController,
                     onScanError = onScanError,
                     cooldownUntilMs = cooldownUntilMs,
-                    onResumeCooldown = onResumeCooldown
+                    onResumeCooldown = onResumeCooldown,
+                    cameraRef = cameraRef
                 )
 
                 // Overlay brightness quality indicator
@@ -174,6 +206,21 @@ private fun CameraViewOrPermissionCard(
                     )
                 }
 
+                // Torch toggle button
+                TorchToggleButton(
+                    isTorchOn = isTorchOn,
+                    onToggle = {
+                        val camera = cameraRef.get()
+                        if (camera?.cameraInfo?.hasFlashUnit() == true) {
+                            val newState = !isTorchOn
+                            camera.cameraControl.enableTorch(newState)
+                            isTorchOn = newState
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 16.dp, end = 16.dp)
+                )
             }
         }
 
@@ -193,7 +240,8 @@ private fun CameraPreview(
     navController: NavHostController,
     onScanError: (String) -> Unit,
     cooldownUntilMs: Long,
-    onResumeCooldown: (Long) -> Unit
+    onResumeCooldown: (Long) -> Unit,
+    cameraRef: java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>
 ) {
     val scope = rememberCoroutineScope()
 
@@ -256,7 +304,8 @@ private fun CameraPreview(
                 mediaActionSound = mediaActionSound,
                 isCapturing = isCapturing,
                 cooldownRef = cooldownRef,
-                onScanError = onScanError
+                onScanError = onScanError,
+                cameraRef = cameraRef
             )
         }
     )
@@ -274,7 +323,8 @@ private fun createCameraContainer(
     mediaActionSound: MediaActionSound,
     isCapturing: AtomicBoolean,
     cooldownRef: AtomicLong,
-    onScanError: (String) -> Unit
+    onScanError: (String) -> Unit,
+    cameraRef: java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>
 ): FrameLayout {
     val container = FrameLayout(context)
 
@@ -332,7 +382,8 @@ private fun createCameraContainer(
         lifecycleOwner = lifecycleOwner,
         imageCapture = imageCapture,
         cooldownRef = cooldownRef,
-        onScanError = onScanError
+        onScanError = onScanError,
+        cameraRef = cameraRef
     )
 
     return container
@@ -352,7 +403,8 @@ private fun setupImageAnalysis(
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
     imageCapture: ImageCapture,
     cooldownRef: AtomicLong,
-    onScanError: (String) -> Unit
+    onScanError: (String) -> Unit,
+    cameraRef: java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>
 ) {
     val analysisUseCase = ImageAnalysis.Builder()
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -403,6 +455,29 @@ private fun setupImageAnalysis(
                             stability.stableFrameCount,
                             stability.requiredFrames
                         )
+                    },
+                    onGeometryUpdate = { geometry ->
+                        overlay.setGeometryRejected(!geometry.isValid)
+                    },
+                    onBrightnessUpdate = { level ->
+                        val lightingQuality = when (level) {
+                            com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel.FAILED,
+                            com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel.POOR -> {
+                                val brightness = omrScannerViewModel.brightnessQuality.value
+                                    ?.brightnessCheck?.value ?: 128.0
+                                if (brightness < 128.0) OverlayView.LightingQuality.TOO_DARK
+                                else OverlayView.LightingQuality.TOO_BRIGHT
+                            }
+                            com.example.ledgerscanner.feature.scanner.scan.model.QualityLevel.ACCEPTABLE -> {
+                                val brightness = omrScannerViewModel.brightnessQuality.value
+                                    ?.brightnessCheck?.value ?: 128.0
+                                if (brightness < 100.0) OverlayView.LightingQuality.TOO_DARK
+                                else if (brightness > 180.0) OverlayView.LightingQuality.TOO_BRIGHT
+                                else OverlayView.LightingQuality.GOOD
+                            }
+                            else -> OverlayView.LightingQuality.GOOD
+                        }
+                        overlay.setLightingQuality(lightingQuality)
                     }
                 )
                 when (scanResult) {
@@ -436,7 +511,8 @@ private fun setupImageAnalysis(
         lifecycleOwner = lifecycleOwner,
         previewView = previewView,
         imageCapture = imageCapture,
-        analysisUseCase = analysisUseCase
+        analysisUseCase = analysisUseCase,
+        onCameraBound = { camera -> cameraRef.set(camera) }
     )
 }
 
@@ -445,7 +521,8 @@ private fun bindCameraUseCases(
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
     previewView: PreviewView,
     imageCapture: ImageCapture,
-    analysisUseCase: ImageAnalysis
+    analysisUseCase: ImageAnalysis,
+    onCameraBound: (androidx.camera.core.Camera) -> Unit = {}
 ) {
     val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
     cameraProviderFuture.addListener({
@@ -456,14 +533,41 @@ private fun bindCameraUseCases(
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
         cameraProvider.unbindAll()
-        cameraProvider.bindToLifecycle(
+        val camera = cameraProvider.bindToLifecycle(
             lifecycleOwner,
             cameraSelector,
             preview,
             imageCapture,
             analysisUseCase
         )
+        onCameraBound(camera)
     }, ContextCompat.getMainExecutor(context))
+}
+
+@Composable
+private fun TorchToggleButton(
+    isTorchOn: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = onToggle,
+        modifier = modifier
+            .background(
+                color = if (isTorchOn) androidx.compose.ui.graphics.Color(0xFFFFC107)
+                else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f),
+                shape = CircleShape
+            )
+            .padding(4.dp)
+    ) {
+        Icon(
+            imageVector = if (isTorchOn) Icons.Default.FlashOn
+            else Icons.Default.FlashOff,
+            contentDescription = if (isTorchOn) "Turn off torch" else "Turn on torch",
+            tint = if (isTorchOn) androidx.compose.ui.graphics.Color.Black
+            else Grey500
+        )
+    }
 }
 
 @Composable

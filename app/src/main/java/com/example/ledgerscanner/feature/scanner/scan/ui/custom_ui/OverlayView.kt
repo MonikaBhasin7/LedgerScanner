@@ -146,6 +146,7 @@ class OverlayView @JvmOverloads constructor(
         PARTIAL(Color.parseColor("#FFC107"), "Almost there..."),
         GOOD(Color.parseColor("#8BC34A"), "Hold steady"),
         STABILIZING(Color.parseColor("#8BC34A"), "Hold steady..."),
+        SHEET_CURVED(Color.parseColor("#FF9800"), "Flatten the sheet"),
         PERFECT(Color.parseColor("#4CAF50"), "✓ Aligned perfectly")
     }
 
@@ -226,6 +227,13 @@ class OverlayView @JvmOverloads constructor(
             }
         }
         invalidate()
+    }
+
+    fun setGeometryRejected(rejected: Boolean) {
+        if (rejected && detectedAnchors?.size == 4) {
+            alignmentQuality = AlignmentQuality.SHEET_CURVED
+            invalidate()
+        }
     }
 
     private fun updateAlignmentQuality(anchors: List<AnchorPoint>?) {
