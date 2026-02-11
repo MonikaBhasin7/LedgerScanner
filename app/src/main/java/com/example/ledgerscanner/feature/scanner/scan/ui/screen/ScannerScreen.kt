@@ -488,7 +488,7 @@ private fun setupImageAnalysis(
                     is UiState.Idle, is UiState.Loading -> {}
                     is UiState.Success -> {
                         if (isCapturing.compareAndSet(false, true)) {
-                            mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
+//                            mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
                             omrScannerViewModel.setCapturedResult(scanResult.data)
 
                             ScanResultActivity.launchScanResultScreen(

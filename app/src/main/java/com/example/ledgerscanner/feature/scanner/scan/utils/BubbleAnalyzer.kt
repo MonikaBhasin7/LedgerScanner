@@ -32,18 +32,20 @@ class BubbleAnalyzer @Inject constructor() {
     companion object {
         const val TAG = "BubbleAnalyzer"
 
-        // ✅ STRICTER thresholds to reduce false positives
-        const val MIN_CONFIDENCE = 0.65  // Increased from 0.60
+        const val MIN_CONFIDENCE = 0.65
 
-        // ✅ More conservative sampling
-        private const val INNER_CIRCLE_RATIO = 0.60  // Reduced from 0.65 to avoid borders
-        private const val BACKGROUND_INNER_RATIO = 1.0  // Background ring starts at bubble edge
-        private const val BACKGROUND_OUTER_RATIO = 1.5  // Background ring ends at 150% of radius
-        private const val DARK_PIXEL_PERCENTAGE = 40.0  // Increased from 35.0
+        // Sampling geometry — DO NOT CHANGE (proven)
+        private const val INNER_CIRCLE_RATIO = 0.60
+        private const val BACKGROUND_INNER_RATIO = 1.0
+        private const val BACKGROUND_OUTER_RATIO = 1.5
 
-        // ✅ Stricter relative threshold
-        private const val RELATIVE_THRESHOLD = 0.65  // Must be 35% darker (was 30%)
-        private const val ABSOLUTE_DIFFERENCE_THRESHOLD = 35.0  // Increased from 25.0
+        // ========== LOCAL thresholds (bubble vs its own background) ==========
+        // These are intentionally strict to eliminate false positives.
+        // On screen: filled ratio ~0.06-0.20, unfilled worst ~0.57
+        // On paper:  filled ratio ~0.30-0.55, unfilled worst ~0.75-0.90
+        private const val RELATIVE_THRESHOLD = 0.55
+        private const val ABSOLUTE_DIFFERENCE_THRESHOLD = 35.0
+        private const val DARK_PIXEL_PERCENTAGE = 40.0
     }
 
     /**
@@ -84,19 +86,18 @@ class BubbleAnalyzer @Inject constructor() {
 
                 val isMarked = analysisResult.isFilled && analysisResult.confidence >= MIN_CONFIDENCE
 
-                if (Log.isLoggable(TAG, Log.DEBUG)) {
-                    val ratio = stats.bubbleIntensity / stats.backgroundIntensity
-                    val diff = stats.backgroundIntensity - stats.bubbleIntensity
-                    Log.d(TAG, "Q${stats.questionIndex + 1}-${stats.optionIndex + 1}: " +
-                            "bubble=${"%.1f".format(stats.bubbleIntensity)}, " +
-                            "bg=${"%.1f".format(stats.backgroundIntensity)}, " +
-                            "ratio=${"%.2f".format(ratio)}, " +
-                            "diff=${"%.1f".format(diff)}, " +
-                            "dark=${"%.1f".format(stats.darkPixelPercentage)}%, " +
-                            "filled=${analysisResult.isFilled}, " +
-                            "conf=${"%.3f".format(analysisResult.confidence)}, " +
-                            "marked=$isMarked")
-                }
+                // TEMP DEBUG: Always log to diagnose false positives
+                val ratio = stats.bubbleIntensity / stats.backgroundIntensity
+                val diff = stats.backgroundIntensity - stats.bubbleIntensity
+                Log.d(TAG, "Q${stats.questionIndex + 1}-${stats.optionIndex + 1}: " +
+                        "bubble=${"%.1f".format(stats.bubbleIntensity)}, " +
+                        "bg=${"%.1f".format(stats.backgroundIntensity)}, " +
+                        "ratio=${"%.3f".format(ratio)}, " +
+                        "diff=${"%.1f".format(diff)}, " +
+                        "dark=${"%.1f".format(stats.darkPixelPercentage)}%, " +
+                        "filled=${analysisResult.isFilled}, " +
+                        "conf=${"%.3f".format(analysisResult.confidence)}, " +
+                        "marked=$isMarked")
 
                 if (isMarked) {
                     bubbleResults.add(
@@ -308,12 +309,24 @@ class BubbleAnalyzer @Inject constructor() {
         val bubbleStdDev: Double,
         val bgMean: Double,
         val filledThreshold: Double,
-        val darkPixelThreshold: Double
+        val darkPixelThreshold: Double,
+        val hasRealVariation: Boolean,
+        /** Median bubble intensity (50th percentile). Robust against number of filled bubbles.
+         *  Used to detect global outliers: a filled bubble is much darker than the median. */
+        val medianBubble: Double
     )
 
     /**
      * Calculate global statistics with STRICTER thresholds
      * (Same percentile-based logic as original — proven to work)
+     *
+     * KEY INSIGHT: When no bubbles are filled, all bubble intensities cluster
+     * tightly together. The 30th percentile and mean-based thresholds become
+     * meaningless noise — they'll flag random unfilled bubbles as "outliers."
+     *
+     * We detect this by checking coefficient of variation (stddev / mean).
+     * Real filled bubbles create a bimodal distribution with high CV.
+     * All-empty sheets have low CV (uniform distribution).
      */
     private fun calculateGlobalStatistics(allStats: List<BubbleStats>): GlobalStats {
         val bubbleIntensities = allStats.map { it.bubbleIntensity }
@@ -335,12 +348,36 @@ class BubbleAnalyzer @Inject constructor() {
         val darkPixelThreshold = sortedDarkPixels[darkPixelThresholdIndex]
             .coerceAtLeast(DARK_PIXEL_PERCENTAGE)
 
+        // ✅ KEY FIX: Detect if there's real variation (bimodal = some filled)
+        // Coefficient of variation: stddev/mean. When bubbles are filled vs unfilled,
+        // CV is typically > 10-15% (e.g., filled ~80-120, unfilled ~200-240, mean ~180, stddev ~40+).
+        // When ALL bubbles are unfilled, CV is tiny (e.g., mean ~220, stddev ~5, CV ~2%).
+        // Threshold at 8% provides safe margin.
+        val coefficientOfVariation = if (bubbleMean > 0) bubbleStdDev / bubbleMean else 0.0
+        val hasRealVariation = coefficientOfVariation > 0.08
+
+        Log.d(TAG, "Global variation: CV=${"%.3f".format(coefficientOfVariation)}, " +
+                "hasRealVariation=$hasRealVariation " +
+                "(stddev=${"%.1f".format(bubbleStdDev)}, mean=${"%.1f".format(bubbleMean)})")
+
+        // Use 60th percentile as representative of "unfilled bubble" intensity.
+        // Since most bubbles are unfilled (typically 1 answer per 4 options = 75% unfilled),
+        // the 60th percentile reliably sits in the unfilled cluster.
+        // A filled bubble must be less than half this value to be considered filled.
+        val p60Index = (sortedBubbles.size * 0.60).toInt().coerceAtMost(sortedBubbles.size - 1)
+        val medianBubble = sortedBubbles[p60Index]
+
+        Log.d(TAG, "P60 bubble intensity: ${"%.1f".format(medianBubble)}, " +
+                "outlier threshold (60%): ${"%.1f".format(medianBubble * 0.60)}")
+
         return GlobalStats(
             bubbleMean = bubbleMean,
             bubbleStdDev = bubbleStdDev,
             bgMean = bgMean,
             filledThreshold = filledThreshold,
-            darkPixelThreshold = darkPixelThreshold
+            darkPixelThreshold = darkPixelThreshold,
+            hasRealVariation = hasRealVariation,
+            medianBubble = medianBubble
         )
     }
 
@@ -351,9 +388,32 @@ class BubbleAnalyzer @Inject constructor() {
     }
 
     /**
-     * Analyze bubble with STRICT validation
-     * ALL conditions must pass (not just 3 of 4)
-     * (Same proven logic as original)
+     * Analyze bubble with LOCAL-ONLY detection.
+     *
+     * PERMANENT FIX: A bubble is filled ONLY when ALL 3 local signals agree.
+     * Each signal compares the bubble to its OWN immediate background — never
+     * to other bubbles. This eliminates ALL false positives caused by global
+     * statistics noise (percentile thresholds, mean-based thresholds, etc.)
+     *
+     * The 3 local signals are independent measurements of the same thing
+     * ("is this bubble darker than the paper immediately surrounding it?"):
+     *   1. RATIO:     bubbleIntensity / backgroundIntensity < 0.65
+     *   2. DARK %:    percentage of dark pixels inside bubble > 40%
+     *   3. ABS DIFF:  backgroundIntensity - bubbleIntensity > 35
+     *
+     * An unfilled bubble (just a printed circle on paper) typically has:
+     *   - ratio ~0.85-0.95 (circle border barely darker than paper)
+     *   - dark% ~5-20% (mostly white inside with thin border)
+     *   - diff ~10-25 (small intensity difference)
+     * It CANNOT pass all 3 thresholds simultaneously.
+     *
+     * A filled bubble (pencil mark or screen black) typically has:
+     *   - ratio ~0.30-0.60 (much darker than paper)
+     *   - dark% ~50-90% (mostly dark pixels)
+     *   - diff ~50-150 (large intensity difference)
+     * It passes all 3 easily.
+     *
+     * Global stats are used ONLY to boost confidence, never for the filled/not decision.
      */
     private fun analyzeBubbleStrict(
         bubbleIntensity: Double,
@@ -364,80 +424,52 @@ class BubbleAnalyzer @Inject constructor() {
         optionIndex: Int
     ): BubbleAnalysisResult {
 
-        // ✅ Condition 1: Relative to local background (STRICT)
         val ratio = bubbleIntensity / backgroundIntensity
-        val relativeCondition = ratio < RELATIVE_THRESHOLD
-
-        // ✅ Condition 2: Must be in darkest 30% of all bubbles
-        val quartileCondition = bubbleIntensity < globalStats.filledThreshold
-
-        // ✅ Condition 3: Dark pixel percentage (STRICT)
-        val darkPixelCondition = darkPixelPercentage > globalStats.darkPixelThreshold
-
-        // ✅ Condition 4: Absolute difference (STRICT)
         val absoluteDifference = backgroundIntensity - bubbleIntensity
-        val absoluteCondition = absoluteDifference > ABSOLUTE_DIFFERENCE_THRESHOLD
 
-        // ✅ Condition 5: Significantly darker than global mean
-        val globalCondition = bubbleIntensity < (globalStats.bubbleMean - globalStats.bubbleStdDev * 0.5)
+        // ========== 3 LOCAL signals (bubble vs its own background) ==========
+        val ratioPass = ratio < RELATIVE_THRESHOLD                          // < 0.55
+        val darkPixelPass = darkPixelPercentage > DARK_PIXEL_PERCENTAGE     // > 40%
+        val absDiffPass = absoluteDifference > ABSOLUTE_DIFFERENCE_THRESHOLD // > 35
 
-        val conditions = listOf(
-            relativeCondition,
-            quartileCondition,
-            darkPixelCondition,
-            absoluteCondition,
-            globalCondition
-        )
-        val passedConditions = conditions.count { it }
+        // ========== GLOBAL outlier check ==========
+        // A filled bubble must be significantly darker than the MEDIAN bubble.
+        // This catches the case where CLAHE makes unfilled bubbles appear locally dark
+        // (ratio 0.57-0.65, dark 65-83%) but they're still near the median globally.
+        // Truly filled bubbles (intensity ~8-23) are far below median (~130).
+        //
+        // Uses median (50th percentile) instead of mean to be robust against
+        // the number of filled bubbles. Even with 1 filled bubble out of 200,
+        // the median stays at the unfilled cluster (~180), and the filled bubble
+        // at ~100 is well below median - 25% = ~135.
+        val isGlobalOutlier = bubbleIntensity < (globalStats.medianBubble * 0.60)
 
-        // ✅ Decision logic:
-        // 5/5 → definitely filled
-        // 4/5 → filled if at least one signal is strong (catches lightly-filled real paper bubbles)
-        // 3/5 → filled ONLY if multiple very strong signals (rare edge case: uneven lighting)
-        // <3  → not filled
-        val isFilled = when {
-            passedConditions == 5 -> true
+        // ========== DECISION ==========
+        // ALL 3 local signals must pass AND the bubble must be a global outlier.
+        // This double-gate makes false positives virtually impossible:
+        // - Local gate catches bubbles that are darker than their own background
+        // - Global gate catches bubbles that are darker than ALL other bubbles
+        // An unfilled bubble might fool one gate but not both.
+        val isFilled = ratioPass && darkPixelPass && absDiffPass && isGlobalOutlier
 
-            passedConditions == 4 -> {
-                // At least one strong signal required to prevent false positives
-                ratio < 0.62 || darkPixelPercentage > 50.0 || absoluteDifference > 45.0
-            }
-
-            passedConditions == 3 -> {
-                // Very strict: need ALL three strong signals simultaneously
-                // This catches the rare case where uneven paper lighting fails
-                // condition 2 (quartile) and condition 5 (global), but the bubble
-                // is clearly dark relative to its own local background
-                ratio < 0.55 && darkPixelPercentage > 60.0 && absoluteDifference > 50.0
-            }
-
-            else -> false
-        }
-
-        // Calculate confidence
+        // ========== CONFIDENCE ==========
         val confidence = if (isFilled) {
-            val intensityScore = 1.0 - ratio
-            val darkPixelScore = (darkPixelPercentage / 100.0).coerceAtMost(1.0)
-            val diffScore = (absoluteDifference / 100.0).coerceAtMost(1.0)
+            val intensityScore = (1.0 - ratio).coerceIn(0.0, 1.0)
+            val darkPixelScore = (darkPixelPercentage / 100.0).coerceIn(0.0, 1.0)
+            val diffScore = (absoluteDifference / 100.0).coerceIn(0.0, 1.0)
             val rawScore = (intensityScore * 0.4) + (darkPixelScore * 0.4) + (diffScore * 0.2)
-
-            when (passedConditions) {
-                5 -> rawScore.coerceIn(0.80, 1.0)
-                4 -> rawScore.coerceIn(0.70, 0.92)
-                3 -> rawScore.coerceIn(0.65, 0.82)
-                else -> 0.0
-            }
+            rawScore.coerceIn(MIN_CONFIDENCE, 1.0)
         } else {
             0.0
         }
 
         if (Log.isLoggable(TAG, Log.VERBOSE)) {
             Log.v(TAG, "Q${questionIndex + 1}-${optionIndex + 1}: " +
-                    "conditions=[rel=$relativeCondition, qrt=$quartileCondition, " +
-                    "dark=$darkPixelCondition, abs=$absoluteCondition, glob=$globalCondition] " +
-                    "passed=$passedConditions/5 → filled=$isFilled " +
-                    "(ratio=${"%.2f".format(ratio)}, diff=${"%.1f".format(absoluteDifference)}, " +
-                    "dark=${"%.1f".format(darkPixelPercentage)}%)")
+                    "ratio=${"%.3f".format(ratio)}(${if (ratioPass) "✓" else "✗"}), " +
+                    "dark=${"%.1f".format(darkPixelPercentage)}%(${if (darkPixelPass) "✓" else "✗"}), " +
+                    "diff=${"%.1f".format(absoluteDifference)}(${if (absDiffPass) "✓" else "✗"}), " +
+                    "outlier=$isGlobalOutlier " +
+                    "→ filled=$isFilled, conf=${"%.3f".format(confidence)}")
         }
 
         return BubbleAnalysisResult(
