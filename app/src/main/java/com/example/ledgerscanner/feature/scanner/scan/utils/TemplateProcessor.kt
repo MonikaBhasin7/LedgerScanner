@@ -208,6 +208,15 @@ class TemplateProcessor @Inject constructor() {
     fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<AnchorPoint> {
         val anchors = mutableListOf<AnchorPoint>()
 
+        val imageArea = gray.rows().toDouble() * gray.cols().toDouble()
+        // Minimum anchor area: 0.0001 of image area (e.g. 10x10 on a 1000x1000 image)
+        // but at least 100px² absolute minimum
+        val minAnchorArea = max(100.0, imageArea * 0.0001)
+        // Maximum anchor area: 2% of image (prevents picking up large blobs)
+        val maxAnchorArea = imageArea * 0.02
+
+        Log.d(TAG, "Anchor area range: ${minAnchorArea.roundToInt()} - ${maxAnchorArea.roundToInt()} px² (image: ${gray.cols()}x${gray.rows()})")
+
         // 1. Threshold (since anchors are black)
         val bin = Mat()
         Imgproc.threshold(
@@ -251,12 +260,12 @@ class TemplateProcessor @Inject constructor() {
                 val contourArea = Imgproc.contourArea(contour)
                 val rectArea = w * h
                 val solidity = if (rectArea > 0.0) contourArea / rectArea else 0.0
-                // Optional convexity: Imgproc.isContourConvex(approxMp)
 
-                // Keep near-square, not-too-tiny, reasonably solid, solidity >=0.7, likely a circle, skip
-                if (aspect in 0.9..1.1 && rectArea >= 800.0 && solidity >= 0.7) {
+                // Keep near-square, within size range, reasonably solid
+                if (aspect in 0.85..1.18 && rectArea in minAnchorArea..maxAnchorArea && solidity >= 0.7) {
                     val center = AnchorPoint(rect.x + w / 2.0, rect.y + h / 2.0)
                     anchors.add(center)
+                    Log.d(TAG, "Anchor candidate: ${w.roundToInt()}x${h.roundToInt()} area=${rectArea.roundToInt()} aspect=${"%.2f".format(aspect)} solidity=${"%.2f".format(solidity)}")
                 }
                 approxMp.release()
             }
