@@ -3,6 +3,7 @@ package com.example.ledgerscanner.feature.scanner.scan.di
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnchorGeometryValidator
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
+import com.example.ledgerscanner.feature.scanner.scan.utils.EnrollmentReader
 import com.example.ledgerscanner.feature.scanner.scan.utils.FrameStabilityTracker
 import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
 import com.example.ledgerscanner.feature.scanner.scan.utils.OmrProcessor
@@ -44,4 +45,7 @@ object ScanProcessingModule {
 
     @Provides
     fun provideAnchorGeometryValidator(): AnchorGeometryValidator = AnchorGeometryValidator()
+
+    @Provides
+    fun provideEnrollmentReader(): EnrollmentReader = EnrollmentReader()
 }

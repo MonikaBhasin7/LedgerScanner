@@ -25,6 +25,7 @@ data class Template(
     val anchor_top_right: AnchorPoint,
     val anchor_bottom_right: AnchorPoint,
     val anchor_bottom_left: AnchorPoint,
+    val enrollment_grid: EnrollmentGrid? = null,
 ) : Parcelable {
     private var totalBubbles: Int? = null
     fun totalBubbles(): Int? {
@@ -138,3 +139,25 @@ enum class OmrTemplateType(val fileName: String) {
     SIXTEEN_QUESTIONS("template_omr_16_ques.json"),
     SIXTEEN_DISTORTED_QUESTIONS("template_omr_16_distorted_ques.json");
 }
+
+/**
+ * Enrollment number grid — a grid of columns where each column has 10 bubbles (digits 0-9).
+ * Students fill one bubble per column to encode their enrollment/roll number.
+ *
+ * Example: 10 columns × 10 digits = encodes a 10-digit enrollment number.
+ */
+@Parcelize
+data class EnrollmentGrid(
+    val columns: Int,               // number of digit positions (e.g., 10)
+    val digits: List<DigitColumn>   // each column's bubble positions
+) : Parcelable
+
+/**
+ * A single column in the enrollment grid representing one digit position.
+ * Contains 10 bubbles (one for each digit 0-9).
+ */
+@Parcelize
+data class DigitColumn(
+    val column_index: Int,          // 0-based position in the enrollment number
+    val bubbles: List<OptionBox>    // 10 bubbles for digits 0-9, positions relative to TL anchor
+) : Parcelable

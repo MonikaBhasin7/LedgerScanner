@@ -140,6 +140,7 @@ fun ScanResultScreen(
 
             StudentDetailsSection(
                 barcodeId = barcodeValueState.value,
+                enrollmentNumber = scanResultEntity.enrollmentNumber,
                 studentDetailsRef = studentDetailsRef,
                 barcodeLocked = barcodeLockedState.value,
                 onBarcodeChange = { value ->

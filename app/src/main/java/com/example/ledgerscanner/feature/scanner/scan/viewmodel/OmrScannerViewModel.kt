@@ -27,6 +27,7 @@ import com.example.ledgerscanner.feature.scanner.scan.utils.AnchorGeometryValida
 import com.example.ledgerscanner.feature.scanner.scan.utils.AnswerEvaluator
 import com.example.ledgerscanner.feature.scanner.scan.utils.BarcodeScanner
 import com.example.ledgerscanner.feature.scanner.scan.utils.BubbleAnalyzer
+import com.example.ledgerscanner.feature.scanner.scan.utils.EnrollmentReader
 import com.example.ledgerscanner.feature.scanner.scan.utils.FrameStabilityTracker
 import com.example.ledgerscanner.feature.scanner.scan.utils.GeometryValidationResult
 import com.example.ledgerscanner.feature.scanner.scan.utils.ImageQualityChecker
@@ -51,6 +52,7 @@ class OmrScannerViewModel @Inject constructor(
     private val imageQualityChecker: ImageQualityChecker,
     private val bubbleAnalyzer: BubbleAnalyzer,
     private val barcodeScanner: BarcodeScanner,
+    private val enrollmentReader: EnrollmentReader,
     private val frameStabilityTracker: FrameStabilityTracker,
     private val anchorGeometryValidator: AnchorGeometryValidator
 ) : ViewModel() {
@@ -274,6 +276,9 @@ class OmrScannerViewModel @Inject constructor(
                 )
             } ?: return UiState.Error(ErrorMessages.IMAGE_SAVE_FAILED)
 
+            // Read enrollment number from process result
+            val enrollmentNumber = omrImageProcessResult.enrollmentNumber
+
             // Convert detected bubbles to answers
             val studentAnswers = mutableMapOf<Int, List<Int>>()
 
@@ -303,6 +308,7 @@ class OmrScannerViewModel @Inject constructor(
                 ScanResultEntity(
                     examId = examEntity.id,
                     barCode = omrImageProcessResult.barcodeId,
+                    enrollmentNumber = enrollmentNumber,
                     scannedImagePath = scannedImagePath,
                     thumbnailPath = thumbnailPath,
                     clickedRawImagePath = rawImagePath,
@@ -400,6 +406,20 @@ class OmrScannerViewModel @Inject constructor(
             )
         }
 
+        // Read enrollment number (if template has enrollment grid)
+        val enrollmentNumber = try {
+            enrollmentReader.readEnrollmentNumber(
+                template = template,
+                warped = processingContext.warpedMat!!
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Enrollment reading failed, continuing without it", e)
+            null
+        }
+        if (enrollmentNumber != null) {
+            Log.d(TAG, "Enrollment number detected: $enrollmentNumber")
+        }
+
         val evaluationResult = evaluateAnswersIfPossible(examEntity, detectionResult.bubbles)
         val finalBitmap = createFinalResultBitmap(
             processingContext.warpedMat!!,
@@ -413,7 +433,8 @@ class OmrScannerViewModel @Inject constructor(
             finalBitmap = finalBitmap,
             detectedBubbles = detectionResult.bubbles,
             evaluation = evaluationResult,
-            rawBitmap = processingContext.rawBitmap
+            rawBitmap = processingContext.rawBitmap,
+            enrollmentNumber = enrollmentNumber
         )
     }
 

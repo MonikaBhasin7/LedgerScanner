@@ -25,6 +25,7 @@ import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsFor
 @Composable
 fun StudentDetailsSection(
     barcodeId: String?,
+    enrollmentNumber: String? = null,
     studentDetailsRef: MutableState<StudentDetailsForScanResult>,
     barcodeLocked: Boolean,
     onBarcodeChange: (String) -> Unit,
@@ -54,6 +55,19 @@ fun StudentDetailsSection(
                 style = AppTypography.label2Bold,
                 color = Grey900
             )
+
+            // Show enrollment number if detected from OMR sheet
+            if (!enrollmentNumber.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+
+                GenericTextField(
+                    value = enrollmentNumber,
+                    label = "Enrollment Number (auto-detected)",
+                    onValueChange = { }, // read-only
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Spacer(Modifier.height(12.dp))
 

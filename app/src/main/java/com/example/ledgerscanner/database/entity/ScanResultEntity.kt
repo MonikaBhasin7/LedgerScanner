@@ -28,6 +28,7 @@ data class ScanResultEntity(
 
     // Student Info
     var barCode: String?,
+    val enrollmentNumber: String? = null,
 
     // Scan Info
     val clickedRawImagePath: String,

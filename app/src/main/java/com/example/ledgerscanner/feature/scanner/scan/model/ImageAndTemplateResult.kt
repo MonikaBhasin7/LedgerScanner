@@ -22,7 +22,8 @@ data class OmrImageProcessResult(
     val rawBitmap: Bitmap? = null,
     val detectedBubbles: List<BubbleResult>? = null,// Detection results
     val evaluation: EvaluationResult? = null, // Evaluation results (optional)
-    val barcodeId: String? = null
+    val barcodeId: String? = null,
+    val enrollmentNumber: String? = null
 ) : OmrResult(success, reason, finalBitmap, debugBitmaps)
 
 @Parcelize

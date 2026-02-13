@@ -8,6 +8,8 @@ import com.example.ledgerscanner.base.utils.image.toBitmapSafe
 import com.example.ledgerscanner.base.utils.image.toColoredWarped
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Bubble
+import com.example.ledgerscanner.feature.scanner.scan.model.DigitColumn
+import com.example.ledgerscanner.feature.scanner.scan.model.EnrollmentGrid
 import com.example.ledgerscanner.feature.scanner.scan.model.Gap
 import com.example.ledgerscanner.feature.scanner.scan.model.HoughParams
 import com.example.ledgerscanner.feature.scanner.scan.model.OmrTemplateResult
@@ -45,18 +47,21 @@ class TemplateProcessor @Inject constructor() {
         questionsPerColumn: Int = 25,
         numberOfColumns: Int = 2,
         optionsPerQuestion: Int = 4,
+        enrollmentColumns: Int = 0, // 0 = no enrollment grid, >0 = number of digit columns
         debug: Boolean = true
     ): OmrTemplateResult {
         val debugMap = hashMapOf<String, Bitmap>()
         var srcMat: Mat? = null
         var grayMat: Mat? = null
         try {
+            val totalAnswerBubbles = questionsPerColumn * numberOfColumns * optionsPerQuestion
+            val totalEnrollmentBubbles = if (enrollmentColumns > 0) enrollmentColumns * 10 else 0
             Log.d(
-                TAG, "Starting template generation: $questionsPerColumn questions/column × " +
-                        "$numberOfColumns columns × $optionsPerQuestion options = " +
-                        "${questionsPerColumn * numberOfColumns * optionsPerQuestion} total bubbles"
+                TAG, "Starting template generation: " +
+                        "$questionsPerColumn questions/column × $numberOfColumns columns × $optionsPerQuestion options = " +
+                        "$totalAnswerBubbles answer bubbles" +
+                        if (enrollmentColumns > 0) " + $enrollmentColumns enrollment columns × 10 digits = $totalEnrollmentBubbles enrollment bubbles" else ""
             )
-
 
             // 1. Convert bitmap to grayscale
             srcMat = Mat().apply {
@@ -67,7 +72,7 @@ class TemplateProcessor @Inject constructor() {
                 if (debug) debugMap["gray"] = this.toBitmapSafe()
             }
 
-            // 3. Detect anchors
+            // 2. Detect anchors
             val anchorPoints: List<AnchorPoint> = detectAnchorPoints(
                 srcMat,
                 grayMat,
@@ -84,71 +89,102 @@ class TemplateProcessor @Inject constructor() {
                 },
             ) ?: listOf()
 
-            // 4. Detect bubbles
-            val bubbles = detectAndFetchBubblesWithinAnchors(
+            // 3. Detect ALL bubbles within anchor region
+            val expectedTotalBubbles = totalAnswerBubbles + totalEnrollmentBubbles
+            val allBubbles = detectAndFetchBubblesWithinAnchors(
                 grayMat = grayMat,
                 anchorPoints = anchorPoints,
                 questionsPerColumn = questionsPerColumn,
                 numberOfColumns = numberOfColumns,
                 optionsPerQuestion = optionsPerQuestion,
+                totalExpectedBubbles = expectedTotalBubbles,
                 debug = debug,
                 debugMapAdditionCallback = { title, bitmap ->
                     debugMap[title] = bitmap
                 }
             )
 
-            // 5. Validate bubble count
-            val expectedBubbles = questionsPerColumn * numberOfColumns * optionsPerQuestion
-//            if (bubbles.size != expectedBubbles) {
-//                return OmrTemplateResult(
-//                    success = false,
-//                    reason = "Expected exactly $expectedBubbles bubbles " +
-//                            "($questionsPerColumn questions/column × $numberOfColumns columns × $optionsPerQuestion options), " +
-//                            "but found ${bubbles.size} bubbles.\n\n" +
-//                            "Please ensure:\n" +
-//                            "• The OMR sheet has exactly $questionsPerColumn questions per column\n" +
-//                            "• There are exactly $numberOfColumns columns\n" +
-//                            "• Each question has exactly $optionsPerQuestion options\n" +
-//                            "• All bubbles are clearly visible and well-lit",
-//                    debugBitmaps = debugMap
-//                )
-//            }
+            Log.d(TAG, "Total bubbles detected: ${allBubbles.size} (expected: $expectedTotalBubbles)")
 
-            // 6. Sort bubbles into 2D array (handles multiple columns automatically)
-            val bubbles2DArray = sortBubblesColumnWise(bubbles, optionsPerQuestion)
+            // 4. Split enrollment bubbles from answer bubbles (if enrollment is enabled)
+            var enrollmentGrid: EnrollmentGrid? = null
+            val answerBubbles: List<Bubble>
+            var enrollmentBubblesForDrawing: List<List<Bubble>>? = null
 
-            // 7. Validate structure
-            val totalQuestions = questionsPerColumn * numberOfColumns
-//            if (bubbles2DArray.size != totalQuestions) {
-//                return OmrTemplateResult(
-//                    success = false,
-//                    reason = "Expected $totalQuestions questions after sorting, got ${bubbles2DArray.size}",
-//                    debugBitmaps = debugMap
-//                )
-//            }
+            if (enrollmentColumns > 0 && allBubbles.size > totalAnswerBubbles) {
+                val splitResult = splitEnrollmentFromAnswers(
+                    grayMat,
+                    allBubbles = allBubbles,
+                    enrollmentColumns = enrollmentColumns,
+                    expectedAnswerBubbles = totalAnswerBubbles,
+                    anchorTopLeft = anchorPoints[0],
+                    debugMapAdditionCallback = { title, bitmap ->
+                        debugMap[title] = bitmap
+                    }
+                )
+                enrollmentGrid = splitResult.first
+                answerBubbles = splitResult.second
+
+                val enrollmentBubbleCount = allBubbles.size - answerBubbles.size
+                Log.d(TAG, "Split: $enrollmentBubbleCount enrollment bubbles, ${answerBubbles.size} answer bubbles")
+
+                // Build enrollment bubbles grouped by column for debug drawing
+                // Convert from EnrollmentGrid (relative coords) back to absolute coords for drawing
+                if (enrollmentGrid != null) {
+                    enrollmentBubblesForDrawing = enrollmentGrid.digits.map { digitCol ->
+                        digitCol.bubbles.map { optBox ->
+                            Bubble(
+                                x = optBox.x + anchorPoints[0].x,
+                                y = optBox.y + anchorPoints[0].y,
+                                r = optBox.r
+                            )
+                        }
+                    }
+                }
+
+                // Validate enrollment bubble count
+                val expectedEnrollmentBubbles = enrollmentColumns * 10
+                if (enrollmentBubbleCount != expectedEnrollmentBubbles) {
+                    Log.w(TAG, "⚠ Enrollment bubble count mismatch: found $enrollmentBubbleCount, expected $expectedEnrollmentBubbles ($enrollmentColumns columns × 10 digits)")
+                    return OmrTemplateResult(
+                        success = false,
+                        reason = "Enrollment grid: found $enrollmentBubbleCount bubbles, expected $expectedEnrollmentBubbles ($enrollmentColumns columns × 10 digits). Check that enrollment grid is clearly printed and anchors cover it.",
+                        debugBitmaps = debugMap
+                    )
+                }
+
+                // Also validate that each column has exactly 10 bubbles
+                enrollmentGrid?.digits?.forEachIndexed { colIdx, digitCol ->
+                    if (digitCol.bubbles.size != 10) {
+                        Log.w(TAG, "⚠ Enrollment column $colIdx has ${digitCol.bubbles.size} bubbles (expected 10)")
+                    }
+                }
+            } else {
+                answerBubbles = allBubbles
+                if (enrollmentColumns > 0) {
+                    Log.w(TAG, "⚠ Enrollment enabled ($enrollmentColumns columns) but total bubbles ${allBubbles.size} <= expected answer bubbles $totalAnswerBubbles. No enrollment bubbles detected.")
+                }
+            }
+
+            // 5. Sort answer bubbles into 2D array
+            val bubbles2DArray = sortBubblesColumnWise(answerBubbles, optionsPerQuestion)
+
             val invalidRows = bubbles2DArray.filter { it.size != optionsPerQuestion }
-//            if (invalidRows.isNotEmpty()) {
-//                return OmrTemplateResult(
-//                    success = false,
-//                    reason = "Found ${invalidRows.size} questions with incorrect bubble count " +
-//                            "(expected $optionsPerQuestion per question)",
-//                    debugBitmaps = debugMap
-//                )
-//            }
 
-            // 8. Generate template JSON
+            // 6. Generate template JSON
             val templatePair = generateTemplateJsonSimple(
                 anchorPoints,
                 bubbles2DArray,
-                srcMat.size()
+                srcMat.size(),
+                enrollmentGrid
             )
 
-
-            // 9. Create final debug bitmap
+            // 7. Create final debug bitmap — includes enrollment bubbles in cyan
             val finalBitmap = OpenCvUtils.drawPoints(
                 grayMat.toColoredWarped(),
                 points = anchorPoints,
                 bubbles2DArray = bubbles2DArray,
+                enrollmentBubbles = enrollmentBubblesForDrawing,
                 radius = templatePair.template?.questions?.firstOrNull()?.options?.firstOrNull()?.r?.roundToInt(),
             ).let {
                 val bitmap = it.toBitmapSafe()
@@ -204,94 +240,235 @@ class TemplateProcessor @Inject constructor() {
         return anchorPoints
     }
 
+    /**
+     * Candidate anchor with metadata for filtering
+     */
+    private data class AnchorCandidate(
+        val center: AnchorPoint,
+        val area: Double,
+        val solidity: Double,
+        val aspect: Double,
+        val vertices: Long,
+        val width: Double,
+        val height: Double
+    )
+
     @Throws
     fun detectAnchorPointsImpl(gray: Mat, debug: Boolean = false): List<AnchorPoint> {
-        val anchors = mutableListOf<AnchorPoint>()
+        val imgW = gray.cols().toDouble()
+        val imgH = gray.rows().toDouble()
+        val imageArea = imgH * imgW
 
-        val imageArea = gray.rows().toDouble() * gray.cols().toDouble()
-        // Minimum anchor area: 0.0001 of image area (e.g. 10x10 on a 1000x1000 image)
-        // but at least 100px² absolute minimum
+        // Anchor area relative to image — supports both small and large anchors
         val minAnchorArea = max(100.0, imageArea * 0.0001)
-        // Maximum anchor area: 2% of image (prevents picking up large blobs)
         val maxAnchorArea = imageArea * 0.02
 
-        Log.d(TAG, "Anchor area range: ${minAnchorArea.roundToInt()} - ${maxAnchorArea.roundToInt()} px² (image: ${gray.cols()}x${gray.rows()})")
+        Log.d(TAG, "Anchor detection: image ${imgW.toInt()}x${imgH.toInt()}, " +
+                "area range: ${minAnchorArea.toInt()}-${maxAnchorArea.toInt()}")
 
+        // Try multiple threshold values for robustness
+        val thresholds = listOf(50.0, 80.0, 100.0, 127.0)
+
+        for (threshold in thresholds) {
+            val result = tryDetectAnchorsAtThreshold(gray, threshold, minAnchorArea, maxAnchorArea, imgW, imgH)
+            if (result.size == 4) {
+                Log.d(TAG, "✓ Found 4 anchors at threshold=$threshold")
+                return result
+            }
+            Log.d(TAG, "Threshold $threshold: found ${result.size} anchors, trying next...")
+        }
+
+        // None of the thresholds gave exactly 4 — try the first threshold with best-effort corner selection
+        Log.w(TAG, "No threshold gave exactly 4 anchors, attempting best-effort with threshold=${thresholds[0]}")
+        return tryDetectAnchorsAtThreshold(gray, thresholds[0], minAnchorArea, maxAnchorArea, imgW, imgH, forceCornerSelect = true)
+    }
+
+    private fun tryDetectAnchorsAtThreshold(
+        gray: Mat,
+        threshold: Double,
+        minAnchorArea: Double,
+        maxAnchorArea: Double,
+        imgW: Double,
+        imgH: Double,
+        forceCornerSelect: Boolean = false
+    ): List<AnchorPoint> {
         // 1. Threshold (since anchors are black)
         val bin = Mat()
-        Imgproc.threshold(
-            gray,
-            bin,
-            50.0,
-            255.0,
-            Imgproc.THRESH_BINARY_INV
-        )
+        Imgproc.threshold(gray, bin, threshold, 255.0, Imgproc.THRESH_BINARY_INV)
 
         // 2. Find contours
         val contours = mutableListOf<MatOfPoint>()
         val hierarchy = Mat()
-        Imgproc.findContours(
-            bin,
-            contours,
-            hierarchy,
-            Imgproc.RETR_EXTERNAL,
-            Imgproc.CHAIN_APPROX_SIMPLE
-        )
+        Imgproc.findContours(bin, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
 
-        // 3. Filter contours that look like squares
+        Log.d(TAG, "Threshold=$threshold: ${contours.size} contours found")
+
+        // 3. Filter contours that look like filled squares
+        val candidates = mutableListOf<AnchorCandidate>()
+        var rejectedTooSmall = 0
+        var rejectedTooBig = 0
+        var rejectedAspect = 0
+        var rejectedShape = 0
+
         for (contour in contours) {
+            val rect = Imgproc.boundingRect(contour)
+            val w = rect.width.toDouble()
+            val h = rect.height.toDouble()
+            if (w <= 0.0 || h <= 0.0) continue
+
+            val rectArea = w * h
+            if (rectArea < minAnchorArea) { rejectedTooSmall++; continue }
+            if (rectArea > maxAnchorArea) { rejectedTooBig++; continue }
+
+            val aspect = w / h
+            if (aspect !in 0.6..1.67) { rejectedAspect++; continue }
+
+            val contourArea = Imgproc.contourArea(contour)
+            val solidity = if (rectArea > 0.0) contourArea / rectArea else 0.0
+
             val mp2f = MatOfPoint2f(*contour.toArray())
             val peri = Imgproc.arcLength(mp2f, true)
             val approx = MatOfPoint2f()
             Imgproc.approxPolyDP(mp2f, approx, 0.04 * peri, true)
-
-            if (approx.total() == 4L) {
-                val approxMp = MatOfPoint(*approx.toArray())
-                val rect = Imgproc.boundingRect(approxMp)
-                val w = rect.width.toDouble()
-                val h = rect.height.toDouble()
-                if (w <= 0.0 || h <= 0.0) {
-                    approxMp.release(); approx.release(); mp2f.release(); continue
-                }
-
-                val aspect = w / h
-
-                // solidity against axis-aligned box (simple & fast)
-                val contourArea = Imgproc.contourArea(contour)
-                val rectArea = w * h
-                val solidity = if (rectArea > 0.0) contourArea / rectArea else 0.0
-
-                // Keep near-square, within size range, reasonably solid
-                if (aspect in 0.85..1.18 && rectArea in minAnchorArea..maxAnchorArea && solidity >= 0.7) {
-                    val center = AnchorPoint(rect.x + w / 2.0, rect.y + h / 2.0)
-                    anchors.add(center)
-                    Log.d(TAG, "Anchor candidate: ${w.roundToInt()}x${h.roundToInt()} area=${rectArea.roundToInt()} aspect=${"%.2f".format(aspect)} solidity=${"%.2f".format(solidity)}")
-                }
-                approxMp.release()
-            }
+            val vertices = approx.total()
             approx.release()
             mp2f.release()
+
+            // Strategy A: 4-vertex polygon with good solidity
+            val isPolySquare = vertices == 4L && aspect in 0.75..1.33 && solidity >= 0.7
+            // Strategy B: Any vertex count but very high solidity (filled square)
+            val isFilledSquare = aspect in 0.75..1.33 && solidity >= 0.82
+
+            if (isPolySquare || isFilledSquare) {
+                candidates.add(AnchorCandidate(
+                    center = AnchorPoint(rect.x + w / 2.0, rect.y + h / 2.0),
+                    area = rectArea,
+                    solidity = solidity,
+                    aspect = aspect,
+                    vertices = vertices,
+                    width = w,
+                    height = h
+                ))
+            } else {
+                rejectedShape++
+            }
         }
 
+        Log.d(TAG, "Candidates: ${candidates.size} passed, rejected: " +
+                "tooSmall=$rejectedTooSmall, tooBig=$rejectedTooBig, " +
+                "aspect=$rejectedAspect, shape=$rejectedShape")
 
-        // 4. Sort anchors into LT, RT, RB, LB
-        if (anchors.size == 4) {
-            // sort top vs bottom by y
-            val sorted = anchors.sortedBy { it.y }
-            val top = sorted.take(2).sortedBy { it.x }   // left, right
-            val bottom = sorted.takeLast(2).sortedBy { it.x } // left, right
-
-            anchors.clear()
-            anchors.add(top[0])     // LT
-            anchors.add(top[1])     // RT
-            anchors.add(bottom[1])  // RB
-            anchors.add(bottom[0])  // LB
+        for ((i, c) in candidates.withIndex()) {
+            Log.d(TAG, "  Candidate $i: center=(${c.center.x.toInt()},${c.center.y.toInt()}) " +
+                    "size=${c.width.toInt()}x${c.height.toInt()} area=${c.area.toInt()} " +
+                    "aspect=${"%.2f".format(c.aspect)} solidity=${"%.2f".format(c.solidity)} vertices=${c.vertices}")
         }
 
         bin.release()
         hierarchy.release()
 
+        val anchors = mutableListOf<AnchorPoint>()
+
+        if (candidates.size >= 4) {
+            // Filter by size consistency: anchors should all be roughly the same size
+            val sizeFilteredCandidates = filterBySizeConsistency(candidates)
+            Log.d(TAG, "After size consistency filter: ${sizeFilteredCandidates.size} candidates")
+
+            val toSelect = if (sizeFilteredCandidates.size >= 4) sizeFilteredCandidates else candidates
+
+            if (toSelect.size == 4) {
+                anchors.addAll(toSelect.map { it.center })
+            } else if (toSelect.size > 4 || forceCornerSelect) {
+                // Pick 4 closest to image corners
+                val corners = listOf(
+                    AnchorPoint(0.0, 0.0),
+                    AnchorPoint(imgW, 0.0),
+                    AnchorPoint(imgW, imgH),
+                    AnchorPoint(0.0, imgH)
+                )
+                val selected = mutableListOf<AnchorPoint>()
+                val used = mutableSetOf<Int>()
+                for (corner in corners) {
+                    var bestIdx = -1
+                    var bestDist = Double.MAX_VALUE
+                    for ((idx, c) in toSelect.withIndex()) {
+                        if (idx in used) continue
+                        val dist = sqrt((c.center.x - corner.x) * (c.center.x - corner.x) +
+                                (c.center.y - corner.y) * (c.center.y - corner.y))
+                        if (dist < bestDist) { bestDist = dist; bestIdx = idx }
+                    }
+                    if (bestIdx >= 0) { selected.add(toSelect[bestIdx].center); used.add(bestIdx) }
+                }
+                anchors.addAll(selected)
+            }
+        } else if (candidates.isNotEmpty()) {
+            Log.w(TAG, "Only ${candidates.size} candidates found (need 4)")
+            anchors.addAll(candidates.map { it.center })
+        }
+
+        // Sort into TL, TR, BR, BL
+        if (anchors.size == 4) {
+            val sorted = anchors.sortedBy { it.y }
+            val top = sorted.take(2).sortedBy { it.x }
+            val bottom = sorted.takeLast(2).sortedBy { it.x }
+            anchors.clear()
+            anchors.add(top[0])     // TL
+            anchors.add(top[1])     // TR
+            anchors.add(bottom[1])  // BR
+            anchors.add(bottom[0])  // BL
+
+            Log.d(TAG, "Anchors: TL=(${top[0].x.toInt()},${top[0].y.toInt()}) " +
+                    "TR=(${top[1].x.toInt()},${top[1].y.toInt()}) " +
+                    "BR=(${bottom[1].x.toInt()},${bottom[1].y.toInt()}) " +
+                    "BL=(${bottom[0].x.toInt()},${bottom[0].y.toInt()})")
+        }
+
         return anchors
+    }
+
+    /**
+     * Filter anchor candidates by size consistency.
+     * Real anchors are all the same size on the sheet.
+     * Other square-like elements (enrollment header boxes, text blocks) vary in size.
+     *
+     * Groups candidates by similar area, picks the group with exactly 4 (or closest to 4).
+     */
+    private fun filterBySizeConsistency(candidates: List<AnchorCandidate>): List<AnchorCandidate> {
+        if (candidates.size <= 4) return candidates
+
+        // Sort by area
+        val sorted = candidates.sortedBy { it.area }
+
+        // Group candidates whose area is within 50% of each other
+        val groups = mutableListOf<MutableList<AnchorCandidate>>()
+        var currentGroup = mutableListOf(sorted.first())
+
+        for (i in 1 until sorted.size) {
+            val prev = currentGroup.last()
+            val curr = sorted[i]
+            val ratio = curr.area / prev.area
+
+            if (ratio <= 1.5) {
+                currentGroup.add(curr)
+            } else {
+                groups.add(currentGroup)
+                currentGroup = mutableListOf(curr)
+            }
+        }
+        groups.add(currentGroup)
+
+        Log.d(TAG, "Size consistency: ${groups.size} groups: ${groups.map { "${it.size} (area~${it.first().area.toInt()})" }}")
+
+        // Prefer group with exactly 4 candidates
+        val exactGroup = groups.find { it.size == 4 }
+        if (exactGroup != null) return exactGroup
+
+        // Otherwise return the group with 4+ candidates closest to 4
+        val viableGroups = groups.filter { it.size >= 4 }.sortedBy { it.size }
+        if (viableGroups.isNotEmpty()) return viableGroups.first()
+
+        // No group has 4+, return all candidates
+        return candidates
     }
 
     /**
@@ -304,6 +481,7 @@ class TemplateProcessor @Inject constructor() {
         questionsPerColumn: Int,
         numberOfColumns: Int,
         optionsPerQuestion: Int,
+        totalExpectedBubbles: Int = 0, // if >0, use this as expected count (includes enrollment)
         debug: Boolean = false,
         debugMapAdditionCallback: (String, Bitmap) -> Unit,
     ): List<Bubble> {
@@ -333,12 +511,13 @@ class TemplateProcessor @Inject constructor() {
 
             // 4. Calculate expected bubble count
             val totalQuestions = questionsPerColumn * numberOfColumns
-            val exactExpectedBubbles = totalQuestions * optionsPerQuestion
+            val exactExpectedBubbles = if (totalExpectedBubbles > 0) {
+                totalExpectedBubbles
+            } else {
+                totalQuestions * optionsPerQuestion
+            }
 
-            Log.d(
-                TAG, "Expected: $exactExpectedBubbles bubbles " +
-                        "($questionsPerColumn questions/column × $numberOfColumns columns × $optionsPerQuestion options)"
-            )
+            Log.d(TAG, "Expected: $exactExpectedBubbles bubbles (including enrollment if any)")
 
             // 5. Calculate base parameters
             val maskedArea = Imgproc.contourArea(anchorMat)
@@ -661,6 +840,7 @@ class TemplateProcessor @Inject constructor() {
         anchors: List<AnchorPoint>,
         bubbleGrid: List<List<Bubble>>,
         size: Size,
+        enrollmentGrid: EnrollmentGrid? = null,
     ): TemplatePair {
         val gson = Gson()
         val questions = mutableListOf<Question>()
@@ -697,7 +877,8 @@ class TemplateProcessor @Inject constructor() {
             anchor_top_left = anchors[0],
             anchor_top_right = anchors[1],
             anchor_bottom_right = anchors[2],
-            anchor_bottom_left = anchors[3]
+            anchor_bottom_left = anchors[3],
+            enrollment_grid = enrollmentGrid
         )
         val json = gson.toJson(template)
         println("$TAG - templateJson - $json")
@@ -752,5 +933,139 @@ class TemplateProcessor @Inject constructor() {
             }
         }
         return points
+    }
+
+    /**
+     * Splits all detected bubbles into enrollment grid bubbles and answer bubbles.
+     *
+     * Strategy: Sort all bubbles by Y. The enrollment grid is in the upper portion
+     * of the sheet (above the answers). There's a significant Y-gap between the
+     * enrollment grid (10 rows of digit bubbles) and the answer bubbles (25 rows).
+     *
+     * We find this gap and split at it.
+     *
+     * @return Pair of (EnrollmentGrid, answerBubbles)
+     */
+    private fun splitEnrollmentFromAnswers(
+        grayMat: Mat,
+        allBubbles: List<Bubble>,
+        enrollmentColumns: Int,
+        expectedAnswerBubbles: Int,
+        anchorTopLeft: AnchorPoint,
+        debugMapAdditionCallback: (String, Bitmap) -> Unit,
+    ): Pair<EnrollmentGrid?, List<Bubble>> {
+        if (allBubbles.isEmpty()) return null to allBubbles
+
+        // Group all bubbles into rows by Y
+        val sortedByY = allBubbles.sortedBy { it.y }
+        val rows = groupIntoRows(sortedByY)
+
+
+        OpenCvUtils.drawPoints(
+            grayMat.toColoredWarped(),
+            bubbles2DArray = rows,
+        ).let {
+            val bitmap = it.toBitmapSafe()
+            debugMapAdditionCallback("enrollment-debug", bitmap)
+            it.release()
+            bitmap
+        }
+
+        Log.d(TAG, "splitEnrollmentFromAnswers: ${rows.size} rows total")
+
+        if (rows.size <= 10) {
+            // Not enough rows for enrollment + answers, return all as answers
+            Log.w(TAG, "Not enough rows (${rows.size}) for enrollment grid, skipping")
+            return null to allBubbles
+        }
+
+        // Find the largest Y-gap between consecutive rows — this is the boundary
+        // between enrollment grid and answer area
+        var maxGap = 0.0
+        var splitRowIndex = -1
+        for (i in 0 until rows.size - 1) {
+            val currentRowY = rows[i].map { it.y }.average()
+            val nextRowY = rows[i + 1].map { it.y }.average()
+            val gap = nextRowY - currentRowY
+
+            if (gap > maxGap) {
+                maxGap = gap
+                splitRowIndex = i
+            }
+        }
+
+        if (splitRowIndex < 0) {
+            Log.w(TAG, "Could not find Y-gap between enrollment and answers")
+            return null to allBubbles
+        }
+
+        Log.d(TAG, "Enrollment/answer split: row $splitRowIndex, gap=${maxGap.roundToInt()}px")
+
+        // Enrollment rows = rows 0..splitRowIndex
+        val enrollmentRows = rows.subList(0, splitRowIndex + 1)
+        // Answer rows = remaining
+        val answerBubbles = rows.subList(splitRowIndex + 1, rows.size).flatten()
+
+        // Build enrollment grid: group enrollment bubbles into columns by X
+        val enrollmentBubbles = enrollmentRows.flatten().sortedBy { it.x }
+
+        // Group into columns by X
+        val enrollmentColumnsList = groupIntoColumns(enrollmentBubbles, enrollmentColumns)
+//        val enrollmentColumnsList = enrollmentRows
+
+        Log.d(TAG, "Enrollment: ${enrollmentRows.size} rows, ${enrollmentColumnsList.size} columns detected")
+
+        if (enrollmentColumnsList.size != enrollmentColumns) {
+            Log.w(TAG, "Expected $enrollmentColumns enrollment columns, got ${enrollmentColumnsList.size}")
+        }
+
+        // Convert to EnrollmentGrid with relative positions
+        val digitColumns = enrollmentColumnsList.mapIndexed { colIdx, columnBubbles ->
+            val sortedColumn = columnBubbles.sortedBy { it.y } // sort top to bottom (0-9)
+            val options = sortedColumn.mapIndexed { digitIdx, bubble ->
+                OptionBox(
+                    option = "$digitIdx", // "0", "1", ..., "9"
+                    x = bubble.x - anchorTopLeft.x,
+                    y = bubble.y - anchorTopLeft.y,
+                    r = bubble.r
+                )
+            }
+            DigitColumn(column_index = colIdx, bubbles = options)
+        }
+
+        val grid = EnrollmentGrid(
+            columns = digitColumns.size,
+            digits = digitColumns
+        )
+
+        return grid to answerBubbles
+    }
+
+    /**
+     * Groups bubbles into columns based on X coordinate.
+     * Used for enrollment grid where bubbles in the same column share similar X values.
+     */
+    private fun groupIntoColumns(
+        sortedBubbles: List<Bubble>,
+        expectedColumns: Int
+    ): List<List<Bubble>> {
+        if (sortedBubbles.isEmpty()) return emptyList()
+
+        // Sort by X
+        val byX = sortedBubbles.sortedBy { it.x }
+
+        val columns = mutableListOf<MutableList<Bubble>>()
+
+        var count = 0
+        for(i in 0 until expectedColumns) {
+            val currentColumn = mutableListOf<Bubble>()
+            for(j in 0 until 10) {
+                currentColumn.add(byX[count])
+                count++
+            }
+            columns.add(currentColumn)
+        }
+
+        return columns
     }
 }

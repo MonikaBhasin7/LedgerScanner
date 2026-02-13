@@ -156,7 +156,8 @@ class CreateTemplateActivity : BaseActivity() {
                                 TemplateProcessor().generateTemplateJson(
                                     it,
                                     questionsPerColumn = questionsPerColumn,
-                                    numberOfColumns = numberOfColumns
+                                    numberOfColumns = numberOfColumns,
+                                    enrollmentColumns = 12
                                 )
                             }
                         createTemplateViewModel.setTemplateResult(result)

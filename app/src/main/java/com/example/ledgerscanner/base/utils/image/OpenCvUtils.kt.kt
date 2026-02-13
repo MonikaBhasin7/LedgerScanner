@@ -31,6 +31,7 @@ object OpenCvUtils {
         points: List<AnchorPoint>? = null,
         bubbles: List<Bubble>? = null,
         bubbles2DArray: List<List<Bubble>>? = null,
+        enrollmentBubbles: List<List<Bubble>>? = null,
         fillColor: Scalar = Scalar(255.0, 0.0, 0.0),
         textColor: Scalar = Scalar(255.0, 255.0, 0.0),
         radius: Int? = 10,
@@ -63,7 +64,22 @@ object OpenCvUtils {
             }
         }
 
-        // 1) Draw 2D bubble grid (row-wise), label with running index
+        // 1) Draw enrollment bubbles in cyan/teal color (distinct from answer bubbles)
+        val enrollmentFillColor = Scalar(0.0, 255.0, 255.0) // Cyan
+        val enrollmentTextColor = Scalar(0.0, 0.0, 0.0)     // Black text
+        enrollmentBubbles?.forEachIndexed { colIdx, column ->
+            column.forEachIndexed { digitIdx, b ->
+                Imgproc.circle(out, Point(b.x, b.y), radius ?: 10, enrollmentFillColor, -1)
+                // Label: "C0D3" means Column 0, Digit 3
+                val label = "C${colIdx}D${digitIdx}"
+                Imgproc.putText(
+                    out, label, Point(b.x - 12, b.y + 3),
+                    Imgproc.FONT_HERSHEY_SIMPLEX, 0.35, enrollmentTextColor, 1
+                )
+            }
+        }
+
+        // 2) Draw 2D bubble grid (row-wise), label with running index
         var idx = 0
         bubbles2DArray?.forEach { row ->
             row.forEach { b ->
@@ -71,10 +87,10 @@ object OpenCvUtils {
             }
         }
 
-        // 2) Draw simple point list
+        // 3) Draw simple point list
         points?.forEachIndexed { i, p -> draw(p.toPoint(), "$i") }
 
-        // 3) Draw flat bubble list
+        // 4) Draw flat bubble list
         bubbles?.forEachIndexed { i, b -> draw(Point(b.x, b.y), "$i") }
         return out
     }
