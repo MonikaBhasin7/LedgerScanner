@@ -122,7 +122,7 @@ class CreateTemplateActivity : BaseActivity() {
             createActivityLauncherComposeSpecific(ActivityResultContracts.GetContent()) { uri ->
                 uri?.let {
                     val bitmap = ImageUtils.loadBitmapCorrectOrientation(
-                        context, uri, reqWidth = 1080, reqHeight = 1920
+                        context, uri, reqWidth = 1920, reqHeight = 2560
                     )
                     createTemplateViewModel.setBitmap(bitmap)
                 }

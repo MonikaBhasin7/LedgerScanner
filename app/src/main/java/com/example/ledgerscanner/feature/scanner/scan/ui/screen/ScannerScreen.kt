@@ -87,7 +87,11 @@ fun ScannerScreen(
     val context = LocalContext.current
     val activity = remember { context as? BaseActivity }
     val lifecycleOwner = LocalLifecycleOwner.current
-    val imageCapture = remember { ImageCapture.Builder().build() }
+    val imageCapture = remember {
+        ImageCapture.Builder()
+            .setTargetResolution(android.util.Size(1920, 1080))
+            .build()
+    }
     var resumeCooldownUntilMs by remember { mutableStateOf(0L) }
 
     // Use rememberSaveable to survive config changes
@@ -409,6 +413,7 @@ private fun setupImageAnalysis(
     val analysisUseCase = ImageAnalysis.Builder()
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+        .setTargetResolution(android.util.Size(1920, 1080))
         .build()
 
     analysisUseCase.setAnalyzer(cameraExecutor) { imageProxy ->
