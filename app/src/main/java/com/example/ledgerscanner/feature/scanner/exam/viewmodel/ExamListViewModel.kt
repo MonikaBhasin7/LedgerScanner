@@ -176,7 +176,13 @@ class ExamListViewModel @Inject constructor(
 //                    style = ButtonStyle.NEUTRAL // Grey outlined
 //                )
 //            )
-            ExamStatus.ARCHIVED -> TODO()
+            ExamStatus.ARCHIVED -> ExamActionPopupConfig(
+                menuItems = listOf(
+                    ExamAction.Duplicate,
+                    ExamAction.Delete
+                ),
+                quickAction = null
+            )
         }
     }
 }

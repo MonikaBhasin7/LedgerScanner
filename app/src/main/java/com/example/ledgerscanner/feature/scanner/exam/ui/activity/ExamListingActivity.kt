@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Addchart
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.BarChart
@@ -382,8 +383,8 @@ class ExamListingActivity : ComponentActivity() {
                                 },
                                 onClick = {
                                     drawerScope.launch { drawerState.close() }
-                                showLogoutDialog = true
-                            },
+                                    showLogoutDialog = true
+                                },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = NavigationDrawerItemDefaults.colors(
                                     unselectedContainerColor = Color.Transparent,
@@ -651,7 +652,12 @@ class ExamListingActivity : ComponentActivity() {
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp, start = 16.dp, end = 16.dp),
+                    contentPadding = PaddingValues(
+                        top = 8.dp,
+                        bottom = 12.dp,
+                        start = 16.dp,
+                        end = 16.dp
+                    ),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     itemsIndexed(
@@ -722,12 +728,18 @@ class ExamListingActivity : ComponentActivity() {
         onClick: (ExamAction) -> Unit,
         onActionClick: (ExamAction) -> Unit,
     ) {
-        val actions = examListViewModel.getExamActionForStatus(item.status)
+        val sheetCount = examStatistics?.sheetsCount ?: 0
+        val actions = examListViewModel.getExamActionForStatus(
+            status = item.status,
+            hasScannedSheets = sheetCount > 0
+        )
+        var showMenu by remember { mutableStateOf(false) }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, Grey200, RoundedCornerShape(16.dp)),
-            shape = RoundedCornerShape(16.dp),
+                .border(1.dp, Grey200, RoundedCornerShape(14.dp)),
+            shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = White),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
@@ -735,49 +747,83 @@ class ExamListingActivity : ComponentActivity() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(14.dp)
+                    .genericClick { actions.quickAction?.action?.let { onClick(it) } },
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .genericClick { actions.quickAction?.action?.let { onClick(it) } }
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ExamIcon()
+                    ExamIcon(status = item.status)
+                    Spacer(modifier = Modifier.width(10.dp))
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        ExamHeader(
-                            examEntity = item,
-                            actions = actions,
-                            onActionClick = onActionClick
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        StatusBadge(status = item.status)
+                        Text(
+                            text = item.examName,
+                            color = Black,
+                            style = AppTypography.text16Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
+                    }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        val sheetCount = examStatistics?.sheetsCount ?: 0
-                        ExamMetadata(
-                            totalQuestions = item.totalQuestions,
-                            createdAt = item.createdAt,
-                            sheetsCount = sheetCount,
-                            status = item.status
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More actions",
+                            tint = Grey500
                         )
-
-                        // Show stats if available
-                        if (examStatistics != null && examStatistics.hasStats() && sheetCount > 0) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ExamStats(
-                                avgScore = examStatistics.avgScore?.toInt(),
-                                topScore = examStatistics.topScore?.toInt(),
-                                lowestScore = examStatistics.lowestScore?.toInt()
-                            )
-                        }
                     }
                 }
-                ExamQuickActionButton(actions.quickAction, onActionClick, modifier = Modifier.padding(top = 10.dp))
+
+                ExamActionsPopup(
+                    expanded = showMenu,
+                    examEntity = item,
+                    viewModel = examListViewModel,
+                    actions = actions,
+                    onActionClick = { action ->
+                        showMenu = false
+                        onActionClick(action)
+                    },
+                    onDismiss = { showMenu = false },
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(bottom = 2.dp)
+                ) {
+                    ExamMetadata(
+                        totalQuestions = item.totalQuestions,
+                        createdAt = item.createdAt,
+                        sheetsCount = sheetCount,
+                        status = item.status
+                    )
+                    StatusDetailLine(status = item.status, sheetsCount = sheetCount)
+                }
+
+                if (examStatistics != null && examStatistics.hasStats() && sheetCount > 0) {
+                    ExamStats(
+                        avgScore = examStatistics.avgScore?.toInt(),
+                        topScore = examStatistics.topScore?.toInt(),
+                        lowestScore = examStatistics.lowestScore?.toInt()
+                    )
+                }
+
+                ExamQuickActionButton(
+                    config = actions.quickAction,
+                    onClick = onActionClick,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
         }
     }
-
 
     @Composable
     fun ExamQuickActionButton(
@@ -786,8 +832,42 @@ class ExamListingActivity : ComponentActivity() {
         modifier: Modifier = Modifier
     ) {
         if (config == null) return
+
+        // Completed exam matches the reference: main outlined button + compact icon action
+        if (config.style == ButtonType.SECONDARY && config.secondaryAction != null) {
+            Row(
+                modifier = modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GenericButton(
+                    text = config.action.label,
+                    type = ButtonType.SECONDARY,
+                    size = ButtonSize.SMALL,
+                    icon = config.action.icon,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onClick(config.action) }
+                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(1.dp, Grey200, RoundedCornerShape(12.dp))
+                        .background(White)
+                        .genericClick { onClick(config.secondaryAction) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = config.secondaryAction.icon,
+                        contentDescription = config.secondaryAction.label,
+                        tint = Grey600,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            return
+        }
+
         if (config.secondaryAction != null) {
-            // Split button (two actions)
             Row(
                 modifier = modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -798,9 +878,7 @@ class ExamListingActivity : ComponentActivity() {
                     size = ButtonSize.SMALL,
                     icon = config.action.icon,
                     modifier = Modifier.weight(1f),
-                    onClick = {
-                        onClick(config.action)
-                    }
+                    onClick = { onClick(config.action) }
                 )
                 GenericButton(
                     text = config.secondaryAction.label,
@@ -808,93 +886,49 @@ class ExamListingActivity : ComponentActivity() {
                     size = ButtonSize.SMALL,
                     icon = config.secondaryAction.icon,
                     modifier = Modifier.weight(1f),
-                    onClick = {
-                        onClick(config.secondaryAction)
-                    }
+                    onClick = { onClick(config.secondaryAction) }
                 )
             }
-        } else {
-            // Single button
-            GenericButton(
-                text = config.action.label,
-                type = config.style,
-                size = ButtonSize.SMALL,
-                icon = config.action.icon,
-                modifier = modifier.fillMaxWidth(),
-                onClick = {
-                    onClick(config.action)
-                }
-            )
+            return
         }
+
+        GenericButton(
+            text = config.action.label,
+            type = config.style,
+            size = ButtonSize.SMALL,
+            icon = config.action.icon,
+            modifier = modifier.fillMaxWidth(),
+            onClick = { onClick(config.action) }
+        )
     }
 
     @Composable
-    private fun ExamIcon() {
+    private fun ExamIcon(status: ExamStatus) {
+        val bg = when (status) {
+            ExamStatus.DRAFT -> Color(0xFFFFF2D6)
+            ExamStatus.ACTIVE -> Color(0xFFE3F0FF)
+            ExamStatus.COMPLETED -> Color(0xFFECEBFF)
+            ExamStatus.ARCHIVED -> Grey200
+        }
+        val tint = when (status) {
+            ExamStatus.DRAFT -> Color(0xFFFFB300)
+            ExamStatus.ACTIVE -> Blue500
+            ExamStatus.COMPLETED -> Color(0xFF6C63FF)
+            ExamStatus.ARCHIVED -> Grey500
+        }
+
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(Blue100),
+                .size(32.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(bg),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Outlined.DateRange,
                 contentDescription = "Exam Icon",
-                tint = Blue500,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-
-    @Composable
-    private fun ExamHeader(
-        examEntity: ExamEntity,
-        actions: ExamActionPopupConfig,
-        onActionClick: (ExamAction) -> Unit,
-    ) {
-        var showMenu by remember { mutableStateOf(false) }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = examEntity.examName,
-                color = Black,
-                style = AppTypography.text16SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            StatusBadge(status = examEntity.status)
-
-            // Three-dot menu icon
-            IconButton(
-                onClick = { showMenu = true },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More actions",
-                    tint = Grey500
-                )
-            }
-
-
-            // Popup menu - now aligned to actual TopEnd of card
-            ExamActionsPopup(
-                expanded = showMenu,
-                examEntity = examEntity,
-                viewModel = examListViewModel,
-                actions = actions,
-                onActionClick = { action ->
-                    showMenu = false
-                    onActionClick(action)
-                },
-                onDismiss = { showMenu = false },
+                tint = tint,
+                modifier = Modifier.size(17.dp)
             )
         }
     }
@@ -916,21 +950,11 @@ class ExamListingActivity : ComponentActivity() {
 
         Text(
             text = "$totalQuestions questions • Created $formattedDate",
-            color = Grey600,
+            color = Grey500,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = AppTypography.text12Regular
+            style = AppTypography.text11Regular
         )
-        if (sheetsLine != null) {
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = sheetsLine,
-                color = Grey600,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = AppTypography.text12Medium
-            )
-        }
     }
 
     @Composable
@@ -943,52 +967,127 @@ class ExamListingActivity : ComponentActivity() {
         val validTop = topScore?.coerceIn(0, 100) ?: 0
         val validLow = lowestScore?.coerceIn(0, 100) ?: 0
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile(
+                value = "$validAvg%",
+                label = "AVG",
+                valueColor = Blue500,
+                backgroundColor = Color(0xFFE7F0FA),
+                modifier = Modifier.weight(1f)
+            )
+            StatTile(
+                value = "$validTop%",
+                label = "TOP",
+                valueColor = Green600,
+                backgroundColor = Color(0xFFEAF7EE),
+                modifier = Modifier.weight(1f)
+            )
+            StatTile(
+                value = "$validLow%",
+                label = "LOW",
+                valueColor = Orange600,
+                backgroundColor = Color(0xFFFFF2E6),
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+
+    @Composable
+    private fun StatTile(
+        value: String,
+        label: String,
+        valueColor: Color,
+        backgroundColor: Color,
+        modifier: Modifier = Modifier
+    ) {
+        Column(
+            modifier = modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(backgroundColor)
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Avg $validAvg%",
-                color = Grey600,
-                style = AppTypography.text12Medium
+                text = value,
+                color = valueColor,
+                style = AppTypography.text13Bold
             )
             Text(
-                text = "•",
-                color = Grey400,
+                text = label,
+                color = Grey500,
+                style = AppTypography.text10Regular
+            )
+        }
+    }
+
+    @Composable
+    private fun StatusDetailLine(status: ExamStatus, sheetsCount: Int) {
+        val (icon, text, tint) = when (status) {
+            ExamStatus.DRAFT -> Triple(
+                Icons.Outlined.Description,
+                "Incomplete setup",
+                Grey600
+            )
+
+            ExamStatus.ACTIVE -> if (sheetsCount > 0) {
+                Triple(Icons.Outlined.BarChart, "$sheetsCount sheets scanned", Grey600)
+            } else {
+                Triple(Icons.Outlined.Description, "No sheets scanned yet", Grey600)
+            }
+
+            ExamStatus.COMPLETED -> Triple(
+                Icons.Filled.CheckCircle,
+                "$sheetsCount sheets scanned",
+                Grey600
+            )
+
+            ExamStatus.ARCHIVED -> Triple(
+                Icons.Outlined.Description,
+                "Archived • $sheetsCount sheets",
+                Grey600
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(start = 12.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(13.dp)
+            )
+            Text(
+                text = text,
+                color = Black,
                 style = AppTypography.text12Regular
-            )
-            Text(
-                text = "Top $validTop%",
-                color = Green600,
-                style = AppTypography.text12SemiBold
-            )
-            Text(
-                text = "•",
-                color = Grey400,
-                style = AppTypography.text12Regular
-            )
-            Text(
-                text = "Low $validLow%",
-                color = Orange600,
-                style = AppTypography.text12SemiBold
             )
         }
     }
 
     @Composable
     private fun StatusBadge(status: ExamStatus) {
+        val (bg, textColor) = when (status) {
+            ExamStatus.DRAFT -> Color(0xFFFFF4D8) to Color(0xFF8A6A00)
+            ExamStatus.ACTIVE -> Color(0xFFE5F6EA) to Color(0xFF2F8A45)
+            ExamStatus.COMPLETED -> Color(0xFFE9EDFF) to Color(0xFF4F67D8)
+            ExamStatus.ARCHIVED -> Grey200 to Grey600
+        }
         Box(
             modifier = Modifier
-                .height(24.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Grey200)
-                .padding(horizontal = 8.dp),
+                .height(20.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(bg)
+                .padding(horizontal = 7.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = status.name,
-                color = Grey500,
-                style = AppTypography.text10SemiBold
+                color = textColor,
+                style = AppTypography.label5Medium
             )
         }
     }
@@ -1023,7 +1122,7 @@ class ExamListingActivity : ComponentActivity() {
                     label = {
                         Text(
                             text = filter?.name ?: "All",
-                            style = AppTypography.text10SemiBold
+                            style = AppTypography.text11SemiBold
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
