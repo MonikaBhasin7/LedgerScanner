@@ -45,6 +45,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
@@ -79,6 +81,7 @@ import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
+import com.example.ledgerscanner.base.ui.components.ButtonSize
 import com.example.ledgerscanner.base.ui.components.ToolbarAction
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
@@ -393,7 +396,7 @@ class ExamListingActivity : ComponentActivity() {
             }
         ) {
             Scaffold(
-                containerColor = White,
+                containerColor = Grey100,
                 topBar = {
                     GenericToolbar(
                         title = "Exams",
@@ -648,8 +651,8 @@ class ExamListingActivity : ComponentActivity() {
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp, start = 16.dp, end = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     itemsIndexed(
                         items = items,
@@ -720,20 +723,18 @@ class ExamListingActivity : ComponentActivity() {
         onActionClick: (ExamAction) -> Unit,
     ) {
         val actions = examListViewModel.getExamActionForStatus(item.status)
-        Box(
+        Card(
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .border(
-                    width = 1.dp,
-                    color = Grey200,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .background(Grey100)
+                .fillMaxWidth()
+                .border(1.dp, Grey200, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(14.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -742,7 +743,7 @@ class ExamListingActivity : ComponentActivity() {
                 ) {
                     ExamIcon()
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         ExamHeader(
@@ -772,11 +773,7 @@ class ExamListingActivity : ComponentActivity() {
                         }
                     }
                 }
-                ExamQuickActionButton(
-                    actions.quickAction,
-                    onActionClick,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                ExamQuickActionButton(actions.quickAction, onActionClick, modifier = Modifier.padding(top = 10.dp))
             }
         }
     }
@@ -798,6 +795,7 @@ class ExamListingActivity : ComponentActivity() {
                 GenericButton(
                     text = config.action.label,
                     type = config.style,
+                    size = ButtonSize.SMALL,
                     icon = config.action.icon,
                     modifier = Modifier.weight(1f),
                     onClick = {
@@ -807,6 +805,7 @@ class ExamListingActivity : ComponentActivity() {
                 GenericButton(
                     text = config.secondaryAction.label,
                     type = ButtonType.SECONDARY,
+                    size = ButtonSize.SMALL,
                     icon = config.secondaryAction.icon,
                     modifier = Modifier.weight(1f),
                     onClick = {
@@ -819,6 +818,7 @@ class ExamListingActivity : ComponentActivity() {
             GenericButton(
                 text = config.action.label,
                 type = config.style,
+                size = ButtonSize.SMALL,
                 icon = config.action.icon,
                 modifier = modifier.fillMaxWidth(),
                 onClick = {
@@ -832,8 +832,8 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamIcon() {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .size(36.dp)
+                .clip(RoundedCornerShape(9.dp))
                 .background(Blue100),
             contentAlignment = Alignment.Center
         ) {
@@ -841,7 +841,7 @@ class ExamListingActivity : ComponentActivity() {
                 imageVector = Icons.Outlined.DateRange,
                 contentDescription = "Exam Icon",
                 tint = Blue500,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -861,7 +861,7 @@ class ExamListingActivity : ComponentActivity() {
             Text(
                 text = examEntity.examName,
                 color = Black,
-                style = AppTypography.body1Medium,
+                style = AppTypography.text16SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -908,27 +908,29 @@ class ExamListingActivity : ComponentActivity() {
     ) {
         val formattedDate = formatTimestamp(createdAt)
 
-        val infoLine = "$totalQuestions questions • Created $formattedDate"
-
         val sheetsLine = when {
             status == ExamStatus.DRAFT -> null
             sheetsCount > 0 -> "Sheets: $sheetsCount scanned"
             else -> "No sheets scanned yet"
         }
 
-        val displayText = if (sheetsLine != null) {
-            "$infoLine\n$sheetsLine"
-        } else {
-            infoLine
-        }
-
         Text(
-            text = displayText,
-            color = Grey500,
-            maxLines = 3,
+            text = "$totalQuestions questions • Created $formattedDate",
+            color = Grey600,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = AppTypography.body2Regular
+            style = AppTypography.text12Regular
         )
+        if (sheetsLine != null) {
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = sheetsLine,
+                color = Grey600,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = AppTypography.text12Medium
+            )
+        }
     }
 
     @Composable
@@ -942,44 +944,33 @@ class ExamListingActivity : ComponentActivity() {
         val validLow = lowestScore?.coerceIn(0, 100) ?: 0
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Avg",
+                text = "Avg $validAvg%",
                 color = Grey600,
-                style = AppTypography.body4Medium
+                style = AppTypography.text12Medium
             )
             Text(
-                text = "$validAvg%",
-                color = Grey900,
-                style = AppTypography.label3Bold
-            )
-
-            Text("•", color = Grey400, style = AppTypography.body4Medium)
-
-            Text(
-                text = "Top",
-                color = Grey600,
-                style = AppTypography.body4Medium
+                text = "•",
+                color = Grey400,
+                style = AppTypography.text12Regular
             )
             Text(
-                text = "$validTop%",
+                text = "Top $validTop%",
                 color = Green600,
-                style = AppTypography.label3Bold
-            )
-
-            Text("•", color = Grey400, style = AppTypography.body4Medium)
-
-            Text(
-                text = "Low",
-                color = Grey600,
-                style = AppTypography.body4Medium
+                style = AppTypography.text12SemiBold
             )
             Text(
-                text = "$validLow%",
+                text = "•",
+                color = Grey400,
+                style = AppTypography.text12Regular
+            )
+            Text(
+                text = "Low $validLow%",
                 color = Orange600,
-                style = AppTypography.label3Bold
+                style = AppTypography.text12SemiBold
             )
         }
     }
@@ -988,16 +979,16 @@ class ExamListingActivity : ComponentActivity() {
     private fun StatusBadge(status: ExamStatus) {
         Box(
             modifier = Modifier
-                .height(28.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .height(24.dp)
+                .clip(RoundedCornerShape(14.dp))
                 .background(Grey200)
-                .padding(horizontal = 10.dp),
+                .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = status.name,
                 color = Grey500,
-                style = AppTypography.label4Medium
+                style = AppTypography.text10SemiBold
             )
         }
     }
@@ -1016,7 +1007,8 @@ class ExamListingActivity : ComponentActivity() {
         Row(
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
-                .padding(start = 12.dp, top = 12.dp, end = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 0.dp)
+                .padding(bottom = 8.dp)
                 .fillMaxWidth()
         ) {
             filters.forEachIndexed { index, filter ->
@@ -1031,7 +1023,7 @@ class ExamListingActivity : ComponentActivity() {
                     label = {
                         Text(
                             text = filter?.name ?: "All",
-                            style = AppTypography.label3Medium
+                            style = AppTypography.text10SemiBold
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
@@ -1042,7 +1034,9 @@ class ExamListingActivity : ComponentActivity() {
                     ),
                     shape = RoundedCornerShape(24.dp),
                     border = null,
-                    modifier = Modifier.padding(end = 8.dp),
+                    modifier = Modifier
+                        .height(28.dp)
+                        .padding(end = 6.dp),
                 )
             }
         }
@@ -1055,16 +1049,19 @@ class ExamListingActivity : ComponentActivity() {
             value = searchQuery,
             placeholder = "Search by exam name",
             onValueChange = { onSearchQueryChange(it) },
+            textStyle = AppTypography.text14Medium,
+            placeholderStyle = AppTypography.text13Regular,
             prefix = {
                 Icon(
                     imageVector = Icons.Outlined.Search,
                     contentDescription = "Search Icon",
-                    tint = Grey500
+                    tint = Grey500,
+                    modifier = Modifier.size(18.dp)
                 )
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         )
     }
 

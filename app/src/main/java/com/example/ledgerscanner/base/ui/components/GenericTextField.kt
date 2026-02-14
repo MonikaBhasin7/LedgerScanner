@@ -1,7 +1,6 @@
 package com.example.ledgerscanner.base.ui.components
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -56,9 +55,9 @@ fun GenericTextField(
     maxLines: Int = 1,
     isError: Boolean = false,
     isPassword: Boolean = false,
-    textStyle: TextStyle = AppTypography.body2Medium,
-    labelStyle: TextStyle = AppTypography.label2Medium,
-    placeholderStyle: TextStyle = AppTypography.body3Regular,
+    textStyle: TextStyle = AppTypography.text14Medium,
+    labelStyle: TextStyle = AppTypography.text13Medium,
+    placeholderStyle: TextStyle = AppTypography.text13Regular,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
@@ -69,7 +68,7 @@ fun GenericTextField(
         unfocusedContainerColor = Color.Transparent,
         disabledContainerColor = Grey200,
         errorContainerColor = Color.Transparent,
-        focusedIndicatorColor = Blue500,
+        focusedIndicatorColor = Blue500.copy(alpha = 0.72f),
         unfocusedIndicatorColor = Grey200,
         disabledIndicatorColor = Grey200,
         errorIndicatorColor = MaterialTheme.colorScheme.error,
@@ -99,70 +98,68 @@ fun GenericTextField(
 
 
     var passwordVisible by remember { mutableStateOf(false) }
+    val fieldModifier = modifier.then(
+        if (onClick != null) Modifier.genericClick { onClick() } else Modifier
+    )
 
-    Box(
-        modifier = modifier.then(
-            if (onClick != null) Modifier.genericClick { onClick() } else Modifier
-        )) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = modifier,
-            textStyle = textStyle,
-            enabled = enabled,
-            readOnly = readOnly,
-            isError = isError,
-            singleLine = singleLine,
-            minLines = minLines,
-            maxLines = maxLines,
-            shape = shape,
-            interactionSource = interactionSource,
-            colors = effectiveColors,
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = fieldModifier,
+        textStyle = textStyle,
+        enabled = enabled,
+        readOnly = readOnly,
+        isError = isError,
+        singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
+        shape = shape,
+        interactionSource = interactionSource,
+        colors = effectiveColors,
 
-            // Label
-            label = label?.let { { Text(it, style = labelStyle) } },
+        // Label
+        label = label?.let { { Text(it, style = labelStyle) } },
 
-            // Placeholder
-            placeholder = placeholder?.let {
-                { Text(it, style = placeholderStyle, color = Grey500) }
-            },
+        // Placeholder
+        placeholder = placeholder?.let {
+            { Text(it, style = placeholderStyle, color = Grey500) }
+        },
 
-            // Icons
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon ?: if (isPassword) {
-                {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible)
-                                Icons.Default.Visibility
-                            else
-                                Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible)
-                                "Hide password"
-                            else
-                                "Show password"
-                        )
-                    }
+        // Icons
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon ?: if (isPassword) {
+            {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible)
+                            Icons.Default.Visibility
+                        else
+                            Icons.Default.VisibilityOff,
+                        contentDescription = if (passwordVisible)
+                            "Hide password"
+                        else
+                            "Show password"
+                    )
                 }
-            } else null,
+            }
+        } else null,
 
-            // Additional slots
-            prefix = prefix,
-            suffix = suffix,
-            supportingText = supportingText,
+        // Additional slots
+        prefix = prefix,
+        suffix = suffix,
+        supportingText = supportingText,
 
-            // Visual transformation for password
-            visualTransformation = if (isPassword && !passwordVisible)
-                PasswordVisualTransformation()
-            else
-                VisualTransformation.None,
+        // Visual transformation for password
+        visualTransformation = if (isPassword && !passwordVisible)
+            PasswordVisualTransformation()
+        else
+            VisualTransformation.None,
 
-            // Keyboard
-            keyboardOptions = if (isPassword)
-                keyboardOptions.copy(keyboardType = KeyboardType.Password)
-            else
-                keyboardOptions,
-            keyboardActions = keyboardActions,
-        )
-    }
+        // Keyboard
+        keyboardOptions = if (isPassword)
+            keyboardOptions.copy(keyboardType = KeyboardType.Password)
+        else
+            keyboardOptions,
+        keyboardActions = keyboardActions,
+    )
 }
