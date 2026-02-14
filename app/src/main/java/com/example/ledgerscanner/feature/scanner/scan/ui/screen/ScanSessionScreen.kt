@@ -1,33 +1,32 @@
-package com.example.omrscanner.ui.screens
+package com.example.ledgerscanner.feature.scanner.scan.ui.screen
 
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,10 +37,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.UiState
@@ -49,27 +49,34 @@ import com.example.ledgerscanner.base.ui.components.ButtonSize
 import com.example.ledgerscanner.base.ui.components.GenericButton
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
 import com.example.ledgerscanner.base.ui.theme.AppTypography
-import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
+import com.example.ledgerscanner.base.ui.theme.Blue50
 import com.example.ledgerscanner.base.ui.theme.Blue500
-import com.example.ledgerscanner.base.ui.theme.Green400
+import com.example.ledgerscanner.base.ui.theme.Blue75
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
-import com.example.ledgerscanner.base.ui.theme.Grey800
+import com.example.ledgerscanner.base.ui.theme.Grey700
 import com.example.ledgerscanner.base.ui.theme.Grey900
+import com.example.ledgerscanner.base.ui.theme.Green50
+import com.example.ledgerscanner.base.ui.theme.Green600
+import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
-import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
-import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
+import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class SessionActionType {
+    ANSWER_KEY,
+    RESULTS,
+    CHECKLIST
+}
+
 @Composable
 fun ScanSessionScreen(
     navController: NavHostController,
@@ -78,87 +85,476 @@ fun ScanSessionScreen(
     onViewResults: () -> Unit
 ) {
     val context = LocalContext.current
-
     val handleBack = rememberBackHandler(navController)
+    val sheetsCountByExamId by scanResultViewModel.sheetsCountByExamId.collectAsState()
 
-    // Extract data from examEntity
-    val examName = examEntity.examName
-    val totalQuestions = examEntity.totalQuestions
-    val optionsPerQuestion = examEntity.template.options_per_question
+    LaunchedEffect(examEntity.id) {
+        scanResultViewModel.getCountByExamId(examEntity.id)
+    }
+
+    val scannedSheets = (sheetsCountByExamId as? UiState.Success)?.data ?: 0
+    val hasTemplate = examEntity.template.questions.isNotEmpty()
 
     val onViewAnswerKey: () -> Unit = {
         context.startActivity(
-            Intent(
-                context,
-                CreateExamActivity::class.java
-            ).apply {
+            Intent(context, CreateExamActivity::class.java).apply {
                 putExtra(
-                    CreateExamActivity.CONFIG, CreateExamConfig(
+                    CreateExamActivity.CONFIG,
+                    CreateExamConfig(
                         examEntity = examEntity,
                         mode = CreateExamConfig.Mode.VIEW,
                         targetScreen = ExamStep.ANSWER_KEY
                     )
                 )
-            })
+            }
+        )
     }
 
     val onStartScanning: () -> Unit = {
-        if (examEntity.template.questions.isEmpty()) {
-            Toast.makeText(context, "Template is missing. Please update the exam.", Toast.LENGTH_SHORT).show()
+        if (!hasTemplate) {
+            Toast.makeText(
+                context,
+                "Template is missing. Please update the exam.",
+                Toast.LENGTH_SHORT
+            ).show()
         } else {
-            navController.navigate(ScanBaseActivity.SCANNER_SCREEN)
+            navController.navigate(ScanBaseActivity.SCANNER_SCREEN) {
+                launchSingleTop = true
+            }
         }
     }
 
     BackHandler(onBack = handleBack)
 
+    val sections = listOf(
+        SessionActionType.ANSWER_KEY,
+        SessionActionType.RESULTS,
+        SessionActionType.CHECKLIST
+    )
+
     Scaffold(
         topBar = {
-            GenericToolbar("Scan Session", onBackClick = handleBack)
+            GenericToolbar(title = "Scan Session", onBackClick = handleBack)
         },
         bottomBar = {
-            ScannerButton(onStartScanning)
+            SessionBottomBar(
+                hasTemplate = hasTemplate,
+                onStartScanning = onStartScanning
+            )
         },
         containerColor = Grey100
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .padding(paddingValues),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Exam Header
-            ExamHeader(
-                examName = examName,
-                totalQuestions = totalQuestions,
-                optionsPerQuestion = optionsPerQuestion
+            item {
+                SessionOverviewCard(
+                    examEntity = examEntity,
+                    scannedSheets = scannedSheets,
+                    hasTemplate = hasTemplate
+                )
+            }
+
+            item {
+                Text(
+                    text = "Session Controls",
+                    style = AppTypography.text14SemiBold,
+                    color = Grey900,
+                    modifier = Modifier.padding(start = 2.dp, top = 2.dp)
+                )
+            }
+
+            items(sections) { section ->
+                when (section) {
+                    SessionActionType.ANSWER_KEY -> {
+                        SessionActionCard(
+                            icon = Icons.Filled.CheckCircle,
+                            iconTint = Green600,
+                            title = "Answer Key",
+                            subtitle = "Review configured correct options before scanning.",
+                            badgeText = "Ready",
+                            badgeBackground = Green50,
+                            badgeTextColor = Green600,
+                            actionText = "Open Answer Key",
+                            onClick = onViewAnswerKey
+                        )
+                    }
+
+                    SessionActionType.RESULTS -> {
+                        ResultsActionCard(
+                            state = sheetsCountByExamId,
+                            onOpen = onViewResults
+                        )
+                    }
+
+                    SessionActionType.CHECKLIST -> {
+                        ScanChecklistCard()
+                    }
+                }
+            }
+
+            item {
+                Box(modifier = Modifier.height(76.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionOverviewCard(
+    examEntity: ExamEntity,
+    scannedSheets: Int,
+    hasTemplate: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(colors = listOf(Blue75, White)))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Blue100)
+                        .padding(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Description,
+                        contentDescription = null,
+                        tint = Blue500,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = examEntity.examName,
+                        style = AppTypography.text16SemiBold,
+                        color = Grey900,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (hasTemplate) {
+                            "Everything is set for this scan session"
+                        } else {
+                            "Template setup is incomplete"
+                        },
+                        style = AppTypography.text12Regular,
+                        color = Grey700
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoChip(text = "${examEntity.totalQuestions} Questions")
+                InfoChip(text = "${examEntity.template.options_per_question} Options")
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompactStatCard(
+                    label = "Sheets Scanned",
+                    value = scannedSheets.toString(),
+                    icon = Icons.Outlined.BarChart,
+                    valueColor = Blue500,
+                    modifier = Modifier.weight(1f)
+                )
+
+                CompactStatCard(
+                    label = "Template",
+                    value = if (hasTemplate) "Ready" else "Missing",
+                    icon = Icons.Outlined.TaskAlt,
+                    valueColor = if (hasTemplate) Green600 else Orange600,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactStatCard(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    valueColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = White.copy(alpha = 0.95f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 9.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = valueColor,
+                modifier = Modifier.size(16.dp)
             )
-            HorizontalDivider(
-                color = Grey200,
-                thickness = 1.dp,
+            Column {
+                Text(
+                    text = label,
+                    style = AppTypography.text10Medium,
+                    color = Grey600
+                )
+                Text(
+                    text = value,
+                    style = AppTypography.text13SemiBold,
+                    color = valueColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResultsActionCard(
+    state: UiState<Int>,
+    onOpen: () -> Unit
+) {
+    val count = (state as? UiState.Success)?.data ?: 0
+    val hasResults = count > 0
+
+    val title = when (state) {
+        is UiState.Loading, is UiState.Idle<*> -> "Checking scanned sheets"
+        is UiState.Error -> "Could not load scanned sheets"
+        is UiState.Success -> if (hasResults) "$count sheets scanned" else "No sheets scanned yet"
+    }
+
+    val subtitle = when (state) {
+        is UiState.Loading, is UiState.Idle<*> -> "Please wait while scan summary is loading."
+        is UiState.Error -> state.message
+        is UiState.Success -> if (hasResults) {
+            "Open results to review performance and details."
+        } else {
+            "Start scanning to generate results."
+        }
+    }
+
+    SessionActionCard(
+        icon = Icons.Outlined.BarChart,
+        iconTint = if (hasResults) Blue500 else Grey600,
+        title = title,
+        subtitle = subtitle,
+        badgeText = if (hasResults) "Active" else "Empty",
+        badgeBackground = if (hasResults) Blue50 else Grey200,
+        badgeTextColor = if (hasResults) Blue500 else Grey600,
+        actionText = if (hasResults) "Open Results" else "Results unavailable",
+        enabled = hasResults,
+        onClick = onOpen
+    )
+}
+
+@Composable
+private fun SessionActionCard(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    subtitle: String,
+    badgeText: String,
+    badgeBackground: Color,
+    badgeTextColor: Color,
+    actionText: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Grey200, RoundedCornerShape(14.dp)),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        onClick = {
+            if (enabled) onClick()
+        }
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = title,
+                        style = AppTypography.text14SemiBold,
+                        color = Grey900,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                ActionStateBadge(
+                    text = badgeText,
+                    backgroundColor = badgeBackground,
+                    textColor = badgeTextColor
+                )
+            }
+
+            Text(
+                text = subtitle,
+                style = AppTypography.text12Regular,
+                color = Grey700
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ReadyState(
-                scanResultViewModel = scanResultViewModel,
-                examId = examEntity.id,
-                onViewAnswerKey = onViewAnswerKey,
-                onViewResults = onViewResults,
+            Text(
+                text = if (enabled) "$actionText  ->" else actionText,
+                style = AppTypography.text12SemiBold,
+                color = if (enabled) Blue500 else Grey500
             )
         }
     }
 }
 
 @Composable
-fun ScannerButton(onStartScanning: () -> Unit) {
+private fun ActionStateBadge(
+    text: String,
+    backgroundColor: Color,
+    textColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(backgroundColor)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            style = AppTypography.text11SemiBold,
+            color = textColor
+        )
+    }
+}
+
+@Composable
+private fun ScanChecklistCard() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Grey200, RoundedCornerShape(14.dp)),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.TaskAlt,
+                    contentDescription = null,
+                    tint = Blue500,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "Capture Checklist",
+                    style = AppTypography.text14SemiBold,
+                    color = Grey900
+                )
+            }
+
+            ChecklistLine("Keep all four corner anchors visible")
+            ChecklistLine("Avoid shadows and extreme perspective")
+            ChecklistLine("Hold device steady for a sharp image")
+        }
+    }
+}
+
+@Composable
+private fun ChecklistLine(text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(top = 5.dp)
+                .size(5.dp)
+                .clip(RoundedCornerShape(50))
+                .background(Blue500)
+        )
+        Text(
+            text = text,
+            style = AppTypography.text12Regular,
+            color = Grey700
+        )
+    }
+}
+
+@Composable
+private fun InfoChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(Blue50)
+            .border(1.dp, Blue100, RoundedCornerShape(999.dp))
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Text(
+            text = text,
+            style = AppTypography.text11SemiBold,
+            color = Blue500
+        )
+    }
+}
+
+@Composable
+private fun SessionBottomBar(
+    hasTemplate: Boolean,
+    onStartScanning: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(16.dp)
+            .background(White)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GenericButton(
                 icon = Icons.Outlined.CameraAlt,
                 text = "Start Scanning",
@@ -166,330 +562,15 @@ fun ScannerButton(onStartScanning: () -> Unit) {
                 onClick = onStartScanning,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "💡 Tip: Ensure good lighting and include all 4 corner anchors",
-                style = AppTypography.body3Regular,
-                color = Grey500,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Left
-            )
-        }
-    }
-
-
-}
-
-@Composable
-private fun ExamHeader(
-    examName: String,
-    totalQuestions: Int,
-    optionsPerQuestion: Int
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(White)
-            .padding(16.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(end = 12.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Blue100)
-                .padding(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Description,
-                contentDescription = "",
-                modifier = Modifier.size(32.dp),
-                tint = Blue500
-            )
-        }
-
-        Column {
-            Text(
-                text = examName,
-                style = AppTypography.h1ExtraBold,
-                color = Grey800
-            )
-            Text(
-                text = "$totalQuestions Questions • $optionsPerQuestion Options",
-                style = AppTypography.body3Regular,
-                color = Grey600
-            )
-        }
-    }
-}
-
-@Composable
-private fun ReadyState(
-    scanResultViewModel: ScanResultViewModel,
-    examId: Int,
-    onViewAnswerKey: () -> Unit,
-    onViewResults: () -> Unit
-) {
-    val sheetsCountByExamId by scanResultViewModel.sheetsCountByExamId.collectAsState()
-
-    LaunchedEffect(Unit) {
-        scanResultViewModel.getCountByExamId(examId)
-    }
-
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp)
-    ) {
-        // Answer Key Set Card
-        StatusCard(
-            icon = Icons.Filled.CheckCircle,
-            iconColor = Green400,
-            title = "Answer Key Set",
-            linkText = "View Answer Key →",
-            onLinkClick = onViewAnswerKey,
-            backgroundColor = White,
-            borderColor = Grey200,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Scanned Sheets Card - Updated Implementation
-        when (val state = sheetsCountByExamId) {
-            is UiState.Loading -> {
-                SheetsStatusCard(
-                    sheetsCount = null,
-                    isLoading = true,
-                    onViewResults = onViewResults
-                )
-            }
-
-            is UiState.Success -> {
-                SheetsStatusCard(
-                    sheetsCount = state.data,
-                    isLoading = false,
-                    onViewResults = onViewResults
-                )
-            }
-
-            is UiState.Error -> {
-                SheetsStatusCard(
-                    sheetsCount = null,
-                    isLoading = false,
-                    errorMessage = state.message,
-                    onViewResults = onViewResults
-                )
-            }
-
-            is UiState.Idle<*> -> {}
-        }
-    }
-}
-
-@Composable
-private fun SheetsStatusCard(
-    sheetsCount: Int?,
-    isLoading: Boolean = false,
-    errorMessage: String? = null,
-    avgScore: Int? = null,
-    topScore: Int? = null,
-    onViewResults: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = Grey200,
-                shape = RoundedCornerShape(12.dp)
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = White),
-        onClick = {
-            if (sheetsCount != null && sheetsCount > 0) {
-                onViewResults()
-            }
-        }
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Icon
-            Icon(
-                imageVector = Icons.Outlined.BarChart,
-                contentDescription = null,
-                tint = if (sheetsCount != null && sheetsCount > 0) Blue500 else Grey600,
-                modifier = Modifier.size(20.dp)
-            )
-
-            Spacer(Modifier.width(12.dp))
-
-            // Content
-            Column(modifier = Modifier.weight(1f)) {
-                when {
-                    // Loading
-                    isLoading -> {
-                        Text(
-                            text = "Loading...",
-                            style = AppTypography.label2Medium,
-                            color = Grey600
-                        )
-                    }
-
-                    // Error
-                    errorMessage != null -> {
-                        Text(
-                            text = "Error loading sheets",
-                            style = AppTypography.label2Medium,
-                            color = Grey900
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = errorMessage,
-                            style = AppTypography.body3Regular,
-                            color = Grey600
-                        )
-                    }
-
-                    // No sheets
-                    sheetsCount == null || sheetsCount == 0 -> {
-                        Text(
-                            text = "No sheets scanned yet",
-                            style = AppTypography.label2Medium,
-                            color = Grey900
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = "Ready to scan your first sheet?",
-                            style = AppTypography.body3Regular,
-                            color = Grey600
-                        )
-                    }
-
-                    // Single sheet
-                    sheetsCount == 1 -> {
-                        Row {
-                            Text(
-                                text = "Scanned: ",
-                                style = AppTypography.body3Regular,
-                                color = Grey600
-                            )
-                            Text(
-                                text = "1 sheet",
-                                style = AppTypography.label2Bold,
-                                color = Grey900
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "View Results →",
-                            style = AppTypography.label3Medium,
-                            color = Blue500
-                        )
-                    }
-
-                    // Multiple sheets
-                    else -> {
-                        Row {
-                            Text(
-                                text = "Scanned: ",
-                                style = AppTypography.body3Regular,
-                                color = Grey600
-                            )
-                            Text(
-                                text = "$sheetsCount sheets",
-                                style = AppTypography.label2Bold,
-                                color = Grey900
-                            )
-                        }
-
-                        // Optional stats
-                        if (avgScore != null && topScore != null) {
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = "Avg: $avgScore% • Top: $topScore%",
-                                style = AppTypography.body4Regular,
-                                color = Grey500
-                            )
-                        }
-
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "View Results →",
-                            style = AppTypography.label3Medium,
-                            color = Blue500
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusCard(
-    icon: ImageVector,
-    iconColor: Color,
-    title: String,
-    linkText: String,
-    onLinkClick: () -> Unit,
-    backgroundColor: Color,
-    borderColor: Color,
-    subtitle: String? = null
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(12.dp)
-            ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp,
-        ),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
-        ),
-        onClick = onLinkClick
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = "",
-                    modifier = Modifier.size(20.dp),
-                    tint = iconColor
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    style = AppTypography.body1Medium,
-                    color = Grey900
-                )
-                if (!subtitle.isNullOrEmpty()) {
-                    Text(
-                        text = subtitle,
-                        style = AppTypography.h4Bold,
-                        color = Black
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = linkText,
-                style = AppTypography.body3Medium,
-                color = Blue500,
-                modifier = Modifier.genericClick { onLinkClick() }
+                text = if (hasTemplate) {
+                    "Tip: Keep the sheet flat and include all 4 corner anchors."
+                } else {
+                    "Template is missing. Configure the answer key before scanning."
+                },
+                style = AppTypography.text12Regular,
+                color = Grey500
             )
         }
     }

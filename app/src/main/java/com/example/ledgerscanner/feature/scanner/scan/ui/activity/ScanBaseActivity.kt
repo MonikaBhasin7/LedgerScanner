@@ -17,8 +17,8 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScannerScreen
+import com.example.ledgerscanner.feature.scanner.scan.ui.screen.ScanSessionScreen
 import com.example.ledgerscanner.feature.scanner.scan.viewmodel.OmrScannerViewModel
-import com.example.omrscanner.ui.screens.ScanSessionScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
