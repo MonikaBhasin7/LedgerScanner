@@ -29,12 +29,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Addchart
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Description
@@ -42,6 +48,8 @@ import androidx.compose.material.icons.outlined.ListAlt
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -67,7 +75,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.auth.LogoutViewModel
@@ -748,11 +758,13 @@ class ExamListingActivity : ComponentActivity() {
                     .fillMaxWidth()
                     .padding(14.dp)
                     .genericClick { actions.quickAction?.action?.let { onClick(it) } },
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+//                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ExamIcon(status = item.status)
                     Spacer(modifier = Modifier.width(10.dp))
@@ -796,8 +808,8 @@ class ExamListingActivity : ComponentActivity() {
                 )
 
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(bottom = 2.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 12.dp)
                 ) {
                     ExamMetadata(
                         totalQuestions = item.totalQuestions,
@@ -809,17 +821,47 @@ class ExamListingActivity : ComponentActivity() {
                 }
 
                 if (examStatistics != null && examStatistics.hasStats() && sheetCount > 0) {
-                    ExamStats(
-                        avgScore = examStatistics.avgScore?.toInt(),
-                        topScore = examStatistics.topScore?.toInt(),
-                        lowestScore = examStatistics.lowestScore?.toInt()
-                    )
+                    Box(modifier = Modifier.padding(bottom = 10.dp)) {
+                        ExamStats(
+                            avgScore = examStatistics.avgScore?.toInt(),
+                            topScore = examStatistics.topScore?.toInt(),
+                            lowestScore = examStatistics.lowestScore?.toInt()
+                        )
+                    }
+                }
+
+                val shouldNudgeScan = sheetCount == 0 && actions.quickAction?.action is ExamAction.ScanSheets
+
+                if (shouldNudgeScan) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp, bottom = 2.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoAwesome,
+                            contentDescription = null,
+                            tint = Blue500,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Tap to scan your first sheet",
+                            color = Grey500,
+                            style = AppTypography.text11Regular,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
 
                 ExamQuickActionButton(
                     config = actions.quickAction,
                     onClick = onActionClick,
-                    modifier = Modifier.padding(top = 2.dp)
+//                    modifier = Modifier.padding(top = 2.dp),
+                    primaryLabelOverride = if (shouldNudgeScan) "Start Scanning" else null,
+                    showPulse = shouldNudgeScan
                 )
             }
         }
@@ -829,7 +871,9 @@ class ExamListingActivity : ComponentActivity() {
     fun ExamQuickActionButton(
         config: QuickActionButton?,
         onClick: (ExamAction) -> Unit,
-        modifier: Modifier = Modifier
+        modifier: Modifier = Modifier,
+        primaryLabelOverride: String? = null,
+        showPulse: Boolean = false
     ) {
         if (config == null) return
 
@@ -840,7 +884,7 @@ class ExamListingActivity : ComponentActivity() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 GenericButton(
-                    text = config.action.label,
+                    text = primaryLabelOverride ?: config.action.label,
                     type = ButtonType.SECONDARY,
                     size = ButtonSize.SMALL,
                     icon = config.action.icon,
@@ -873,7 +917,7 @@ class ExamListingActivity : ComponentActivity() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 GenericButton(
-                    text = config.action.label,
+                    text = primaryLabelOverride ?: config.action.label,
                     type = config.style,
                     size = ButtonSize.SMALL,
                     icon = config.action.icon,
@@ -892,14 +936,87 @@ class ExamListingActivity : ComponentActivity() {
             return
         }
 
-        GenericButton(
-            text = config.action.label,
-            type = config.style,
-            size = ButtonSize.SMALL,
-            icon = config.action.icon,
-            modifier = modifier.fillMaxWidth(),
-            onClick = { onClick(config.action) }
-        )
+        if (showPulse) {
+            val transition = rememberInfiniteTransition(label = "scan-ripple")
+            val rippleOneScale = transition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.06f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1400),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "rippleOneScale"
+            )
+            val rippleOneAlpha = transition.animateFloat(
+                initialValue = 0.22f,
+                targetValue = 0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1400),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "rippleOneAlpha"
+            )
+            val rippleTwoScale = transition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.26f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1400, delayMillis = 420),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "rippleTwoScale"
+            )
+            val rippleTwoAlpha = transition.animateFloat(
+                initialValue = 0.12f,
+                targetValue = 0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1400, delayMillis = 420),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "rippleTwoAlpha"
+            )
+
+            Box(modifier = modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer {
+                            scaleX = rippleOneScale.value
+                            scaleY = rippleOneScale.value
+                            alpha = rippleOneAlpha.value
+                        }
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(Blue500)
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer {
+                            scaleX = rippleTwoScale.value
+                            scaleY = rippleTwoScale.value
+                            alpha = rippleTwoAlpha.value
+                        }
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(Blue500)
+                )
+                GenericButton(
+                    text = primaryLabelOverride ?: config.action.label,
+                    type = config.style,
+                    size = ButtonSize.SMALL,
+                    icon = config.action.icon,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onClick(config.action) }
+                )
+            }
+        } else {
+            GenericButton(
+                text = primaryLabelOverride ?: config.action.label,
+                type = config.style,
+                size = ButtonSize.SMALL,
+                icon = config.action.icon,
+                modifier = modifier.fillMaxWidth(),
+                onClick = { onClick(config.action) }
+            )
+        }
     }
 
     @Composable
@@ -953,7 +1070,7 @@ class ExamListingActivity : ComponentActivity() {
             color = Grey500,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = AppTypography.text11Regular
+            style = AppTypography.text11Medium
         )
     }
 
@@ -1025,7 +1142,7 @@ class ExamListingActivity : ComponentActivity() {
     private fun StatusDetailLine(status: ExamStatus, sheetsCount: Int) {
         val (icon, text, tint) = when (status) {
             ExamStatus.DRAFT -> Triple(
-                Icons.Outlined.Description,
+                Icons.Outlined.WarningAmber,
                 "Incomplete setup",
                 Grey600
             )
@@ -1063,7 +1180,7 @@ class ExamListingActivity : ComponentActivity() {
             Text(
                 text = text,
                 color = Black,
-                style = AppTypography.text12Regular
+                style = AppTypography.text12Medium
             )
         }
     }

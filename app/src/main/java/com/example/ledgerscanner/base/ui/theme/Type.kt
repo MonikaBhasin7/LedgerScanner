@@ -1085,15 +1085,7 @@ object AppTypography {
 }
 
 val Inter = FontFamily(
-    Font(R.font.inter, weight = FontWeight.Thin),
-    Font(R.font.inter, weight = FontWeight.ExtraLight),
-    Font(R.font.inter, weight = FontWeight.Light),
     Font(R.font.inter, weight = FontWeight.Normal),
-    Font(R.font.inter, weight = FontWeight.Medium),
-    Font(R.font.inter, weight = FontWeight.SemiBold),
-    Font(R.font.inter, weight = FontWeight.Bold),
-    Font(R.font.inter, weight = FontWeight.ExtraBold),
-    Font(R.font.inter, weight = FontWeight.Black),
 )
 
 @Composable
