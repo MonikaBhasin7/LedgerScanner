@@ -77,17 +77,17 @@ fun ScannedSheetGridItem(
                     Modifier.border(
                         width = 2.dp,
                         color = Blue600,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(16.dp)
                     )
                 } else {
                     Modifier
                 }
             ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) Blue50 else Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Box {
             Column(
@@ -101,7 +101,7 @@ fun ScannedSheetGridItem(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
+                        .height(132.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(Grey200)
                 ) {
@@ -151,7 +151,7 @@ fun ScannedSheetGridItem(
                 // Score
                 Text(
                     text = "${sheet.scorePercent.toInt()}%",
-                    style = AppTypography.text24Bold,
+                    style = AppTypography.text22Bold,
                     color = Blue700
                 )
 

@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,10 +33,11 @@ fun SheetPreviewImages(imagePath: String?, thumbnailPath: String?) {
 fun SheetPreviewImage(imagePath: String?) {
     Box(
         modifier = Modifier
-            .width(60.dp)
-            .height(80.dp)
+            .width(62.dp)
+            .height(86.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(Grey200)
+            .border(1.dp, Grey300, RoundedCornerShape(8.dp))
     ) {
         if (imagePath != null) {
             val file = File(imagePath)

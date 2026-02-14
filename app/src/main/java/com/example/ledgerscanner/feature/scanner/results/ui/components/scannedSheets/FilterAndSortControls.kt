@@ -35,9 +35,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
+import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue600
 import com.example.ledgerscanner.base.ui.theme.Green600
 import com.example.ledgerscanner.base.ui.theme.Grey600
+import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.ui.theme.Red600
 import com.example.ledgerscanner.database.entity.ScanResultEntity
@@ -66,8 +68,10 @@ fun FilterAndSortControls(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, Grey200, RoundedCornerShape(14.dp))
             .background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -96,7 +100,7 @@ fun FilterAndSortControls(
             } else {
                 Text(
                     text = "Select All",
-                    style = AppTypography.text15SemiBold,
+                    style = AppTypography.text14SemiBold,
                     color = Blue600,
                     modifier = Modifier.clickable { onSelectAll() }
                 )
@@ -134,12 +138,21 @@ private fun ViewModeToggle(
     viewMode: ScannedSheetViewMode,
     onViewModeChange: (ScannedSheetViewMode) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Grey200.copy(alpha = 0.45f))
+            .padding(3.dp)
+    ) {
         Icon(
             imageVector = Icons.Default.GridView,
             contentDescription = "Grid view",
             tint = if (viewMode == ScannedSheetViewMode.GRID) Blue600 else Grey600,
             modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (viewMode == ScannedSheetViewMode.GRID) Blue100 else Color.Transparent)
+                .padding(6.dp)
                 .size(24.dp)
                 .clickable { onViewModeChange(ScannedSheetViewMode.GRID) }
         )
@@ -148,6 +161,9 @@ private fun ViewModeToggle(
             contentDescription = "List view",
             tint = if (viewMode == ScannedSheetViewMode.LIST) Blue600 else Grey600,
             modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (viewMode == ScannedSheetViewMode.LIST) Blue100 else Color.Transparent)
+                .padding(6.dp)
                 .size(24.dp)
                 .clickable { onViewModeChange(ScannedSheetViewMode.LIST) }
         )
@@ -165,7 +181,9 @@ private fun FilterChip(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(24.dp))
-            .background(if (isSelected) selectedColor else Color.White)
+            .background(
+                if (isSelected) selectedColor.copy(alpha = 0.16f) else Color.White
+            )
             .border(1.5.dp, unselectedColor, RoundedCornerShape(24.dp))
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -173,7 +191,7 @@ private fun FilterChip(
         Text(
             text = label,
             style = AppTypography.text12SemiBold,
-            color = if (isSelected) Color.White else unselectedColor
+            color = if (isSelected) selectedColor else unselectedColor
         )
     }
 }
@@ -194,7 +212,7 @@ private fun SortDropdown(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Sort by: ${selectedSort.displayName}",
+                text = "Sort: ${selectedSort.displayName}",
                 style = AppTypography.text14Regular,
                 color = Grey600
             )

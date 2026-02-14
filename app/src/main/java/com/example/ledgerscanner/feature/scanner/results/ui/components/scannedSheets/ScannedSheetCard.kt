@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,6 +35,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
 import com.example.ledgerscanner.base.ui.theme.Grey700
+import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.Red600
@@ -69,17 +72,17 @@ fun ScannedSheetCard(
                     Modifier.border(
                         width = 2.dp,
                         color = Blue600,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(16.dp)
                     )
                 } else {
                     Modifier
                 }
             ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) Blue50 else Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Box {
             Column(
@@ -89,7 +92,7 @@ fun ScannedSheetCard(
                         start = 16.dp,
                         top = 16.dp,
                         end = 16.dp,
-                        bottom = if (selectionMode) 16.dp else 0.dp
+                        bottom = if (selectionMode) 16.dp else 8.dp
                     )
             ) {
                 Row(
@@ -129,13 +132,19 @@ fun ScannedSheetCard(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        Text(
-                            text = "${sheet.score}/${sheet.totalQuestions} (${sheet.scorePercent.toInt()}%)",
-                            style = AppTypography.text24Bold,
-                            color = Blue700
-                        )
+                        Box(
+                            modifier = Modifier
+                                .background(Blue50, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "${sheet.score}/${sheet.totalQuestions} (${sheet.scorePercent.toInt()}%)",
+                                style = AppTypography.text24Bold,
+                                color = Blue700
+                            )
+                        }
 
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -151,6 +160,11 @@ fun ScannedSheetCard(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = Grey200
+                )
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(

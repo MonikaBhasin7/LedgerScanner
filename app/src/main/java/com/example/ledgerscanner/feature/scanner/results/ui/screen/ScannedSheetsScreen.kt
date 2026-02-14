@@ -3,6 +3,7 @@ package com.example.ledgerscanner.feature.scanner.results.ui.screen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Scaffold
@@ -36,6 +37,7 @@ import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSh
 import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets.ScannedSheetCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets.ScannedSheetGridRow
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
+import com.example.ledgerscanner.base.ui.theme.Grey50
 
 @Composable
 fun ScannedSheetsScreen(
@@ -73,7 +75,12 @@ fun ScannedSheetsScreen(
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .background(Grey50)
+        ) {
             when (scannedSheets) {
                 is UiState.Error -> {
                     ErrorState(message = (scannedSheets as UiState.Error).message)
@@ -88,8 +95,12 @@ fun ScannedSheetsScreen(
                     val filteredSheets = dataHolder?.filterList ?: listOf()
                     val hasAnySheets = dataHolder?.originalList?.isNotEmpty() == true
 
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        if (hasAnySheets == true) {
+                    if (!hasAnySheets) {
+                        EmptyState(modifier = Modifier.fillMaxSize())
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
                             item {
                                 ExamStatsHeader(examEntity, examStats[examEntity.id])
                             }
@@ -112,61 +123,56 @@ fun ScannedSheetsScreen(
                                     }
                                 )
                             }
-                        }
+                            when {
+                                filteredSheets.isEmpty() -> {
+                                    item { FilteredEmptyState(selectedFilter) }
+                                }
 
-                        when {
-                            !hasAnySheets -> {
-                                item { EmptyState() }
-                            }
-
-                            filteredSheets.isEmpty() -> {
-                                item { FilteredEmptyState(selectedFilter) }
-                            }
-
-                            else -> {
-                                when (viewMode) {
-                                    ScannedSheetViewMode.LIST -> {
-                                        items(filteredSheets) { sheet ->
-                                            ScannedSheetCard(
-                                                sheet = sheet,
-                                                isSelected = selectedSheets.contains(sheet.id),
-                                                selectionMode = selectionMode,
-                                                onCardClick = {
-                                                    scanResultViewModel.toggleSheetSelection(sheet.id)
-                                                },
-                                                onLongClick = {
-                                                    scanResultViewModel.enterSelectionMode()
-                                                    scanResultViewModel.toggleSheetSelection(sheet.id)
-                                                },
-                                                onViewDetails = {
-                                                    ScanResultActivity.launchScanResultScreen(
-                                                        context,
-                                                        examEntity,
-                                                        sheet
+                                else -> {
+                                    when (viewMode) {
+                                        ScannedSheetViewMode.LIST -> {
+                                            items(filteredSheets) { sheet ->
+                                                ScannedSheetCard(
+                                                    sheet = sheet,
+                                                    isSelected = selectedSheets.contains(sheet.id),
+                                                    selectionMode = selectionMode,
+                                                    onCardClick = {
+                                                        scanResultViewModel.toggleSheetSelection(sheet.id)
+                                                    },
+                                                    onLongClick = {
+                                                        scanResultViewModel.enterSelectionMode()
+                                                        scanResultViewModel.toggleSheetSelection(sheet.id)
+                                                    },
+                                                    onViewDetails = {
+                                                        ScanResultActivity.launchScanResultScreen(
+                                                            context,
+                                                            examEntity,
+                                                            sheet
+                                                        )
+                                                    },
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 16.dp,
+                                                        vertical = 6.dp
                                                     )
-                                                },
-                                                modifier = Modifier.padding(
-                                                    horizontal = 16.dp,
-                                                    vertical = 6.dp
                                                 )
-                                            )
+                                            }
                                         }
-                                    }
 
-                                    ScannedSheetViewMode.GRID -> {
-                                        items(filteredSheets.chunked(2)) { rowSheets ->
-                                            ScannedSheetGridRow(
-                                                rowSheets = rowSheets,
-                                                selectedSheets = selectedSheets,
-                                                selectionMode = selectionMode,
-                                                onCardClick = { sheetId ->
-                                                    scanResultViewModel.toggleSheetSelection(sheetId)
-                                                },
-                                                onLongClick = { sheetId ->
-                                                    scanResultViewModel.enterSelectionMode()
-                                                    scanResultViewModel.toggleSheetSelection(sheetId)
-                                                }
-                                            )
+                                        ScannedSheetViewMode.GRID -> {
+                                            items(filteredSheets.chunked(2)) { rowSheets ->
+                                                ScannedSheetGridRow(
+                                                    rowSheets = rowSheets,
+                                                    selectedSheets = selectedSheets,
+                                                    selectionMode = selectionMode,
+                                                    onCardClick = { sheetId ->
+                                                        scanResultViewModel.toggleSheetSelection(sheetId)
+                                                    },
+                                                    onLongClick = { sheetId ->
+                                                        scanResultViewModel.enterSelectionMode()
+                                                        scanResultViewModel.toggleSheetSelection(sheetId)
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
