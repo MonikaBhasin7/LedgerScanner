@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
@@ -44,36 +43,28 @@ fun ExamActionsPopup(
     onActionClick: (ExamAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
-    val menuWidth = 220.dp
-    val cardPadding = 16.dp
-
-    val offsetX = screenWidth - menuWidth - cardPadding - 50.dp - 24.dp
+    val menuWidth = 196.dp
 
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
-        offset = DpOffset(x = offsetX, y = 8.dp),
+        offset = DpOffset(x = 0.dp, y = 4.dp),
         modifier = Modifier
             .width(menuWidth)
             .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(16.dp),
-                spotColor = Black.copy(alpha = 0.15f)
+                elevation = 6.dp,
+                shape = RoundedCornerShape(14.dp),
+                spotColor = Black.copy(alpha = 0.12f)
             )
-            .background(White, RoundedCornerShape(16.dp))
-            .border(1.dp, Grey100, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp)
+            .background(White, RoundedCornerShape(14.dp))
+            .border(1.dp, Grey100, RoundedCornerShape(14.dp)),
+        shape = RoundedCornerShape(14.dp)
     ) {
-        // Top padding
-        Spacer(modifier = Modifier.height(2.dp))
-
         actions.menuItems.forEachIndexed { index, action ->
             // Divider before dangerous actions
             if (action.isDangerous && index > 0) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp),
+                    modifier = Modifier.padding(vertical = 6.dp, horizontal = 10.dp),
                     thickness = 1.dp,
                     color = Grey200
                 )
@@ -83,14 +74,14 @@ fun ExamActionsPopup(
                 text = {
                     Text(
                         text = action.label,
-                        style = AppTypography.body2Medium,
+                        style = AppTypography.text13Medium,
                         color = if (action.isDangerous) Red500 else Black
                     )
                 },
                 leadingIcon = {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(32.dp)
                             .background(
                                 color = if (action.isDangerous)
                                     Red500.copy(alpha = 0.1f)
@@ -104,7 +95,7 @@ fun ExamActionsPopup(
                             imageVector = action.icon,
                             contentDescription = action.label,
                             tint = if (action.isDangerous) Red500 else Blue500,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(17.dp)
                         )
                     }
                 },
@@ -112,12 +103,9 @@ fun ExamActionsPopup(
                     onActionClick(action)
                     onDismiss()
                 },
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 5.dp)
             )
         }
-
-        // Bottom padding
-        Spacer(modifier = Modifier.height(2.dp))
     }
 }

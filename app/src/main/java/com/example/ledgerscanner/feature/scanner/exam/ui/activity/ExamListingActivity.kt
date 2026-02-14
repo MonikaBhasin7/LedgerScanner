@@ -783,29 +783,31 @@ class ExamListingActivity : ComponentActivity() {
                         )
                     }
 
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More actions",
-                            tint = Grey500
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More actions",
+                                tint = Grey500
+                            )
+                        }
+
+                        ExamActionsPopup(
+                            expanded = showMenu,
+                            examEntity = item,
+                            viewModel = examListViewModel,
+                            actions = actions,
+                            onActionClick = { action ->
+                                showMenu = false
+                                onActionClick(action)
+                            },
+                            onDismiss = { showMenu = false },
                         )
                     }
                 }
-
-                ExamActionsPopup(
-                    expanded = showMenu,
-                    examEntity = item,
-                    viewModel = examListViewModel,
-                    actions = actions,
-                    onActionClick = { action ->
-                        showMenu = false
-                        onActionClick(action)
-                    },
-                    onDismiss = { showMenu = false },
-                )
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
