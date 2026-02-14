@@ -36,6 +36,9 @@ class ExamListViewModel @Inject constructor(
     private val _duplicateExamState = MutableStateFlow<UiState<Unit>>(UiState.Loading())
     val duplicateExamState = _duplicateExamState.asStateFlow()
 
+    private val _updateExamStatusState = MutableStateFlow<UiState<Unit>>(UiState.Loading())
+    val updateExamStatusState = _updateExamStatusState.asStateFlow()
+
     private val _allExams = MutableStateFlow<List<ExamEntity>>(emptyList())
     private var currentSearchQuery: String = ""
 
@@ -118,6 +121,23 @@ class ExamListViewModel @Inject constructor(
         _duplicateExamState.value = UiState.Loading()
     }
 
+    fun updateExamStatus(examId: Int, status: ExamStatus) {
+        viewModelScope.launch {
+            _updateExamStatusState.value = UiState.Loading()
+            try {
+                repository.updateExamStatus(examId, status)
+                _updateExamStatusState.value = UiState.Success(Unit)
+            } catch (e: Exception) {
+                _updateExamStatusState.value =
+                    UiState.Error(e.message ?: "Failed to update exam status")
+            }
+        }
+    }
+
+    fun resetUpdateExamStatusState() {
+        _updateExamStatusState.value = UiState.Loading()
+    }
+
     fun getExamActionForStatus(
         status: ExamStatus,
         hasScannedSheets: Boolean = false
@@ -178,10 +198,14 @@ class ExamListViewModel @Inject constructor(
 //            )
             ExamStatus.ARCHIVED -> ExamActionPopupConfig(
                 menuItems = listOf(
+                    ExamAction.Restore,
                     ExamAction.Duplicate,
                     ExamAction.Delete
                 ),
-                quickAction = null
+                quickAction = QuickActionButton(
+                    action = ExamAction.Restore,
+                    style = ButtonType.SECONDARY
+                )
             )
         }
     }

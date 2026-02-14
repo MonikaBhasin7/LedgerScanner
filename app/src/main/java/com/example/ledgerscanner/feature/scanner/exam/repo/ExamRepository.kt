@@ -114,4 +114,9 @@ class ExamRepository @Inject constructor(
         )
         dao.insertExam(newExamEntity)
     }
+
+    suspend fun updateExamStatus(examId: Int, status: ExamStatus) = withContext(Dispatchers.IO) {
+        dao.updateExamStatusAndMarkPending(examId, status)
+        syncManager.scheduleImmediateSync()
+    }
 }

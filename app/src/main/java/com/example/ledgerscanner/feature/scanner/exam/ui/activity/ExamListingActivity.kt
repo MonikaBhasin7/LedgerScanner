@@ -216,6 +216,7 @@ class ExamListingActivity : ComponentActivity() {
         var showDeleteAndDuplicateDialog by remember { mutableStateOf<ExamActionDialog?>(null) }
         val deleteState by viewModel.deleteExamState.collectAsState()
         val duplicateState by viewModel.duplicateExamState.collectAsState()
+        val updateExamStatusState by viewModel.updateExamStatusState.collectAsState()
         val examStatistics by scanResultViewModel.examStatsCache.collectAsState()
         var showLogoutDialog by remember { mutableStateOf(false) }
         val drawerState = androidx.compose.material3.rememberDrawerState(
@@ -271,6 +272,23 @@ class ExamListingActivity : ComponentActivity() {
                 is UiState.Error -> {
                     Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
                     viewModel.resetDuplicateState()
+                }
+
+                else -> {}
+            }
+        }
+
+        // Handle update exam status state
+        LaunchedEffect(updateExamStatusState) {
+            when (val state = updateExamStatusState) {
+                is UiState.Success -> {
+                    Toast.makeText(context, "Exam status updated", Toast.LENGTH_SHORT).show()
+                    viewModel.resetUpdateExamStatusState()
+                }
+
+                is UiState.Error -> {
+                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    viewModel.resetUpdateExamStatusState()
                 }
 
                 else -> {}
@@ -480,6 +498,15 @@ class ExamListingActivity : ComponentActivity() {
                                 },
                                 showDuplicateDialog = {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
+                                },
+                                showMarkCompletedDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.MarkCompleted(it)
+                                },
+                                showArchiveDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Archive(it)
+                                },
+                                showRestoreDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Restore(it)
                                 }
                             )
                         },
@@ -499,6 +526,15 @@ class ExamListingActivity : ComponentActivity() {
                                 },
                                 showDuplicateDialog = {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
+                                },
+                                showMarkCompletedDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.MarkCompleted(it)
+                                },
+                                showArchiveDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Archive(it)
+                                },
+                                showRestoreDialog = {
+                                    showDeleteAndDuplicateDialog = ExamActionDialog.Restore(it)
                                 }
                             )
                         }
@@ -564,6 +600,54 @@ class ExamListingActivity : ComponentActivity() {
                     )
                 }
 
+                is ExamActionDialog.MarkCompleted -> {
+                    val examEntity = (it as ExamActionDialog.MarkCompleted).examEntity
+                    ExamActionConfirmationDialog(
+                        title = "Mark Completed",
+                        message = "Mark \"${examEntity.examName}\" as completed?",
+                        confirmText = "Mark Completed",
+                        onConfirm = {
+                            examListViewModel.updateExamStatus(examEntity.id, ExamStatus.COMPLETED)
+                            showDeleteAndDuplicateDialog = null
+                        },
+                        onDismiss = {
+                            showDeleteAndDuplicateDialog = null
+                        }
+                    )
+                }
+
+                is ExamActionDialog.Archive -> {
+                    val examEntity = (it as ExamActionDialog.Archive).examEntity
+                    ExamActionConfirmationDialog(
+                        title = "Archive Exam",
+                        message = "Archive \"${examEntity.examName}\"? You can still view results later.",
+                        confirmText = "Archive",
+                        onConfirm = {
+                            examListViewModel.updateExamStatus(examEntity.id, ExamStatus.ARCHIVED)
+                            showDeleteAndDuplicateDialog = null
+                        },
+                        onDismiss = {
+                            showDeleteAndDuplicateDialog = null
+                        }
+                    )
+                }
+
+                is ExamActionDialog.Restore -> {
+                    val examEntity = (it as ExamActionDialog.Restore).examEntity
+                    ExamActionConfirmationDialog(
+                        title = "Restore Exam",
+                        message = "Restore \"${examEntity.examName}\" to active state?",
+                        confirmText = "Restore",
+                        onConfirm = {
+                            examListViewModel.updateExamStatus(examEntity.id, ExamStatus.ACTIVE)
+                            showDeleteAndDuplicateDialog = null
+                        },
+                        onDismiss = {
+                            showDeleteAndDuplicateDialog = null
+                        }
+                    )
+                }
+
                 null -> {}
             }
         }
@@ -574,7 +658,10 @@ class ExamListingActivity : ComponentActivity() {
         examEntity: ExamEntity,
         examAction: ExamAction,
         showDeleteDialog: (ExamEntity) -> Unit,
-        showDuplicateDialog: (ExamEntity) -> Unit
+        showDuplicateDialog: (ExamEntity) -> Unit,
+        showMarkCompletedDialog: (ExamEntity) -> Unit,
+        showArchiveDialog: (ExamEntity) -> Unit,
+        showRestoreDialog: (ExamEntity) -> Unit
     ) {
         when (examAction) {
             ExamAction.ContinueSetup, ExamAction.EditExam -> {
@@ -606,8 +693,7 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             ExamAction.MarkCompleted -> {
-                // TODO: Show confirmation and update status
-                Toast.makeText(context, "Mark Completed - Coming soon", Toast.LENGTH_SHORT).show()
+                showMarkCompletedDialog(examEntity)
             }
 
             ExamAction.Duplicate -> {
@@ -620,8 +706,11 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             ExamAction.Archive -> {
-                // TODO: Archive exam
-                Toast.makeText(context, "Archive - Coming soon", Toast.LENGTH_SHORT).show()
+                showArchiveDialog(examEntity)
+            }
+
+            ExamAction.Restore -> {
+                showRestoreDialog(examEntity)
             }
 
             ExamAction.Delete -> {
@@ -738,6 +827,7 @@ class ExamListingActivity : ComponentActivity() {
         onClick: (ExamAction) -> Unit,
         onActionClick: (ExamAction) -> Unit,
     ) {
+        val isArchived = item.status == ExamStatus.ARCHIVED
         val sheetCount = examStatistics?.sheetsCount ?: 0
         val actions = examListViewModel.getExamActionForStatus(
             status = item.status,
@@ -750,7 +840,9 @@ class ExamListingActivity : ComponentActivity() {
                 .fillMaxWidth()
                 .border(1.dp, Grey200, RoundedCornerShape(14.dp)),
             shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = White),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isArchived) Grey100 else White
+            ),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(
@@ -827,7 +919,8 @@ class ExamListingActivity : ComponentActivity() {
                         ExamStats(
                             avgScore = examStatistics.avgScore?.toInt(),
                             topScore = examStatistics.topScore?.toInt(),
-                            lowestScore = examStatistics.lowestScore?.toInt()
+                            lowestScore = examStatistics.lowestScore?.toInt(),
+                            isArchived = isArchived
                         )
                     }
                 }
@@ -1080,32 +1173,40 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamStats(
         avgScore: Int?,
         topScore: Int?,
-        lowestScore: Int?
+        lowestScore: Int?,
+        isArchived: Boolean = false
     ) {
         val validAvg = avgScore?.coerceIn(0, 100) ?: 0
         val validTop = topScore?.coerceIn(0, 100) ?: 0
         val validLow = lowestScore?.coerceIn(0, 100) ?: 0
 
+        val statValueColor = if (isArchived) Grey600 else Blue500
+        val statBgColor = if (isArchived) Grey200 else Color(0xFFE7F0FA)
+        val topValueColor = if (isArchived) Grey600 else Green600
+        val topBgColor = if (isArchived) Grey200 else Color(0xFFEAF7EE)
+        val lowValueColor = if (isArchived) Grey600 else Orange600
+        val lowBgColor = if (isArchived) Grey200 else Color(0xFFFFF2E6)
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile(
                 value = "$validAvg%",
                 label = "AVG",
-                valueColor = Blue500,
-                backgroundColor = Color(0xFFE7F0FA),
+                valueColor = statValueColor,
+                backgroundColor = statBgColor,
                 modifier = Modifier.weight(1f)
             )
             StatTile(
                 value = "$validTop%",
                 label = "TOP",
-                valueColor = Green600,
-                backgroundColor = Color(0xFFEAF7EE),
+                valueColor = topValueColor,
+                backgroundColor = topBgColor,
                 modifier = Modifier.weight(1f)
             )
             StatTile(
                 value = "$validLow%",
                 label = "LOW",
-                valueColor = Orange600,
-                backgroundColor = Color(0xFFFFF2E6),
+                valueColor = lowValueColor,
+                backgroundColor = lowBgColor,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1142,31 +1243,32 @@ class ExamListingActivity : ComponentActivity() {
 
     @Composable
     private fun StatusDetailLine(status: ExamStatus, sheetsCount: Int) {
-        val (icon, text, tint) = when (status) {
+        val (detail, textColor) = when (status) {
             ExamStatus.DRAFT -> Triple(
                 Icons.Outlined.WarningAmber,
                 "Incomplete setup",
                 Grey600
-            )
+            ) to Black
 
             ExamStatus.ACTIVE -> if (sheetsCount > 0) {
-                Triple(Icons.Outlined.BarChart, "$sheetsCount sheets scanned", Grey600)
+                Triple(Icons.Outlined.BarChart, "$sheetsCount sheets scanned", Grey600) to Black
             } else {
-                Triple(Icons.Outlined.Description, "No sheets scanned yet", Grey600)
+                Triple(Icons.Outlined.Description, "No sheets scanned yet", Grey600) to Black
             }
 
             ExamStatus.COMPLETED -> Triple(
                 Icons.Filled.CheckCircle,
                 "$sheetsCount sheets scanned",
                 Grey600
-            )
+            ) to Black
 
             ExamStatus.ARCHIVED -> Triple(
                 Icons.Outlined.Description,
                 "Archived • $sheetsCount sheets",
                 Grey600
-            )
+            ) to Grey600
         }
+        val (icon, text, tint) = detail
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1181,7 +1283,7 @@ class ExamListingActivity : ComponentActivity() {
             )
             Text(
                 text = text,
-                color = Black,
+                color = textColor,
                 style = AppTypography.text12Medium
             )
         }

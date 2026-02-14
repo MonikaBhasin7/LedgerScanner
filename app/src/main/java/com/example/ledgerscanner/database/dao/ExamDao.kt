@@ -36,6 +36,9 @@ interface ExamDao {
     @Query("UPDATE exams SET marksPerCorrect=:marksPerCorrect, marksPerWrong=:marksPerWrong WHERE id = :examId")
     suspend fun updateMarkingScheme(examId: Int, marksPerCorrect: Float?, marksPerWrong: Float?)
 
+    @Query("UPDATE exams SET status = :status WHERE id = :examId")
+    suspend fun updateExamStatus(examId: Int, status: ExamStatus)
+
 
     @Transaction
     suspend fun updateAnswerKeyAndMarkPending(examId: Int, answerKey: Map<Int, Int>) {
@@ -50,6 +53,12 @@ interface ExamDao {
         marksPerWrong: Float?
     ) {
         updateMarkingScheme(examId, marksPerCorrect, marksPerWrong)
+        markExamPending(examId)
+    }
+
+    @Transaction
+    suspend fun updateExamStatusAndMarkPending(examId: Int, status: ExamStatus) {
+        updateExamStatus(examId, status)
         markExamPending(examId)
     }
 
