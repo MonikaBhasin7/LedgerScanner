@@ -15,6 +15,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,7 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -72,6 +75,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -235,6 +239,7 @@ class ExamListingActivity : ComponentActivity() {
         var pendingCompletedExamId by remember { mutableStateOf<Int?>(null) }
         var celebratingExamId by remember { mutableStateOf<Int?>(null) }
         var waitForCompletedCard by remember { mutableStateOf(false) }
+        var walkthroughDismissed by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         var pendingCommitAction by remember { mutableStateOf<(() -> Unit)?>(null) }
         var pendingUndoAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -342,6 +347,14 @@ class ExamListingActivity : ComponentActivity() {
             }
         }
 
+        val visibleExamItems = (examListResponse as? UiState.Success)?.data.orEmpty()
+            .filterNot { hiddenExamIds.contains(it.id) }
+        val firstNoScanExamId = visibleExamItems
+            .firstOrNull { exam ->
+                exam.status == ExamStatus.ACTIVE && (examStatistics[exam.id]?.sheetsCount ?: 0) == 0
+            }?.id
+        val showNoScanWalkthrough = firstNoScanExamId != null && !walkthroughDismissed
+
         fun enqueueUndoAction(
             message: String,
             undoAction: () -> Unit,
@@ -357,7 +370,7 @@ class ExamListingActivity : ComponentActivity() {
             pendingCommitAction = commitAction
             undoSnackbarJob = drawerScope.launch {
                 val dismissJob = launch {
-                    delay(3500)
+                    delay(6500)
                     snackbarHostState.currentSnackbarData?.dismiss()
                 }
                 val result = snackbarHostState.showSnackbar(
@@ -604,6 +617,11 @@ class ExamListingActivity : ComponentActivity() {
                         examStatistics = examStatistics,
                         celebratingExamId = celebratingExamId,
                         hiddenExamIds = hiddenExamIds,
+                        walkthroughExamId = firstNoScanExamId,
+                        showNoScanWalkthrough = showNoScanWalkthrough,
+                        onDismissNoScanWalkthrough = {
+                            walkthroughDismissed = true
+                        },
                         onExamClick = { examEntity, examAction ->
                             handleExamAction(
                                 context,
@@ -879,6 +897,9 @@ class ExamListingActivity : ComponentActivity() {
         examStatistics: Map<Int, ExamStatistics>,
         celebratingExamId: Int?,
         hiddenExamIds: Set<Int>,
+        walkthroughExamId: Int?,
+        showNoScanWalkthrough: Boolean,
+        onDismissNoScanWalkthrough: () -> Unit,
         onExamClick: (ExamEntity, ExamAction) -> Unit,
         onRetry: () -> Unit,
         onActionClick: (ExamEntity, ExamAction) -> Unit,
@@ -928,6 +949,8 @@ class ExamListingActivity : ComponentActivity() {
                             item = item,
                             examStatistics = examStatistics[item.id],
                             showCompletionCelebration = celebratingExamId == item.id,
+                            showNoScanWalkthrough = showNoScanWalkthrough && walkthroughExamId == item.id,
+                            onDismissNoScanWalkthrough = onDismissNoScanWalkthrough,
                             onClick = { onExamClick(item, it) },
                             onActionClick = {
                                 onActionClick(item, it)
@@ -981,6 +1004,8 @@ class ExamListingActivity : ComponentActivity() {
         item: ExamEntity,
         examStatistics: ExamStatistics?,
         showCompletionCelebration: Boolean = false,
+        showNoScanWalkthrough: Boolean = false,
+        onDismissNoScanWalkthrough: () -> Unit = {},
         onClick: (ExamAction) -> Unit,
         onActionClick: (ExamAction) -> Unit,
     ) {
@@ -1100,25 +1125,18 @@ class ExamListingActivity : ComponentActivity() {
                 val shouldNudgeScan = sheetCount == 0 && actions.quickAction?.action is ExamAction.ScanSheets
 
                 if (shouldNudgeScan) {
-                    Row(
+                    NoScanContextualNudge(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp, bottom = 2.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
-                            contentDescription = null,
-                            tint = Blue500,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Tap to scan your first sheet",
-                            color = Grey500,
-                            style = AppTypography.text11Regular,
-                            textAlign = TextAlign.Center,
+                            .padding(top = 2.dp, bottom = 8.dp)
+                    )
+
+                    if (showNoScanWalkthrough) {
+                        NoScanWalkthroughTooltip(
+                            onDismiss = onDismissNoScanWalkthrough,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
                         )
                     }
                 }
@@ -1130,6 +1148,145 @@ class ExamListingActivity : ComponentActivity() {
                     primaryLabelOverride = if (shouldNudgeScan) "Start Scanning" else null,
                     showPulse = shouldNudgeScan
                 )
+            }
+        }
+    }
+
+    @Composable
+    private fun NoScanContextualNudge(modifier: Modifier = Modifier) {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(Blue100.copy(alpha = 0.35f))
+                .border(1.dp, Blue100, RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    tint = Blue500,
+                    modifier = Modifier.size(14.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "No scans yet",
+                        style = AppTypography.text12Medium,
+                        color = Blue500
+                    )
+                    Text(
+                        text = "Start scanning to unlock score insights and trends.",
+                        style = AppTypography.text11Regular,
+                        color = Grey600
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun NoScanWalkthroughTooltip(
+        onDismiss: () -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        val walkthroughTips = listOf(
+            "Step 1: Start Scanning" to "Use the primary button to scan your first sheet.",
+            "Step 2: Track Insights" to "After first scan, this card will show live score stats."
+        )
+        val carouselState = rememberLazyListState()
+        val currentStep by remember {
+            derivedStateOf { carouselState.firstVisibleItemIndex.coerceIn(0, walkthroughTips.size - 1) }
+        }
+        val tooltipBg = Grey800
+
+        BoxWithConstraints(modifier = modifier) {
+            val totalSteps = walkthroughTips.size
+            val pageWidth = maxWidth
+
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Grey600.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+                        .background(tooltipBg, RoundedCornerShape(14.dp))
+                ) {
+                    LazyRow(
+                        state = carouselState,
+                        horizontalArrangement = Arrangement.spacedBy(0.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        itemsIndexed(walkthroughTips) { _, tip ->
+                            Column(
+                                modifier = Modifier
+                                    .width(pageWidth)
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Grey900.copy(alpha = 0.25f))
+                                    .padding(horizontal = 10.dp, vertical = 9.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = tip.first,
+                                        style = AppTypography.text13SemiBold,
+                                        color = White
+                                    )
+                                    Text(
+                                        text = "Dismiss",
+                                        style = AppTypography.text12Medium,
+                                        color = Blue100,
+                                        modifier = Modifier.clickable { onDismiss() }
+                                    )
+                                }
+
+                                Text(
+                                    text = tip.second,
+                                    style = AppTypography.text12Regular,
+                                    color = White.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                    }
+                }
+                Canvas(
+                    modifier = Modifier
+                        .padding(start = 22.dp)
+                        .size(width = 18.dp, height = 9.dp)
+                ) {
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(0f, 0f)
+                        lineTo(size.width / 2f, size.height)
+                        lineTo(size.width, 0f)
+                        close()
+                    }
+                    drawPath(path = path, color = tooltipBg)
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(totalSteps) { index ->
+                        val isActive = index == currentStep
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 3.dp)
+                                .width(if (isActive) 14.dp else 6.dp)
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(if (isActive) Blue100 else Grey500.copy(alpha = 0.8f))
+                        )
+                    }
+                }
             }
         }
     }
