@@ -191,7 +191,10 @@ fun ScannedSheetsScreen(
                                             }
 
                                             ScannedSheetViewMode.GRID -> {
-                                                items(filteredSheets.chunked(2)) { rowSheets ->
+                                                items(
+                                                    items = filteredSheets.chunked(2),
+                                                    key = { row -> row.firstOrNull()?.id ?: -1 }
+                                                ) { rowSheets ->
                                                     ScannedSheetGridRow(
                                                         rowSheets = rowSheets,
                                                         selectedSheets = selectedSheets,
