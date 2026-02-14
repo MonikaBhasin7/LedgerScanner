@@ -1,15 +1,17 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.Card
@@ -27,13 +30,21 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -52,7 +63,9 @@ import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
 import com.example.ledgerscanner.base.ui.theme.Grey700
+import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Grey900
+import com.example.ledgerscanner.base.ui.theme.Orange100
 import com.example.ledgerscanner.base.ui.theme.Orange50
 import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.Red50
@@ -62,6 +75,7 @@ import com.example.ledgerscanner.base.utils.DateAndTimeUtils
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.results.utils.ScanResultUtils
 import java.io.File
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -76,6 +90,14 @@ fun ScannedSheetCard(
 ) {
     val percent = sheet.scorePercent.toInt().coerceIn(0, 100)
     val attempted = (sheet.totalQuestions - sheet.blankCount).coerceAtLeast(0)
+    var statTooltip by remember(sheet.id) { mutableStateOf<StatTooltipInfo?>(null) }
+
+    LaunchedEffect(statTooltip) {
+        if (statTooltip != null) {
+            delay(2000)
+            statTooltip = null
+        }
+    }
 
     Card(
         modifier = modifier
@@ -104,13 +126,8 @@ fun ScannedSheetCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(
-                        start = 14.dp,
-                        top = 14.dp,
-                        end = 14.dp,
-                        bottom = if (selectionMode) 14.dp else 8.dp
-                    ),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -125,32 +142,29 @@ fun ScannedSheetCard(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = "Sheet #${sheet.id}",
-                                style = AppTypography.text16Bold,
+                                style = AppTypography.text18Bold,
                                 color = Grey900
                             )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (ScanResultUtils.isRecentSheet(sheet.scannedAt)) {
-                                    NewBadge()
-                                }
-                                PercentagePill(percent = percent)
+                            if (ScanResultUtils.isRecentSheet(sheet.scannedAt)) {
+                                NewBadge()
                             }
                         }
 
-                        Text(
-                            text = sheet.enrollmentNumber ?: (sheet.barCode ?: "Unknown Candidate"),
-                            style = AppTypography.text15SemiBold,
-                            color = Grey700,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        sheet.enrollmentNumber?.let {
+                            if (it.isNotEmpty()) {
+                                Text(
+                                    text = "Eno: ${sheet.enrollmentNumber}",
+                                    style = AppTypography.text15SemiBold,
+                                    color = Grey700,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             MetaPill("Questions ${sheet.totalQuestions}")
@@ -162,18 +176,76 @@ fun ScannedSheetCard(
                             totalQuestions = sheet.totalQuestions,
                             percent = percent
                         )
-                    }
-                }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    StatChip("✓", "${sheet.correctCount}", Green50, Green600)
-                    StatChip("✕", "${sheet.wrongCount}", Red50, Red600)
-                    StatChip("—", "${sheet.blankCount}", Grey100, Grey600)
-                    if (!sheet.multipleMarksDetected.isNullOrEmpty()) {
-                        StatChip("⚠", "${sheet.multipleMarksDetected.size}", Orange50, Orange600)
+                        if (statTooltip != null) {
+                            StatTooltipBubble(
+                                info = statTooltip!!,
+                                pointerCenterX = statTooltip!!.pointerCenterX
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StatChip(
+                                icon = "✓",
+                                value = "${sheet.correctCount}",
+                                bgColor = Green50,
+                                contentColor = Green600,
+                                onClick = { centerX ->
+                                    statTooltip = StatTooltipInfo(
+                                        icon = "✓",
+                                        title = "Correct Answers",
+                                        description = "Questions answered correctly on this sheet.",
+                                        pointerCenterX = centerX
+                                    )
+                                }
+                            )
+                            StatChip(
+                                icon = "✕",
+                                value = "${sheet.wrongCount}",
+                                bgColor = Red50,
+                                contentColor = Red600,
+                                onClick = { centerX ->
+                                    statTooltip = StatTooltipInfo(
+                                        icon = "✕",
+                                        title = "Wrong Answers",
+                                        description = "Questions attempted with incorrect choices.",
+                                        pointerCenterX = centerX
+                                    )
+                                }
+                            )
+                            StatChip(
+                                icon = "—",
+                                value = "${sheet.blankCount}",
+                                bgColor = Grey100,
+                                contentColor = Grey600,
+                                onClick = { centerX ->
+                                    statTooltip = StatTooltipInfo(
+                                        icon = "—",
+                                        title = "Blank Answers",
+                                        description = "Questions left unanswered by the student.",
+                                        pointerCenterX = centerX
+                                    )
+                                }
+                            )
+                            if (!sheet.multipleMarksDetected.isNullOrEmpty()) {
+                                StatChip(
+                                    icon = "⚠",
+                                    value = "${sheet.multipleMarksDetected.size}",
+                                    bgColor = Orange50,
+                                    contentColor = Orange600,
+                                    onClick = { centerX ->
+                                        statTooltip = StatTooltipInfo(
+                                            icon = "⚠",
+                                            title = "Multiple Marks",
+                                            description = "Questions where more than one option was marked.",
+                                            pointerCenterX = centerX
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -191,16 +263,12 @@ fun ScannedSheetCard(
                     )
 
                     if (!selectionMode) {
-                        TextButton(
-                            onClick = onViewDetails,
-                            modifier = Modifier.height(IntrinsicSize.Min)
-                        ) {
-                            Text(
-                                text = "View Result",
-                                color = Blue600,
-                                style = AppTypography.text14SemiBold
-                            )
-                        }
+                        Text(
+                            text = "View Result",
+                            color = Blue600,
+                            style = AppTypography.text14SemiBold,
+                            modifier = Modifier.clickable { onViewDetails() }
+                        )
                     }
                 }
             }
@@ -228,12 +296,14 @@ fun ScannedSheetCard(
 
 @Composable
 private fun CardPreviewImage(imagePath: String?) {
+    val imageShape = RoundedCornerShape(12.dp)
     Box(
         modifier = Modifier
             .width(88.dp)
             .height(122.dp)
-            .background(Grey200, RoundedCornerShape(12.dp))
-            .border(1.dp, Grey300, RoundedCornerShape(12.dp))
+            .clip(imageShape)
+            .background(Grey200, imageShape)
+            .border(1.dp, Grey300, imageShape)
     ) {
         val file = imagePath?.let { File(it) }
         if (file != null && file.exists()) {
@@ -332,12 +402,18 @@ private fun StatChip(
     icon: String,
     value: String,
     bgColor: Color,
-    contentColor: Color
+    contentColor: Color,
+    onClick: (Float) -> Unit
 ) {
+    var centerX by remember { mutableStateOf(0f) }
     Box(
         modifier = Modifier
             .background(bgColor, RoundedCornerShape(999.dp))
             .padding(horizontal = 8.dp, vertical = 5.dp)
+            .onGloballyPositioned { coordinates ->
+                centerX = coordinates.positionInParent().x + (coordinates.size.width / 2f)
+            }
+            .clickable { onClick(centerX) }
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -345,6 +421,85 @@ private fun StatChip(
         ) {
             Text(text = icon, style = AppTypography.text12Bold, color = contentColor)
             Text(text = value, style = AppTypography.text12SemiBold, color = contentColor)
+        }
+    }
+}
+
+private data class StatTooltipInfo(
+    val icon: String,
+    val title: String,
+    val description: String,
+    val pointerCenterX: Float
+)
+
+@SuppressLint("UnusedBoxWithConstraintsScope")
+@Composable
+private fun StatTooltipBubble(info: StatTooltipInfo, pointerCenterX: Float) {
+    val tooltipBg = Grey800
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val pointerWidth = 20.dp
+        val pointerHeight = 10.dp
+        val horizontalInset = 10.dp
+        val maxWidthPx = with(density) { maxWidth.toPx() }
+        val halfPointerPx = with(density) { pointerWidth.toPx() / 2f }
+        val insetPx = with(density) { horizontalInset.toPx() }
+        val clampedCenterX = pointerCenterX.coerceIn(
+            insetPx + halfPointerPx,
+            maxWidthPx - insetPx - halfPointerPx
+        )
+        val pointerStartDp = with(density) { (clampedCenterX - halfPointerPx).toDp() }
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(tooltipBg, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = info.icon,
+                            style = AppTypography.text14Bold,
+                            color = Orange100
+                        )
+                        Text(
+                            text = info.title,
+                            style = AppTypography.text13Bold,
+                            color = Orange100
+                        )
+                    }
+                    Text(
+                        text = info.description,
+                        style = AppTypography.text12Regular,
+                        color = White
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(pointerHeight)
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .padding(start = pointerStartDp)
+                        .width(pointerWidth)
+                        .height(pointerHeight)
+                ) {
+                    val path = Path().apply {
+                        moveTo(0f, 0f)
+                        lineTo(size.width / 2f, size.height)
+                        lineTo(size.width, 0f)
+                        close()
+                    }
+                    drawPath(path = path, color = tooltipBg)
+                }
+            }
         }
     }
 }

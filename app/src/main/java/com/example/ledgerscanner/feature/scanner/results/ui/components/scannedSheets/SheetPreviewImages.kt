@@ -76,6 +76,7 @@ fun SheetPlaceholder() {
 fun NewBadge() {
     Box(
         modifier = Modifier
+            .padding(horizontal = 8.dp)
             .background(Green500, RoundedCornerShape(6.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
