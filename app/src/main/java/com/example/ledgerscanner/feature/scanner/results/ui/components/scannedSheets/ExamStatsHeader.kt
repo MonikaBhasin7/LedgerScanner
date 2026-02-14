@@ -61,11 +61,11 @@ fun ExamStatsHeader(
                     }
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = examEntity.examName,
-                        style = AppTypography.text22Bold,
-                        color = Grey900
-                    )
+                Text(
+                    text = examEntity.examName,
+                    style = AppTypography.text20Bold,
+                    color = Grey900
+                )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "${examEntity.totalQuestions} Questions",

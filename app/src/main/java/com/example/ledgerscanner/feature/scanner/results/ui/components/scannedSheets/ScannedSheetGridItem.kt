@@ -157,7 +157,7 @@ fun ScannedSheetGridItem(
                 ) {
                     Text(
                         text = "Sheet #${sheet.id}",
-                        style = AppTypography.text15Bold,
+                        style = AppTypography.text14Bold,
                         color = Grey900
                     )
                     GridPercentagePill(percent)
@@ -165,7 +165,7 @@ fun ScannedSheetGridItem(
 
                 Text(
                     text = sheet.enrollmentNumber ?: (sheet.barCode ?: "Unknown"),
-                    style = AppTypography.text13SemiBold,
+                    style = AppTypography.text12SemiBold,
                     color = Grey700,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

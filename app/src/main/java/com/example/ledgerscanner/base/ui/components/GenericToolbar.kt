@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
@@ -64,6 +65,7 @@ fun GenericToolbar(
     onBackClick: (() -> Unit)? = null,
     navigationIcon: ImageVector? = null,
     onNavigationClick: (() -> Unit)? = null,
+    titleTextStyle: TextStyle = AppTypography.text18Bold,
     actions: List<ToolbarAction> = emptyList()
 ) {
     Column {
@@ -75,7 +77,7 @@ fun GenericToolbar(
             title = {
                 androidx.compose.material3.Text(
                     text = title,
-                    style = AppTypography.h3Bold,
+                    style = titleTextStyle,
                     color = Black
                 )
             },
@@ -89,14 +91,15 @@ fun GenericToolbar(
                             modifier = Modifier
                                 .genericClick { onNavigationClick() }
                                 .padding(start = 8.dp, end = 10.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(color = Blue100)
-                                .padding(8.dp),
+                                .padding(6.dp),
                         ) {
                             androidx.compose.material3.Icon(
                                 imageVector = navigationIcon,
                                 contentDescription = null,
-                                tint = Blue500
+                                tint = Blue500,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -106,14 +109,15 @@ fun GenericToolbar(
                             modifier = Modifier
                                 .genericClick { onBackClick() }
                                 .padding(start = 8.dp, end = 10.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(color = Blue100)
-                                .padding(8.dp),
+                                .padding(6.dp),
                         ) {
                             androidx.compose.material3.Icon(
                                 imageVector = Icons.Sharp.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Blue500
+                                tint = Blue500,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

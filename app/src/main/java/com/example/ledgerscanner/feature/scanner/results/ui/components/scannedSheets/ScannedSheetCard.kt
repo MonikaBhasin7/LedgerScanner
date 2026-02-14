@@ -152,7 +152,7 @@ fun ScannedSheetCard(
                         ) {
                             Text(
                                 text = "Sheet #${sheet.id}",
-                                style = AppTypography.text18Bold,
+                                style = AppTypography.text16Bold,
                                 color = Grey900
                             )
                             if (ScanResultUtils.isRecentSheet(sheet.scannedAt)) {
@@ -380,16 +380,16 @@ private fun ScorePanel(score: Int, totalQuestions: Int, percent: Int) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Score $score/$totalQuestions",
-                    style = AppTypography.text14SemiBold,
-                    color = Blue700
-                )
-                Text(
-                    text = "$percent%",
-                    style = AppTypography.text16Bold,
-                    color = Blue700
-                )
+                                Text(
+                                    text = "Score $score/$totalQuestions",
+                                    style = AppTypography.text13SemiBold,
+                                    color = Blue700
+                                )
+                                Text(
+                                    text = "$percent%",
+                                    style = AppTypography.text14Bold,
+                                    color = Blue700
+                                )
             }
             LinearProgressIndicator(
                 progress = { percent / 100f },
