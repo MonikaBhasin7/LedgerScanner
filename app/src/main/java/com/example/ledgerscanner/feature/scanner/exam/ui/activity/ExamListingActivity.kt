@@ -64,7 +64,13 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -136,6 +142,7 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivi
 import com.example.ledgerscanner.feature.scanner.statistics.activity.ExamStatisticsActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -228,6 +235,11 @@ class ExamListingActivity : ComponentActivity() {
         var pendingCompletedExamId by remember { mutableStateOf<Int?>(null) }
         var celebratingExamId by remember { mutableStateOf<Int?>(null) }
         var waitForCompletedCard by remember { mutableStateOf(false) }
+        val snackbarHostState = remember { SnackbarHostState() }
+        var pendingCommitAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+        var pendingUndoAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+        var undoSnackbarJob by remember { mutableStateOf<Job?>(null) }
+        var hiddenExamIds by remember { mutableStateOf(emptySet<Int>()) }
         var showLogoutDialog by remember { mutableStateOf(false) }
         val drawerState = androidx.compose.material3.rememberDrawerState(
             initialValue = androidx.compose.material3.DrawerValue.Closed
@@ -327,6 +339,42 @@ class ExamListingActivity : ComponentActivity() {
             if (celebratingExamId != null) {
                 delay(1500)
                 celebratingExamId = null
+            }
+        }
+
+        fun enqueueUndoAction(
+            message: String,
+            undoAction: () -> Unit,
+            commitAction: () -> Unit
+        ) {
+            pendingCommitAction?.invoke()
+            pendingCommitAction = null
+            pendingUndoAction = null
+            undoSnackbarJob?.cancel()
+            snackbarHostState.currentSnackbarData?.dismiss()
+
+            pendingUndoAction = undoAction
+            pendingCommitAction = commitAction
+            undoSnackbarJob = drawerScope.launch {
+                val dismissJob = launch {
+                    delay(3500)
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                }
+                val result = snackbarHostState.showSnackbar(
+                    message = message,
+                    actionLabel = "Undo",
+                    withDismissAction = false,
+                    duration = SnackbarDuration.Indefinite
+                )
+                dismissJob.cancel()
+
+                if (result == SnackbarResult.ActionPerformed) {
+                    pendingUndoAction?.invoke()
+                } else {
+                    pendingCommitAction?.invoke()
+                }
+                pendingUndoAction = null
+                pendingCommitAction = null
             }
         }
 
@@ -461,6 +509,37 @@ class ExamListingActivity : ComponentActivity() {
         ) {
             Scaffold(
                 containerColor = Grey100,
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) { data ->
+                        Snackbar(
+                            containerColor = White,
+                            contentColor = Black,
+                            shape = RoundedCornerShape(14.dp),
+                            action = {
+                                TextButton(
+                                    onClick = { data.performAction() },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                ) {
+                                    Text(
+                                        text = data.visuals.actionLabel.orEmpty(),
+                                        color = Blue500,
+                                        style = AppTypography.text13SemiBold
+                                    )
+                                }
+                            },
+                            dismissAction = null
+                        ) {
+                            Text(
+                                text = data.visuals.message,
+                                color = Grey800,
+                                style = AppTypography.text13Medium
+                            )
+                        }
+                    }
+                },
                 topBar = {
                     GenericToolbar(
                         title = "Exams",
@@ -524,6 +603,7 @@ class ExamListingActivity : ComponentActivity() {
                         examListResponse = examListResponse,
                         examStatistics = examStatistics,
                         celebratingExamId = celebratingExamId,
+                        hiddenExamIds = hiddenExamIds,
                         onExamClick = { examEntity, examAction ->
                             handleExamAction(
                                 context,
@@ -611,7 +691,17 @@ class ExamListingActivity : ComponentActivity() {
                         message = "Are you sure you want to delete \"${examEntity.examName}\"?",
                         confirmText = "Delete",
                         onConfirm = {
-                            examListViewModel.deleteExam(examEntity.id)
+                            hiddenExamIds = hiddenExamIds + examEntity.id
+                            enqueueUndoAction(
+                                message = "Exam deleted",
+                                undoAction = {
+                                    hiddenExamIds = hiddenExamIds - examEntity.id
+                                },
+                                commitAction = {
+                                    hiddenExamIds = hiddenExamIds - examEntity.id
+                                    examListViewModel.deleteExam(examEntity.id)
+                                }
+                            )
                             showDeleteAndDuplicateDialog = null
                         },
                         onDismiss = {
@@ -643,9 +733,23 @@ class ExamListingActivity : ComponentActivity() {
                         message = "Mark \"${examEntity.examName}\" as completed?",
                         confirmText = "Mark Completed",
                         onConfirm = {
+                            val previousStatus = examEntity.status
                             pendingCompletedExamId = examEntity.id
                             waitForCompletedCard = true
                             examListViewModel.updateExamStatus(examEntity.id, ExamStatus.COMPLETED)
+                            enqueueUndoAction(
+                                message = "Marked as completed",
+                                undoAction = {
+                                    pendingCompletedExamId = null
+                                    waitForCompletedCard = false
+                                    celebratingExamId = null
+                                    examListViewModel.updateExamStatus(
+                                        examEntity.id,
+                                        previousStatus
+                                    )
+                                },
+                                commitAction = {}
+                            )
                             showDeleteAndDuplicateDialog = null
                         },
                         onDismiss = {
@@ -661,7 +765,18 @@ class ExamListingActivity : ComponentActivity() {
                         message = "Archive \"${examEntity.examName}\"? You can still view results later.",
                         confirmText = "Archive",
                         onConfirm = {
+                            val previousStatus = examEntity.status
                             examListViewModel.updateExamStatus(examEntity.id, ExamStatus.ARCHIVED)
+                            enqueueUndoAction(
+                                message = "Exam archived",
+                                undoAction = {
+                                    examListViewModel.updateExamStatus(
+                                        examEntity.id,
+                                        previousStatus
+                                    )
+                                },
+                                commitAction = {}
+                            )
                             showDeleteAndDuplicateDialog = null
                         },
                         onDismiss = {
@@ -763,6 +878,7 @@ class ExamListingActivity : ComponentActivity() {
         examListResponse: UiState<List<ExamEntity>>,
         examStatistics: Map<Int, ExamStatistics>,
         celebratingExamId: Int?,
+        hiddenExamIds: Set<Int>,
         onExamClick: (ExamEntity, ExamAction) -> Unit,
         onRetry: () -> Unit,
         onActionClick: (ExamEntity, ExamAction) -> Unit,
@@ -781,7 +897,7 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             is UiState.Success -> {
-                val items = examListResponse.data ?: emptyList()
+                val items = (examListResponse.data ?: emptyList()).filterNot { hiddenExamIds.contains(it.id) }
 
                 if (items.isEmpty()) {
                     GenericEmptyState(text = "No exams found")
