@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -57,12 +58,15 @@ class ScanResultViewModel @Inject constructor(
     val deleteState = _deleteState.asStateFlow()
 
     fun toggleSheetSelection(sheetId: Int) {
-        _selectedSheets.update { currentSet ->
+        val updatedSelection = _selectedSheets.updateAndGet { currentSet ->
             if (currentSet.contains(sheetId)) {
                 currentSet - sheetId
             } else {
                 currentSet + sheetId
             }
+        }
+        if (updatedSelection.isEmpty()) {
+            _selectionMode.value = false
         }
     }
 

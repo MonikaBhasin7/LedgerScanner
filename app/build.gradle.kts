@@ -29,11 +29,11 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "false")
-            buildConfigField("String", "BASE_URL", "\"http://192.168.1.17:8080/\"")
+            buildConfigField("String", "BASE_URL", "\"http://192.168.1.12:8080/\"")
         }
         debug {
             buildConfigField("Boolean", "ENABLE_IMAGE_LOGS", "true")
-            buildConfigField("String", "BASE_URL", "\"http://192.168.1.17:8080/\"")
+            buildConfigField("String", "BASE_URL", "\"http://192.168.1.12:8080/\"")
         }
     }
     compileOptions {

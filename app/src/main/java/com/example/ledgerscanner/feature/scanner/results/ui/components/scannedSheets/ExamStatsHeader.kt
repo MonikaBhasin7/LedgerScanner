@@ -33,7 +33,7 @@ fun ExamStatsHeader(
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = examEntity.examName,
-                style = AppTypography.title2ExtraBold,
+                style = AppTypography.text22Bold,
                 color = Grey900
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -63,7 +63,7 @@ private fun StatItem(value: String, label: String, color: Color) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(text = value, style = AppTypography.text36Bold, color = color)
+        Text(text = value, style = AppTypography.text24Bold, color = color)
         Text(text = label, style = AppTypography.text13Regular, color = Grey600, textAlign = TextAlign.Center)
     }
 }

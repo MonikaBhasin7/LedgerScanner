@@ -86,7 +86,7 @@ fun ScannedSheetsScreen(
                 is UiState.Success -> {
                     val dataHolder = (scannedSheets as UiState.Success).data
                     val filteredSheets = dataHolder?.filterList ?: listOf()
-                    val hasAnySheets = dataHolder?.originalList?.isNotEmpty()
+                    val hasAnySheets = dataHolder?.originalList?.isNotEmpty() == true
 
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if (hasAnySheets == true) {
@@ -115,7 +115,7 @@ fun ScannedSheetsScreen(
                         }
 
                         when {
-                            hasAnySheets == false -> {
+                            !hasAnySheets -> {
                                 item { EmptyState() }
                             }
 

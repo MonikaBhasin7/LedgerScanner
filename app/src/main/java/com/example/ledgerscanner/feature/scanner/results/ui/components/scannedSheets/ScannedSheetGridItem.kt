@@ -105,19 +105,19 @@ fun ScannedSheetGridItem(
                         .clip(RoundedCornerShape(8.dp))
                         .background(Grey200)
                 ) {
-                    if (sheet.scannedImagePath != null) {
-                        val file = File(sheet.scannedImagePath)
-                        if (file.exists()) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(file)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Sheet preview",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
+                    val file = File(sheet.scannedImagePath)
+                    if (file.exists()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(file)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Sheet preview",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        SheetPlaceholder()
                     }
 
                     // New Badge overlay (only show if not in selection mode)

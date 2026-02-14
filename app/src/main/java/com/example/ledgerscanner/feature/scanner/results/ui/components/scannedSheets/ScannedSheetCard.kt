@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue50
 import com.example.ledgerscanner.base.ui.theme.Blue600
@@ -59,6 +58,8 @@ fun ScannedSheetCard(
                 onClick = {
                     if (selectionMode) {
                         onCardClick()
+                    } else {
+                        onViewDetails()
                     }
                 },
                 onLongClick = onLongClick
@@ -111,7 +112,7 @@ fun ScannedSheetCard(
                         ) {
                             Text(
                                 text = "Sheet #${sheet.id}",
-                                style = AppTypography.text20Bold,
+                                style = AppTypography.text16Bold,
                                 color = Grey900
                             )
 
@@ -122,7 +123,7 @@ fun ScannedSheetCard(
 
                         Text(
                             text = "Student: ${sheet.barCode ?: "Unknown"}",
-                            style = AppTypography.text15Regular,
+                            style = AppTypography.text14Regular,
                             color = Grey700
                         )
 
@@ -130,7 +131,7 @@ fun ScannedSheetCard(
 
                         Text(
                             text = "${sheet.score}/${sheet.totalQuestions} (${sheet.scorePercent.toInt()}%)",
-                            style = AppTypography.text28Bold,
+                            style = AppTypography.text24Bold,
                             color = Blue700
                         )
 
@@ -206,7 +207,7 @@ private fun ScoreIndicator(icon: String, count: Int, color: Color) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = icon, color = color, style = AppTypography.label1Bold, fontSize = 18.sp)
-        Text(text = count.toString(), color = color, style = AppTypography.body2SemiBold)
+        Text(text = icon, color = color, style = AppTypography.text14Bold)
+        Text(text = count.toString(), color = color, style = AppTypography.text13SemiBold)
     }
 }

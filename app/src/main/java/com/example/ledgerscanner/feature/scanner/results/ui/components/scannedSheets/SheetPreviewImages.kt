@@ -24,7 +24,7 @@ import java.io.File
 fun SheetPreviewImages(imagePath: String?, thumbnailPath: String?) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SheetPreviewImage(thumbnailPath ?: imagePath)
-        SheetPreviewImage(thumbnailPath ?: imagePath)
+        SheetPreviewImage(imagePath ?: thumbnailPath)
     }
 }
 
