@@ -562,87 +562,87 @@ object AppTypography {
     val text10Regular = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W400,
-        fontSize = 10.sp,
-        lineHeight = 12.sp
+        fontSize = 11.sp,
+        lineHeight = 14.sp
     )
 
     val text10Medium = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W500,
-        fontSize = 10.sp,
-        lineHeight = 12.sp
+        fontSize = 11.sp,
+        lineHeight = 14.sp
     )
 
     val text10SemiBold = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W600,
-        fontSize = 10.sp,
-        lineHeight = 12.sp
+        fontSize = 11.sp,
+        lineHeight = 14.sp
     )
 
     val text10Bold = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W700,
-        fontSize = 10.sp,
-        lineHeight = 12.sp
+        fontSize = 11.sp,
+        lineHeight = 14.sp
     )
 
     // --- 11sp variants
     val text11Regular = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W400,
-        fontSize = 11.sp,
-        lineHeight = 14.sp
+        fontSize = 12.sp,
+        lineHeight = 16.sp
     )
 
     val text11Medium = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W500,
-        fontSize = 11.sp,
-        lineHeight = 14.sp
+        fontSize = 12.sp,
+        lineHeight = 16.sp
     )
 
     val text11SemiBold = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W600,
-        fontSize = 11.sp,
-        lineHeight = 14.sp
+        fontSize = 12.sp,
+        lineHeight = 16.sp
     )
 
     val text11Bold = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W700,
-        fontSize = 11.sp,
-        lineHeight = 14.sp
+        fontSize = 12.sp,
+        lineHeight = 16.sp
     )
 
     // --- 12sp variants (already covered by body4 and label4, but adding for consistency)
     val text12Regular = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W400,
-        fontSize = 12.sp,
-        lineHeight = 16.sp
+        fontSize = 13.sp,
+        lineHeight = 18.sp
     )
 
     val text12Medium = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W500,
-        fontSize = 12.sp,
-        lineHeight = 16.sp
+        fontSize = 13.sp,
+        lineHeight = 18.sp
     )
 
     val text12SemiBold = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W600,
-        fontSize = 12.sp,
-        lineHeight = 16.sp
+        fontSize = 13.sp,
+        lineHeight = 18.sp
     )
 
     val text12Bold = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.W700,
-        fontSize = 12.sp,
-        lineHeight = 16.sp
+        fontSize = 13.sp,
+        lineHeight = 18.sp
     )
 
     // --- 13sp variants

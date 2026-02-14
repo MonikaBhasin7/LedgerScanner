@@ -97,25 +97,25 @@ fun GenericButton(
                 contentPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp),
                 iconSize = 16.dp,
                 spacerWidth = 6.dp,
-                textStyle = AppTypography.label3Medium
+                textStyle = AppTypography.text13SemiBold
             )
         }
 
         ButtonSize.MEDIUM -> {
             SizeConfig(
-                contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp),
-                iconSize = 20.dp,
+                contentPadding = PaddingValues(vertical = 10.dp, horizontal = 16.dp),
+                iconSize = 18.dp,
                 spacerWidth = 8.dp,
-                textStyle = AppTypography.label2SemiBold
+                textStyle = AppTypography.text15SemiBold
             )
         }
 
         ButtonSize.LARGE -> {
             SizeConfig(
-                contentPadding = PaddingValues(vertical = 16.dp, horizontal = 24.dp),
-                iconSize = 24.dp,
-                spacerWidth = 10.dp,
-                textStyle = AppTypography.label1Bold
+                contentPadding = PaddingValues(vertical = 14.dp, horizontal = 20.dp),
+                iconSize = 20.dp,
+                spacerWidth = 8.dp,
+                textStyle = AppTypography.text16SemiBold
             )
         }
     }
