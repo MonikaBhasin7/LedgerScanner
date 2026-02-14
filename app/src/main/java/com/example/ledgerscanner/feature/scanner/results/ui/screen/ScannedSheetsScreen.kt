@@ -73,7 +73,11 @@ fun ScannedSheetsScreen(
     }
     val headerListTopPadding by remember(headerHeightPx, density) {
         derivedStateOf {
-            with(density) { headerHeightPx.toDp() } + 2.dp
+            if (headerHeightPx > 0) {
+                with(density) { headerHeightPx.toDp() } + 2.dp
+            } else {
+                172.dp
+            }
         }
     }
 
@@ -156,7 +160,10 @@ fun ScannedSheetsScreen(
                                     else -> {
                                         when (viewMode) {
                                             ScannedSheetViewMode.LIST -> {
-                                                items(filteredSheets) { sheet ->
+                                                items(
+                                                    items = filteredSheets,
+                                                    key = { it.id }
+                                                ) { sheet ->
                                                     ScannedSheetCard(
                                                         sheet = sheet,
                                                         isSelected = selectedSheets.contains(sheet.id),
@@ -206,7 +213,10 @@ fun ScannedSheetsScreen(
 
                             Box(
                                 modifier = Modifier.onSizeChanged { size ->
-                                    headerHeightPx = size.height
+                                    // Keep the largest measured header height to avoid relayout on every scroll tick.
+                                    if (size.height > headerHeightPx) {
+                                        headerHeightPx = size.height
+                                    }
                                 }
                             ) {
                                 ExamStatsHeader(

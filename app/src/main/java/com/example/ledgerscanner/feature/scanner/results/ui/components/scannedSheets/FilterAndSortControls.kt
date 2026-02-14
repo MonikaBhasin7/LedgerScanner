@@ -36,7 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue100
-import com.example.ledgerscanner.base.ui.theme.Blue600
+import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Green600
 import com.example.ledgerscanner.base.ui.theme.Grey600
 import com.example.ledgerscanner.base.ui.theme.Grey200
@@ -87,7 +87,7 @@ fun FilterAndSortControls(
                     Text(
                         text = "$selectedCount selected",
                         style = AppTypography.text15SemiBold,
-                        color = Blue600
+                        color = Blue500
                     )
 
                     TextButton(onClick = onDeselectAll) {
@@ -102,7 +102,7 @@ fun FilterAndSortControls(
                 Text(
                     text = "Select All",
                     style = AppTypography.text14SemiBold,
-                    color = Blue600,
+                    color = Blue500,
                     modifier = Modifier.clickable { onSelectAll() }
                 )
             }
@@ -149,7 +149,7 @@ private fun ViewModeToggle(
         Icon(
             imageVector = Icons.Default.GridView,
             contentDescription = "Grid view",
-            tint = if (viewMode == ScannedSheetViewMode.GRID) Blue600 else Grey600,
+            tint = if (viewMode == ScannedSheetViewMode.GRID) Blue500 else Grey600,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .background(if (viewMode == ScannedSheetViewMode.GRID) Blue100 else Color.Transparent)
@@ -160,7 +160,7 @@ private fun ViewModeToggle(
         Icon(
             imageVector = Icons.Default.List,
             contentDescription = "List view",
-            tint = if (viewMode == ScannedSheetViewMode.LIST) Blue600 else Grey600,
+            tint = if (viewMode == ScannedSheetViewMode.LIST) Blue500 else Grey600,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .background(if (viewMode == ScannedSheetViewMode.LIST) Blue100 else Color.Transparent)

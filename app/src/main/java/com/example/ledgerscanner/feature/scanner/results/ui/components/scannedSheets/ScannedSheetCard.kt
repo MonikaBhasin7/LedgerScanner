@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -30,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,7 +54,7 @@ import coil.request.ImageRequest
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue50
-import com.example.ledgerscanner.base.ui.theme.Blue600
+import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Blue700
 import com.example.ledgerscanner.base.ui.theme.Green50
 import com.example.ledgerscanner.base.ui.theme.Green600
@@ -72,6 +74,7 @@ import com.example.ledgerscanner.base.ui.theme.Red50
 import com.example.ledgerscanner.base.ui.theme.Red600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.DateAndTimeUtils
+import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.results.utils.ScanResultUtils
 import java.io.File
@@ -91,6 +94,7 @@ fun ScannedSheetCard(
     val percent = sheet.scorePercent.toInt().coerceIn(0, 100)
     val attempted = (sheet.totalQuestions - sheet.blankCount).coerceAtLeast(0)
     var statTooltip by remember(sheet.id) { mutableStateOf<StatTooltipInfo?>(null) }
+    val cardInteractionSource = remember { MutableInteractionSource() }
 
     LaunchedEffect(statTooltip) {
         if (statTooltip != null) {
@@ -103,6 +107,8 @@ fun ScannedSheetCard(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
+                interactionSource = cardInteractionSource,
+                indication = ripple(color = Blue100),
                 onClick = {
                     if (selectionMode) onCardClick() else onViewDetails()
                 },
@@ -110,7 +116,7 @@ fun ScannedSheetCard(
             )
             .then(
                 if (isSelected) {
-                    Modifier.border(2.dp, Blue600, RoundedCornerShape(18.dp))
+                    Modifier.border(2.dp, Blue500, RoundedCornerShape(18.dp))
                 } else Modifier
             ),
         shape = RoundedCornerShape(18.dp),
@@ -118,8 +124,8 @@ fun ScannedSheetCard(
             containerColor = if (isSelected) Blue50 else White
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 10.dp else 7.dp,
-            pressedElevation = if (isSelected) 12.dp else 9.dp
+            defaultElevation = if (isSelected) 3.dp else 2.dp,
+            pressedElevation = if (isSelected) 5.dp else 4.dp
         )
     ) {
         Box {
@@ -231,7 +237,7 @@ fun ScannedSheetCard(
                             )
                             if (!sheet.multipleMarksDetected.isNullOrEmpty()) {
                                 StatChip(
-                                    icon = "⚠",
+                                    icon = "!",
                                     value = "${sheet.multipleMarksDetected.size}",
                                     bgColor = Orange50,
                                     contentColor = Orange600,
@@ -265,7 +271,7 @@ fun ScannedSheetCard(
                     if (!selectionMode) {
                         Text(
                             text = "View Result",
-                            color = Blue600,
+                            color = Blue500,
                             style = AppTypography.text14SemiBold,
                             modifier = Modifier.clickable { onViewDetails() }
                         )
@@ -284,7 +290,7 @@ fun ScannedSheetCard(
                         checked = isSelected,
                         onCheckedChange = { onCardClick() },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Blue600,
+                            checkedColor = Blue500,
                             uncheckedColor = Grey400
                         )
                     )
@@ -310,7 +316,7 @@ private fun CardPreviewImage(imagePath: String?) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(file)
-                    .crossfade(true)
+                    .crossfade(false)
                     .build(),
                 contentDescription = "Sheet preview",
                 modifier = Modifier.fillMaxSize(),
@@ -390,7 +396,7 @@ private fun ScorePanel(score: Int, totalQuestions: Int, percent: Int) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp),
-                color = Blue600,
+                color = Blue500,
                 trackColor = Blue100
             )
         }
@@ -409,18 +415,23 @@ private fun StatChip(
     Box(
         modifier = Modifier
             .background(bgColor, RoundedCornerShape(999.dp))
-            .padding(horizontal = 8.dp, vertical = 5.dp)
+            .border(
+                width = 1.dp,
+                color = contentColor.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(999.dp)
+            )
+            .padding(horizontal = 9.dp, vertical = 4.dp)
             .onGloballyPositioned { coordinates ->
                 centerX = coordinates.positionInParent().x + (coordinates.size.width / 2f)
             }
-            .clickable { onClick(centerX) }
+            .genericClick { onClick(centerX) }
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = icon, style = AppTypography.text12Bold, color = contentColor)
-            Text(text = value, style = AppTypography.text12SemiBold, color = contentColor)
+            Text(text = icon, style = AppTypography.text13Bold, color = contentColor)
+            Text(text = value, style = AppTypography.text14Bold, color = contentColor)
         }
     }
 }

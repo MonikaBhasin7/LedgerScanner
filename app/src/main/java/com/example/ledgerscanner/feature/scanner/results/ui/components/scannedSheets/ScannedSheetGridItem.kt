@@ -34,7 +34,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue50
-import com.example.ledgerscanner.base.ui.theme.Blue600
+import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Blue700
 import com.example.ledgerscanner.base.ui.theme.Green500
 import com.example.ledgerscanner.base.ui.theme.Green600
@@ -76,7 +76,7 @@ fun ScannedSheetGridItem(
                 if (isSelected) {
                     Modifier.border(
                         width = 2.dp,
-                        color = Blue600,
+                        color = Blue500,
                         shape = RoundedCornerShape(16.dp)
                     )
                 } else {
@@ -192,7 +192,7 @@ fun ScannedSheetGridItem(
                         checked = isSelected,
                         onCheckedChange = { onCardClick() },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Blue600,
+                            checkedColor = Blue500,
                             uncheckedColor = Grey400,
                             checkmarkColor = White
                         ),

@@ -23,7 +23,7 @@ import com.example.ledgerscanner.feature.scanner.results.model.SheetFilter
 @Composable
 fun LoadingState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Blue600)
+        CircularProgressIndicator(color = Blue500)
     }
 }
 
@@ -48,7 +48,7 @@ fun EmptyState(modifier: Modifier = Modifier) {
             StateIconBadge(
                 icon = Icons.Outlined.Description,
                 contentDescription = "No sheets",
-                tint = Blue600
+                tint = Blue500
             )
             Text(
                 text = "No sheets scanned yet",
@@ -79,7 +79,7 @@ fun FilteredEmptyState(selectedFilter: SheetFilter) {
             StateIconBadge(
                 icon = Icons.Outlined.FilterList,
                 contentDescription = "No filtered results",
-                tint = Blue600
+                tint = Blue500
             )
             Text(
                 text = when (selectedFilter) {
