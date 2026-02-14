@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,8 +30,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -74,8 +77,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -104,6 +109,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey400
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
+import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.base.ui.theme.Orange600
@@ -129,6 +135,7 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplate
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.statistics.activity.ExamStatisticsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -218,6 +225,9 @@ class ExamListingActivity : ComponentActivity() {
         val duplicateState by viewModel.duplicateExamState.collectAsState()
         val updateExamStatusState by viewModel.updateExamStatusState.collectAsState()
         val examStatistics by scanResultViewModel.examStatsCache.collectAsState()
+        var pendingCompletedExamId by remember { mutableStateOf<Int?>(null) }
+        var celebratingExamId by remember { mutableStateOf<Int?>(null) }
+        var waitForCompletedCard by remember { mutableStateOf(false) }
         var showLogoutDialog by remember { mutableStateOf(false) }
         val drawerState = androidx.compose.material3.rememberDrawerState(
             initialValue = androidx.compose.material3.DrawerValue.Closed
@@ -283,15 +293,40 @@ class ExamListingActivity : ComponentActivity() {
             when (val state = updateExamStatusState) {
                 is UiState.Success -> {
                     Toast.makeText(context, "Exam status updated", Toast.LENGTH_SHORT).show()
+                    if (pendingCompletedExamId != null) {
+                        waitForCompletedCard = true
+                    }
                     viewModel.resetUpdateExamStatusState()
                 }
 
                 is UiState.Error -> {
                     Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    pendingCompletedExamId = null
+                    waitForCompletedCard = false
                     viewModel.resetUpdateExamStatusState()
                 }
 
                 else -> {}
+            }
+        }
+
+        LaunchedEffect(examListResponse, waitForCompletedCard, pendingCompletedExamId) {
+            val targetExamId = pendingCompletedExamId ?: return@LaunchedEffect
+            if (!waitForCompletedCard) return@LaunchedEffect
+            val items = (examListResponse as? UiState.Success)?.data.orEmpty()
+            val completedCardVisible =
+                items.any { it.id == targetExamId && it.status == ExamStatus.COMPLETED }
+            if (completedCardVisible) {
+                celebratingExamId = targetExamId
+                waitForCompletedCard = false
+                pendingCompletedExamId = null
+            }
+        }
+
+        LaunchedEffect(celebratingExamId) {
+            if (celebratingExamId != null) {
+                delay(1500)
+                celebratingExamId = null
             }
         }
 
@@ -488,6 +523,7 @@ class ExamListingActivity : ComponentActivity() {
                     ExamList(
                         examListResponse = examListResponse,
                         examStatistics = examStatistics,
+                        celebratingExamId = celebratingExamId,
                         onExamClick = { examEntity, examAction ->
                             handleExamAction(
                                 context,
@@ -607,6 +643,8 @@ class ExamListingActivity : ComponentActivity() {
                         message = "Mark \"${examEntity.examName}\" as completed?",
                         confirmText = "Mark Completed",
                         onConfirm = {
+                            pendingCompletedExamId = examEntity.id
+                            waitForCompletedCard = true
                             examListViewModel.updateExamStatus(examEntity.id, ExamStatus.COMPLETED)
                             showDeleteAndDuplicateDialog = null
                         },
@@ -724,6 +762,7 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamList(
         examListResponse: UiState<List<ExamEntity>>,
         examStatistics: Map<Int, ExamStatistics>,
+        celebratingExamId: Int?,
         onExamClick: (ExamEntity, ExamAction) -> Unit,
         onRetry: () -> Unit,
         onActionClick: (ExamEntity, ExamAction) -> Unit,
@@ -772,6 +811,7 @@ class ExamListingActivity : ComponentActivity() {
                         ExamCardRow(
                             item = item,
                             examStatistics = examStatistics[item.id],
+                            showCompletionCelebration = celebratingExamId == item.id,
                             onClick = { onExamClick(item, it) },
                             onActionClick = {
                                 onActionClick(item, it)
@@ -824,10 +864,16 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamCardRow(
         item: ExamEntity,
         examStatistics: ExamStatistics?,
+        showCompletionCelebration: Boolean = false,
         onClick: (ExamAction) -> Unit,
         onActionClick: (ExamAction) -> Unit,
     ) {
         val isArchived = item.status == ExamStatus.ARCHIVED
+        val badgeCelebrationProgress by animateFloatAsState(
+            targetValue = if (showCompletionCelebration && item.status == ExamStatus.COMPLETED) 1f else 0f,
+            animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing),
+            label = "completedBadgeMorph"
+        )
         val sheetCount = examStatistics?.sheetsCount ?: 0
         val actions = examListViewModel.getExamActionForStatus(
             status = item.status,
@@ -852,6 +898,13 @@ class ExamListingActivity : ComponentActivity() {
                     .genericClick { actions.quickAction?.action?.let { onClick(it) } },
 //                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                CompletionConfettiBurst(
+                    visible = showCompletionCelebration && item.status == ExamStatus.COMPLETED,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(76.dp)
+                )
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -865,7 +918,10 @@ class ExamListingActivity : ComponentActivity() {
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        StatusBadge(status = item.status)
+                        StatusBadge(
+                            status = item.status,
+                            celebrationProgress = badgeCelebrationProgress
+                        )
                         Text(
                             text = item.examName,
                             color = Black,
@@ -1247,13 +1303,13 @@ class ExamListingActivity : ComponentActivity() {
             ExamStatus.DRAFT -> Triple(
                 Icons.Outlined.WarningAmber,
                 "Incomplete setup",
-                Grey600
+                Grey800
             ) to Black
 
             ExamStatus.ACTIVE -> if (sheetsCount > 0) {
-                Triple(Icons.Outlined.BarChart, "$sheetsCount sheets scanned", Grey600) to Black
+                Triple(Icons.Outlined.BarChart, "$sheetsCount sheets scanned", Grey600) to Grey800
             } else {
-                Triple(Icons.Outlined.Description, "No sheets scanned yet", Grey600) to Black
+                Triple(Icons.Outlined.Description, "No sheets scanned yet", Grey600) to Grey800
             }
 
             ExamStatus.COMPLETED -> Triple(
@@ -1266,7 +1322,7 @@ class ExamListingActivity : ComponentActivity() {
                 Icons.Outlined.Description,
                 "Archived • $sheetsCount sheets",
                 Grey600
-            ) to Grey600
+            ) to Grey800
         }
         val (icon, text, tint) = detail
 
@@ -1284,32 +1340,91 @@ class ExamListingActivity : ComponentActivity() {
             Text(
                 text = text,
                 color = textColor,
-                style = AppTypography.text12Medium
+                style = AppTypography.text13Medium
             )
         }
     }
 
     @Composable
-    private fun StatusBadge(status: ExamStatus) {
+    private fun StatusBadge(
+        status: ExamStatus,
+        celebrationProgress: Float = 0f
+    ) {
         val (bg, textColor) = when (status) {
             ExamStatus.DRAFT -> Color(0xFFFFF4D8) to Color(0xFF8A6A00)
             ExamStatus.ACTIVE -> Color(0xFFE5F6EA) to Color(0xFF2F8A45)
             ExamStatus.COMPLETED -> Color(0xFFE9EDFF) to Color(0xFF4F67D8)
             ExamStatus.ARCHIVED -> Grey200 to Grey600
         }
+        val progress = celebrationProgress.coerceIn(0f, 1f)
+        val completedBgStart = Color(0xFFE5F6EA)
+        val completedTextStart = Color(0xFF2F8A45)
+        val animatedBg = if (status == ExamStatus.COMPLETED) lerp(completedBgStart, bg, progress) else bg
+        val animatedText =
+            if (status == ExamStatus.COMPLETED) lerp(completedTextStart, textColor, progress) else textColor
+        val scale = if (status == ExamStatus.COMPLETED) 1f + (0.1f * progress) else 1f
+
         Box(
             modifier = Modifier
                 .height(20.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
                 .clip(RoundedCornerShape(10.dp))
-                .background(bg)
+                .background(animatedBg)
                 .padding(horizontal = 7.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = status.name,
-                color = textColor,
+                color = animatedText,
                 style = AppTypography.label5Medium
             )
+        }
+    }
+
+    @Composable
+    private fun CompletionConfettiBurst(
+        visible: Boolean,
+        modifier: Modifier = Modifier
+    ) {
+        val progress by animateFloatAsState(
+            targetValue = if (visible) 1f else 0f,
+            animationSpec = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
+            label = "confettiProgress"
+        )
+        if (progress <= 0f) return
+
+        val palette = listOf(
+            Blue500,
+            Color(0xFF4F67D8),
+            Color(0xFF2F8A45),
+            Color(0xFFFFB300),
+            Color(0xFFEF6C00)
+        )
+
+        Canvas(modifier = modifier) {
+            val particles = 30
+            val centerX = size.width / 2f
+            val originY = 6.dp.toPx()
+
+            repeat(particles) { i ->
+                val localProgress = (progress - (i % 6) * 0.03f).coerceIn(0f, 1f)
+                if (localProgress <= 0f) return@repeat
+
+                val spread = ((i.toFloat() / (particles - 1)) - 0.5f) * size.width * 1.1f
+                val x = centerX + spread * localProgress
+                val y = originY + (size.height * 0.78f * localProgress * localProgress)
+                val alpha = (1f - localProgress).coerceIn(0f, 1f)
+                val radius = 2.2.dp.toPx() + (i % 3) * 0.8.dp.toPx()
+
+                drawCircle(
+                    color = palette[i % palette.size].copy(alpha = alpha),
+                    radius = radius,
+                    center = Offset(x, y)
+                )
+            }
         }
     }
 
