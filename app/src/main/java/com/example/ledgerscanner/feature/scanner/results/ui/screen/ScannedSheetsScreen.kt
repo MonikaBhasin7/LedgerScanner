@@ -1,21 +1,26 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.screen
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.UiState
@@ -38,7 +43,6 @@ import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSh
 import com.example.ledgerscanner.feature.scanner.results.ui.components.scannedSheets.ScannedSheetGridRow
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.base.ui.theme.Grey50
-
 @Composable
 fun ScannedSheetsScreen(
     navController: NavHostController,
@@ -56,6 +60,22 @@ fun ScannedSheetsScreen(
     val deleteState by scanResultViewModel.deleteState.collectAsState()
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     val handleBack = rememberBackHandler(navController)
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    var headerHeightPx by remember { mutableStateOf(0) }
+    val headerCollapseFraction by remember(listState) {
+        derivedStateOf {
+            when {
+                listState.firstVisibleItemIndex > 0 -> 1f
+                else -> (listState.firstVisibleItemScrollOffset / 170f).coerceIn(0f, 1f)
+            }
+        }
+    }
+    val headerListTopPadding by remember(headerHeightPx, density) {
+        derivedStateOf {
+            with(density) { headerHeightPx.toDp() } + 2.dp
+        }
+    }
 
     LaunchedEffect(Unit) {
         scanResultViewModel.getScannedSheetsByExamId(examEntity.id)
@@ -98,84 +118,102 @@ fun ScannedSheetsScreen(
                     if (!hasAnySheets) {
                         EmptyState(modifier = Modifier.fillMaxSize())
                     } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            item {
-                                ExamStatsHeader(examEntity, examStats[examEntity.id])
-                            }
-                            item {
-                                FilterAndSortControls(
-                                    selectedFilter = selectedFilter,
-                                    selectedSort = selectedSort,
-                                    viewMode = viewMode,
-                                    sheets = dataHolder.originalList,
-                                    selectionMode = selectionMode,
-                                    selectedCount = selectedSheets.size,
-                                    onFilterChange = { scanResultViewModel.setFilter(it) },
-                                    onSortChange = { scanResultViewModel.setSort(it) },
-                                    onViewModeChange = { scanResultViewModel.setViewMode(it) },
-                                    onSelectAll = {
-                                        scanResultViewModel.selectAll(filteredSheets)
-                                    },
-                                    onDeselectAll = {
-                                        scanResultViewModel.deselectAll()
-                                    }
-                                )
-                            }
-                            when {
-                                filteredSheets.isEmpty() -> {
-                                    item { FilteredEmptyState(selectedFilter) }
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                state = listState,
+                                contentPadding = PaddingValues(top = headerListTopPadding)
+                            ) {
+                                item {
+                                    FilterAndSortControls(
+                                        modifier = Modifier.padding(
+                                            start = 16.dp,
+                                            end = 16.dp,
+                                            bottom = 8.dp
+                                        ),
+                                        selectedFilter = selectedFilter,
+                                        selectedSort = selectedSort,
+                                        viewMode = viewMode,
+                                        sheets = dataHolder.originalList,
+                                        selectionMode = selectionMode,
+                                        selectedCount = selectedSheets.size,
+                                        onFilterChange = { scanResultViewModel.setFilter(it) },
+                                        onSortChange = { scanResultViewModel.setSort(it) },
+                                        onViewModeChange = { scanResultViewModel.setViewMode(it) },
+                                        onSelectAll = {
+                                            scanResultViewModel.selectAll(filteredSheets)
+                                        },
+                                        onDeselectAll = {
+                                            scanResultViewModel.deselectAll()
+                                        }
+                                    )
                                 }
+                                when {
+                                    filteredSheets.isEmpty() -> {
+                                        item { FilteredEmptyState(selectedFilter) }
+                                    }
 
-                                else -> {
-                                    when (viewMode) {
-                                        ScannedSheetViewMode.LIST -> {
-                                            items(filteredSheets) { sheet ->
-                                                ScannedSheetCard(
-                                                    sheet = sheet,
-                                                    isSelected = selectedSheets.contains(sheet.id),
-                                                    selectionMode = selectionMode,
-                                                    onCardClick = {
-                                                        scanResultViewModel.toggleSheetSelection(sheet.id)
-                                                    },
-                                                    onLongClick = {
-                                                        scanResultViewModel.enterSelectionMode()
-                                                        scanResultViewModel.toggleSheetSelection(sheet.id)
-                                                    },
-                                                    onViewDetails = {
-                                                        ScanResultActivity.launchScanResultScreen(
-                                                            context,
-                                                            examEntity,
-                                                            sheet
+                                    else -> {
+                                        when (viewMode) {
+                                            ScannedSheetViewMode.LIST -> {
+                                                items(filteredSheets) { sheet ->
+                                                    ScannedSheetCard(
+                                                        sheet = sheet,
+                                                        isSelected = selectedSheets.contains(sheet.id),
+                                                        selectionMode = selectionMode,
+                                                        onCardClick = {
+                                                            scanResultViewModel.toggleSheetSelection(sheet.id)
+                                                        },
+                                                        onLongClick = {
+                                                            scanResultViewModel.enterSelectionMode()
+                                                            scanResultViewModel.toggleSheetSelection(sheet.id)
+                                                        },
+                                                        onViewDetails = {
+                                                            ScanResultActivity.launchScanResultScreen(
+                                                                context,
+                                                                examEntity,
+                                                                sheet
+                                                            )
+                                                        },
+                                                        modifier = Modifier.padding(
+                                                            horizontal = 16.dp,
+                                                            vertical = 6.dp
                                                         )
-                                                    },
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 16.dp,
-                                                        vertical = 6.dp
                                                     )
-                                                )
+                                                }
                                             }
-                                        }
 
-                                        ScannedSheetViewMode.GRID -> {
-                                            items(filteredSheets.chunked(2)) { rowSheets ->
-                                                ScannedSheetGridRow(
-                                                    rowSheets = rowSheets,
-                                                    selectedSheets = selectedSheets,
-                                                    selectionMode = selectionMode,
-                                                    onCardClick = { sheetId ->
-                                                        scanResultViewModel.toggleSheetSelection(sheetId)
-                                                    },
-                                                    onLongClick = { sheetId ->
-                                                        scanResultViewModel.enterSelectionMode()
-                                                        scanResultViewModel.toggleSheetSelection(sheetId)
-                                                    }
-                                                )
+                                            ScannedSheetViewMode.GRID -> {
+                                                items(filteredSheets.chunked(2)) { rowSheets ->
+                                                    ScannedSheetGridRow(
+                                                        rowSheets = rowSheets,
+                                                        selectedSheets = selectedSheets,
+                                                        selectionMode = selectionMode,
+                                                        onCardClick = { sheetId ->
+                                                            scanResultViewModel.toggleSheetSelection(sheetId)
+                                                        },
+                                                        onLongClick = { sheetId ->
+                                                            scanResultViewModel.enterSelectionMode()
+                                                            scanResultViewModel.toggleSheetSelection(sheetId)
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
+                            }
+
+                            Box(
+                                modifier = Modifier.onSizeChanged { size ->
+                                    headerHeightPx = size.height
+                                }
+                            ) {
+                                ExamStatsHeader(
+                                    examEntity = examEntity,
+                                    stats = examStats[examEntity.id],
+                                    collapseFraction = headerCollapseFraction
+                                )
                             }
                         }
                     }

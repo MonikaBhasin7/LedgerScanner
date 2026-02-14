@@ -49,6 +49,7 @@ import com.example.ledgerscanner.feature.scanner.results.model.SheetSort
 
 @Composable
 fun FilterAndSortControls(
+    modifier: Modifier = Modifier,
     selectedFilter: SheetFilter,
     selectedSort: SheetSort,
     viewMode: ScannedSheetViewMode,
@@ -66,7 +67,7 @@ fun FilterAndSortControls(
     val lowScoreCount = sheets.count { it.scorePercent < 40 }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .border(1.dp, Grey200, RoundedCornerShape(14.dp))

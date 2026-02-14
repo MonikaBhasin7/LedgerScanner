@@ -135,11 +135,11 @@ fun ScannedSheetCard(
                         Box(
                             modifier = Modifier
                                 .background(Blue50, RoundedCornerShape(10.dp))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
                             Text(
                                 text = "${sheet.score}/${sheet.totalQuestions} (${sheet.scorePercent.toInt()}%)",
-                                style = AppTypography.text24Bold,
+                                style = AppTypography.text20Bold,
                                 color = Blue700
                             )
                         }
@@ -147,7 +147,7 @@ fun ScannedSheetCard(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             ScoreIndicator("✓", sheet.correctCount, Green600)
@@ -218,10 +218,10 @@ fun ScannedSheetCard(
 @Composable
 private fun ScoreIndicator(icon: String, count: Int, color: Color) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = icon, color = color, style = AppTypography.text14Bold)
-        Text(text = count.toString(), color = color, style = AppTypography.text13SemiBold)
+        Text(text = icon, color = color, style = AppTypography.text16Bold)
+        Text(text = count.toString(), color = color, style = AppTypography.text15SemiBold)
     }
 }
