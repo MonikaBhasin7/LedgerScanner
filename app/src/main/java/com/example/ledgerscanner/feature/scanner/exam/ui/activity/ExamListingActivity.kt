@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.exam.ui.activity
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -8,11 +9,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,21 +35,16 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Addchart
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Menu
@@ -54,14 +57,13 @@ import androidx.compose.material.icons.outlined.ListAlt
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
@@ -75,9 +77,9 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -95,20 +97,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.ledgerscanner.auth.LogoutViewModel
 import com.example.ledgerscanner.auth.AuthState
+import com.example.ledgerscanner.auth.LogoutViewModel
 import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.auth.ui.LoginActivity
 import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.base.ui.components.ButtonSize
 import com.example.ledgerscanner.base.ui.components.ButtonType
 import com.example.ledgerscanner.base.ui.components.GenericButton
-import com.example.ledgerscanner.base.ui.components.GenericEmptyState
 import com.example.ledgerscanner.base.ui.components.GenericLoader
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.components.GenericToolbar
-import com.example.ledgerscanner.base.ui.components.ButtonSize
-import com.example.ledgerscanner.base.ui.components.ToolbarAction
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
@@ -127,11 +127,10 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
+import com.example.ledgerscanner.feature.scanner.exam.model.DrawerItem
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionDialog
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamActionPopupConfig
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
-import com.example.ledgerscanner.feature.scanner.exam.model.DrawerItem
 import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.model.QuickActionButton
 import com.example.ledgerscanner.feature.scanner.exam.ui.compose.ExamActionConfirmationDialog
@@ -145,8 +144,8 @@ import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplate
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.statistics.activity.ExamStatisticsActivity
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -349,6 +348,7 @@ class ExamListingActivity : ComponentActivity() {
 
         val visibleExamItems = (examListResponse as? UiState.Success)?.data.orEmpty()
             .filterNot { hiddenExamIds.contains(it.id) }
+        val showListControls = examListResponse !is UiState.Success || visibleExamItems.isNotEmpty()
         val firstNoScanExamId = visibleExamItems
             .firstOrNull { exam ->
                 exam.status == ExamStatus.ACTIVE && (examStatistics[exam.id]?.sheetsCount ?: 0) == 0
@@ -534,7 +534,10 @@ class ExamListingActivity : ComponentActivity() {
                             action = {
                                 TextButton(
                                     onClick = { data.performAction() },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                    contentPadding = PaddingValues(
+                                        horizontal = 8.dp,
+                                        vertical = 0.dp
+                                    )
                                 ) {
                                     Text(
                                         text = data.visuals.actionLabel.orEmpty(),
@@ -600,17 +603,19 @@ class ExamListingActivity : ComponentActivity() {
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    SearchBar(searchQuery, onSearchQueryChange = {
-                        searchQuery = it
-                    })
+                    if (showListControls) {
+                        SearchBar(searchQuery, onSearchQueryChange = {
+                            searchQuery = it
+                        })
 
-                    val isLoading = examListResponse is UiState.Loading
-                    FilterChips(
-                        disableClicking = isLoading,
-                        onSelect = { selectedFilter ->
-                            examFilter = selectedFilter
-                        }
-                    )
+                        val isLoading = examListResponse is UiState.Loading
+                        FilterChips(
+                            disableClicking = isLoading,
+                            onSelect = { selectedFilter ->
+                                examFilter = selectedFilter
+                            }
+                        )
+                    }
 
                     ExamList(
                         examListResponse = examListResponse,
@@ -634,7 +639,8 @@ class ExamListingActivity : ComponentActivity() {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
                                 },
                                 showMarkCompletedDialog = {
-                                    showDeleteAndDuplicateDialog = ExamActionDialog.MarkCompleted(it)
+                                    showDeleteAndDuplicateDialog =
+                                        ExamActionDialog.MarkCompleted(it)
                                 },
                                 showArchiveDialog = {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Archive(it)
@@ -646,6 +652,9 @@ class ExamListingActivity : ComponentActivity() {
                         },
                         onLoadStats = {
                             scanResultViewModel.loadStatsForExam(it)
+                        },
+                        onCreateExamClick = {
+                            startActivity(Intent(context, CreateExamActivity::class.java))
                         },
                         onRetry = {
                             examListViewModel.getExamList(examFilter)
@@ -662,7 +671,8 @@ class ExamListingActivity : ComponentActivity() {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Duplicate(it)
                                 },
                                 showMarkCompletedDialog = {
-                                    showDeleteAndDuplicateDialog = ExamActionDialog.MarkCompleted(it)
+                                    showDeleteAndDuplicateDialog =
+                                        ExamActionDialog.MarkCompleted(it)
                                 },
                                 showArchiveDialog = {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Archive(it)
@@ -900,6 +910,7 @@ class ExamListingActivity : ComponentActivity() {
         walkthroughExamId: Int?,
         showNoScanWalkthrough: Boolean,
         onDismissNoScanWalkthrough: () -> Unit,
+        onCreateExamClick: () -> Unit,
         onExamClick: (ExamEntity, ExamAction) -> Unit,
         onRetry: () -> Unit,
         onActionClick: (ExamEntity, ExamAction) -> Unit,
@@ -918,10 +929,11 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             is UiState.Success -> {
-                val items = (examListResponse.data ?: emptyList()).filterNot { hiddenExamIds.contains(it.id) }
+                val items = (examListResponse.data
+                    ?: emptyList()).filterNot { hiddenExamIds.contains(it.id) }
 
                 if (items.isEmpty()) {
-                    GenericEmptyState(text = "No exams found")
+                    ExamsEmptyState(onCreateExamClick = onCreateExamClick)
                     return
                 }
 
@@ -961,6 +973,161 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             is UiState.Idle -> {}
+        }
+    }
+
+    @Composable
+    private fun ExamsEmptyState(
+        onCreateExamClick: () -> Unit
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 22.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 320.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Blue100.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Addchart,
+                        contentDescription = null,
+                        tint = Blue500,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Text(
+                    text = "No exams yet",
+                    style = AppTypography.text18SemiBold,
+                    color = Grey900
+                )
+                Text(
+                    text = "Create your first exam to start scanning sheets and tracking results.",
+                    style = AppTypography.text13Regular,
+                    color = Grey600,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "Setup takes around 2 minutes. You can edit details anytime.",
+                    style = AppTypography.text11Regular,
+                    color = Grey500,
+                    textAlign = TextAlign.Center
+                )
+
+                GenericButton(
+                    text = "Create Exam",
+                    icon = Icons.Default.AddCircleOutline,
+                    type = ButtonType.PRIMARY,
+                    size = ButtonSize.LARGE,
+                    onClick = onCreateExamClick,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                HowItWorksRow(
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .fillMaxWidth()
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun HowItWorksRow(modifier: Modifier = Modifier) {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HowItWorksStep(number = "1", label = "Create")
+            Text(text = "\u2192", style = AppTypography.text11Medium, color = Grey500)
+            HowItWorksStep(number = "2", label = "Scan")
+            Text(text = "\u2192", style = AppTypography.text11Medium, color = Grey500)
+            HowItWorksStep(number = "3", label = "Results")
+        }
+    }
+
+    @Composable
+    private fun HowItWorksStep(number: String, label: String) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(Blue100.copy(alpha = 0.45f))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Blue500),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = number,
+                    style = AppTypography.text10Medium,
+                    color = White
+                )
+            }
+            Text(
+                text = label,
+                style = AppTypography.text11Medium,
+                color = Grey800
+            )
+        }
+    }
+
+    @Composable
+    private fun OnboardingChecklist(modifier: Modifier = Modifier) {
+        Column(
+            modifier = modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(Grey100)
+                .border(1.dp, Grey200, RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Text(
+                text = "Getting started (0/3)",
+                style = AppTypography.text12Medium,
+                color = Grey800
+            )
+            ChecklistItem(label = "Create your first exam")
+            ChecklistItem(label = "Scan at least one sheet")
+            ChecklistItem(label = "Review first result report")
+        }
+    }
+
+    @Composable
+    private fun ChecklistItem(label: String) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(15.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .border(1.dp, Grey400, RoundedCornerShape(999.dp))
+            )
+            Text(
+                text = label,
+                style = AppTypography.text11Regular,
+                color = Grey600
+            )
         }
     }
 
@@ -1122,7 +1289,8 @@ class ExamListingActivity : ComponentActivity() {
                     }
                 }
 
-                val shouldNudgeScan = sheetCount == 0 && actions.quickAction?.action is ExamAction.ScanSheets
+                val shouldNudgeScan =
+                    sheetCount == 0 && actions.quickAction?.action is ExamAction.ScanSheets
 
                 if (shouldNudgeScan) {
                     NoScanContextualNudge(
@@ -1187,6 +1355,7 @@ class ExamListingActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("UnusedBoxWithConstraintsScope")
     @Composable
     private fun NoScanWalkthroughTooltip(
         onDismiss: () -> Unit,
@@ -1198,7 +1367,12 @@ class ExamListingActivity : ComponentActivity() {
         )
         val carouselState = rememberLazyListState()
         val currentStep by remember {
-            derivedStateOf { carouselState.firstVisibleItemIndex.coerceIn(0, walkthroughTips.size - 1) }
+            derivedStateOf {
+                carouselState.firstVisibleItemIndex.coerceIn(
+                    0,
+                    walkthroughTips.size - 1
+                )
+            }
         }
         val tooltipBg = Grey800
 
@@ -1632,9 +1806,14 @@ class ExamListingActivity : ComponentActivity() {
         val progress = celebrationProgress.coerceIn(0f, 1f)
         val completedBgStart = Color(0xFFE5F6EA)
         val completedTextStart = Color(0xFF2F8A45)
-        val animatedBg = if (status == ExamStatus.COMPLETED) lerp(completedBgStart, bg, progress) else bg
+        val animatedBg =
+            if (status == ExamStatus.COMPLETED) lerp(completedBgStart, bg, progress) else bg
         val animatedText =
-            if (status == ExamStatus.COMPLETED) lerp(completedTextStart, textColor, progress) else textColor
+            if (status == ExamStatus.COMPLETED) lerp(
+                completedTextStart,
+                textColor,
+                progress
+            ) else textColor
         val scale = if (status == ExamStatus.COMPLETED) 1f + (0.1f * progress) else 1f
 
         Box(
