@@ -105,6 +105,7 @@ fun ExamCardRow(
             animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing),
             label = "completedBadgeMorph"
         )
+        val hasLoadedStats = examStatistics != null
         val sheetCount = examStatistics?.sheetsCount ?: 0
         val actions = actionsProvider(item.status, sheetCount > 0)
         var showMenu by remember { mutableStateOf(false) }
@@ -205,7 +206,7 @@ fun ExamCardRow(
                 }
 
                 val shouldNudgeScan =
-                    sheetCount == 0 && actions.quickAction?.action is ExamAction.ScanSheets
+                    hasLoadedStats && sheetCount == 0 && actions.quickAction?.action is ExamAction.ScanSheets
 
                 if (shouldNudgeScan) {
                     NoScanContextualNudge(

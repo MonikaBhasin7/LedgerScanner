@@ -231,6 +231,7 @@ class ExamListingActivity : ComponentActivity() {
         var examFilter by remember { mutableStateOf<ExamStatus?>(null) }
         val examListResponse by viewModel.examList.collectAsState()
         var searchQuery by remember { mutableStateOf("") }
+        var previousSearchQuery by remember { mutableStateOf("") }
 
         var showDeleteAndDuplicateDialog by remember { mutableStateOf<ExamActionDialog?>(null) }
         val deleteState by viewModel.deleteExamState.collectAsState()
@@ -253,22 +254,21 @@ class ExamListingActivity : ComponentActivity() {
         val drawerScope = rememberCoroutineScope()
 
 
-        // Handle filter changes - starts collecting from DB
-        LaunchedEffect(examFilter) {
-            if (searchQuery.isBlank()) {
-                examListViewModel.getExamList(examFilter)
-            } else {
-                examListViewModel.searchExam(searchQuery)
-            }
+        // Initial load
+        LaunchedEffect(Unit) {
+            examListViewModel.getExamList(examFilter)
         }
 
-        // Handle search query changes
+        // Handle search query changes over the currently loaded source list
         LaunchedEffect(searchQuery) {
-            if (searchQuery.isBlank()) {
-                examListViewModel.getExamList(examFilter)
-            } else {
+            if (searchQuery.isNotBlank()) {
                 examListViewModel.searchExam(searchQuery)
+            } else if (previousSearchQuery.isNotBlank()) {
+                // Apply clear only when user actually cleared a non-empty query,
+                // avoiding empty-state flicker on first composition/filter swaps.
+                examListViewModel.searchExam("")
             }
+            previousSearchQuery = searchQuery
         }
 
         // Handle delete state
@@ -356,7 +356,8 @@ class ExamListingActivity : ComponentActivity() {
             searchQuery.isNotBlank()
         val firstNoScanExamId = visibleExamItems
             .firstOrNull { exam ->
-                exam.status == ExamStatus.ACTIVE && (examStatistics[exam.id]?.sheetsCount ?: 0) == 0
+                val stats = examStatistics[exam.id]
+                exam.status == ExamStatus.ACTIVE && stats != null && stats.sheetsCount == 0
             }?.id
         val showNoScanWalkthrough = firstNoScanExamId != null && !walkthroughDismissed
 
@@ -619,6 +620,7 @@ class ExamListingActivity : ComponentActivity() {
                             selectedFilter = examFilter,
                             onSelect = { selectedFilter ->
                                 examFilter = selectedFilter
+                                examListViewModel.getExamList(selectedFilter)
                             }
                         )
                     }

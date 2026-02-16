@@ -2,6 +2,7 @@ package com.example.ledgerscanner.network
 
 import android.util.Log
 import okhttp3.Interceptor
+import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.Response
 import okio.Buffer
@@ -46,17 +47,68 @@ class CurlLoggingInterceptor(
         }
 
         body?.let { body ->
-            val buffer = Buffer()
-            body.writeTo(buffer)
-            val charset = body.contentType()?.charset(Charset.forName("UTF-8")) ?: Charsets.UTF_8
-            val bodyString = buffer.readString(charset)
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "")
-            curl.append("--data-raw \"").append(bodyString).append("\" ")
+            val contentType = body.contentType()
+            val contentLength = body.contentLength()
+
+            if (!isTextLike(contentType)) {
+                curl.append("--data-binary \"[omitted non-text body")
+                if (contentLength >= 0) curl.append(", ").append(contentLength).append(" bytes")
+                curl.append("]\" ")
+            } else if (contentLength < 0) {
+                curl.append("--data-raw \"[omitted body with unknown length]\" ")
+            } else if (contentLength > MAX_BODY_LOG_BYTES) {
+                curl.append("--data-raw \"[omitted body too large: ")
+                    .append(contentLength)
+                    .append(" bytes]\" ")
+            } else {
+                val buffer = Buffer()
+                body.writeTo(buffer)
+                val charset = contentType?.charset(UTF8) ?: UTF8
+                val totalBytes = buffer.size
+                val bytesToRead = minOf(totalBytes, MAX_BODY_LOG_BYTES.toLong()).toInt()
+                val raw = buffer.readString(bytesToRead.toLong(), charset)
+                val escaped = escapeForDoubleQuotedShell(raw)
+
+                curl.append("--data-raw \"").append(escaped)
+                if (totalBytes > bytesToRead) {
+                    curl.append("...[truncated ")
+                        .append(totalBytes - bytesToRead)
+                        .append(" bytes]")
+                }
+                curl.append("\" ")
+            }
         }
 
         curl.append("\"").append(url).append("\"")
         return curl.toString()
+    }
+
+    private fun isTextLike(mediaType: MediaType?): Boolean {
+        if (mediaType == null) return false
+        val type = mediaType.type.lowercase()
+        val subtype = mediaType.subtype.lowercase()
+        if (type == "text") return true
+        if (subtype.contains("json")) return true
+        if (subtype.contains("xml")) return true
+        if (subtype.contains("x-www-form-urlencoded")) return true
+        return false
+    }
+
+    private fun escapeForDoubleQuotedShell(input: String): String {
+        val out = StringBuilder((input.length * 1.1).toInt())
+        input.forEach { ch ->
+            when (ch) {
+                '\\' -> out.append("\\\\")
+                '"' -> out.append("\\\"")
+                '\n', '\r' -> out.append(' ')
+                else -> out.append(ch)
+            }
+        }
+        return out.toString()
+    }
+
+    companion object {
+        private const val MAX_BODY_LOG_BYTES = 16_384L
+        private val UTF8: Charset = Charsets.UTF_8
     }
 }

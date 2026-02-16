@@ -14,6 +14,7 @@ import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuickActionBu
 import com.example.ledgerscanner.feature.scanner.exam.data.repository.ExamRepository
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,11 +42,13 @@ class ExamListViewModel @Inject constructor(
     private val _allExams = MutableStateFlow<List<ExamEntity>>(emptyList())
     private var currentSearchQuery: String = ""
     private var examListCollectionJob: Job? = null
+    private var examListRequestToken: Long = 0L
 
     fun getExamList(examStatus: ExamStatus? = null) {
         examListCollectionJob?.cancel()
+        val requestToken = ++examListRequestToken
+        _examList.value = UiState.Loading()
         examListCollectionJob = viewModelScope.launch(Dispatchers.IO) {
-            _examList.value = UiState.Loading()
             try {
                 val source = if (examStatus == null) {
                     repository.getAllExams()
@@ -53,10 +56,14 @@ class ExamListViewModel @Inject constructor(
                     repository.getExamByStatus(examStatus)
                 }
                 source.collect { exams ->
+                    if (requestToken != examListRequestToken) return@collect
                     _allExams.value = exams
                     applySearch(currentSearchQuery)
                 }
+            } catch (_: CancellationException) {
+                // Expected when switching filters quickly; avoid showing cancellation as an error.
             } catch (e: Exception) {
+                if (requestToken != examListRequestToken) return@launch
                 _examList.value = UiState.Error(e.message ?: "Something went wrong")
             }
         }
