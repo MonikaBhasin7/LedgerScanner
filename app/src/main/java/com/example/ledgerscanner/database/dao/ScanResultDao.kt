@@ -7,8 +7,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.ledgerscanner.database.entity.ScanResultEntity
-import com.example.ledgerscanner.feature.scanner.exam.model.BasicExamStatistics
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.BasicExamStatistics
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import kotlinx.coroutines.flow.Flow
 
 @Dao

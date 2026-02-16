@@ -3,7 +3,7 @@ package com.example.ledgerscanner.database.entity
 import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import kotlinx.parcelize.Parcelize
 

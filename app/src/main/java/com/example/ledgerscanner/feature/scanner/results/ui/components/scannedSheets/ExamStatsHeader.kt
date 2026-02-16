@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import com.example.ledgerscanner.base.ui.theme.*
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 
 @Composable
 fun ExamStatsHeader(

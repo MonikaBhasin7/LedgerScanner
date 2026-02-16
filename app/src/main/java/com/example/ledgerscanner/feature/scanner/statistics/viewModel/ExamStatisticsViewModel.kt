@@ -2,7 +2,7 @@ package com.example.ledgerscanner.feature.scanner.statistics.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -11,7 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.example.ledgerscanner.auth.AuthViewModel
 import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
-import com.example.ledgerscanner.feature.scanner.exam.ui.activity.ExamListingActivity
+import com.example.ledgerscanner.feature.scanner.exam.presentation.activity.ExamListingActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

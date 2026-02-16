@@ -4,8 +4,8 @@ import android.content.Context
 import com.example.ledgerscanner.database.dao.ScanResultDao
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.database.entity.setStudentDetails
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
-import com.example.ledgerscanner.feature.scanner.exam.model.QuestionStat
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuestionStat
 import com.example.ledgerscanner.feature.scanner.results.model.StudentDetailsForScanResult
 import com.example.ledgerscanner.sync.SyncManager
 import dagger.hilt.android.qualifiers.ApplicationContext

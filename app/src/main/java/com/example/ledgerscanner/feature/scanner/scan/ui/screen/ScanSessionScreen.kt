@@ -65,9 +65,9 @@ import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.exam.model.CreateExamConfig
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStep
-import com.example.ledgerscanner.feature.scanner.exam.ui.activity.CreateExamActivity
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
+import com.example.ledgerscanner.feature.scanner.exam.presentation.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 

@@ -2,7 +2,7 @@ package com.example.ledgerscanner.database
 
 import androidx.room.TypeConverter
 import com.example.ledgerscanner.database.entity.SyncStatus
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatus
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken

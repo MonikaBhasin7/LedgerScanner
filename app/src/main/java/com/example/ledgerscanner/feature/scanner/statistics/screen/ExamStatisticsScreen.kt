@@ -60,7 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
-import com.example.ledgerscanner.feature.scanner.exam.model.QuestionStat
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuestionStat
 import com.example.ledgerscanner.feature.scanner.statistics.viewModel.ExamStatisticsViewModel
 
 // ===========================================================================
@@ -712,7 +712,7 @@ private fun LegendItem(bullet: String, color: Color, label: String) {
 }
 
 @Composable
-private fun InsightsCard(statistics: com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics) {
+private fun InsightsCard(statistics: com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),

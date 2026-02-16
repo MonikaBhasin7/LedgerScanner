@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.database.entity.ScanResultEntity
-import com.example.ledgerscanner.feature.scanner.exam.model.ExamStatistics
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.results.model.ScannedSheetDataHolder
 import com.example.ledgerscanner.feature.scanner.results.model.ScannedSheetViewMode
 import com.example.ledgerscanner.feature.scanner.results.model.SheetFilter
