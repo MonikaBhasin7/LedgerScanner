@@ -149,8 +149,8 @@ fun ExamCardRow(
                         Text(
                             text = item.examName,
                             color = Black,
-                            style = AppTypography.text16Bold,
-                            maxLines = 1,
+                            style = AppTypography.text18Bold,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -256,12 +256,12 @@ fun ExamCardRow(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = "No scans yet",
-                        style = AppTypography.text12Medium,
+                        style = AppTypography.text13Medium,
                         color = Blue500
                     )
                     Text(
                         text = "Start scanning to unlock score insights and trends.",
-                        style = AppTypography.text11Regular,
+                        style = AppTypography.text12Regular,
                         color = Grey600
                     )
                 }
@@ -298,7 +298,6 @@ fun ExamCardRow(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, Grey600.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
                         .background(tooltipBg, RoundedCornerShape(14.dp))
                 ) {
                     LazyRow(
@@ -310,9 +309,7 @@ fun ExamCardRow(
                             Column(
                                 modifier = Modifier
                                     .width(pageWidth)
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Grey900.copy(alpha = 0.25f))
                                     .padding(horizontal = 10.dp, vertical = 9.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
@@ -323,12 +320,12 @@ fun ExamCardRow(
                                 ) {
                                     Text(
                                         text = tip.first,
-                                        style = AppTypography.text13SemiBold,
+                                        style = AppTypography.text12SemiBold,
                                         color = White
                                     )
                                     Text(
                                         text = "Dismiss",
-                                        style = AppTypography.text12Medium,
+                                        style = AppTypography.text11Medium,
                                         color = Blue100,
                                         modifier = Modifier.clickable { onDismiss() }
                                     )
@@ -336,7 +333,7 @@ fun ExamCardRow(
 
                                 Text(
                                     text = tip.second,
-                                    style = AppTypography.text12Regular,
+                                    style = AppTypography.text10Regular,
                                     color = White.copy(alpha = 0.9f)
                                 )
                             }
@@ -358,8 +355,7 @@ fun ExamCardRow(
                 }
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 2.dp),
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -369,7 +365,7 @@ fun ExamCardRow(
                             modifier = Modifier
                                 .padding(horizontal = 3.dp)
                                 .width(if (isActive) 14.dp else 6.dp)
-                                .height(6.dp)
+                                .height(4.dp)
                                 .clip(RoundedCornerShape(50))
                                 .background(if (isActive) Blue100 else Grey500.copy(alpha = 0.8f))
                         )
@@ -571,18 +567,12 @@ fun ExamCardRow(
     ) {
         val formattedDate = formatTimestamp(createdAt)
 
-        val sheetsLine = when {
-            status == ExamStatus.DRAFT -> null
-            sheetsCount > 0 -> "Sheets: $sheetsCount scanned"
-            else -> "No sheets scanned yet"
-        }
-
         Text(
             text = "$totalQuestions questions • Created $formattedDate",
-            color = Grey500,
-            maxLines = 1,
+            color = Grey600,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = AppTypography.text11Medium
+            style = AppTypography.text13Medium
         )
     }
 
@@ -648,12 +638,12 @@ fun ExamCardRow(
             Text(
                 text = value,
                 color = valueColor,
-                style = AppTypography.text13Bold
+                style = AppTypography.text14Bold
             )
             Text(
                 text = label,
                 color = Grey500,
-                style = AppTypography.text10Regular
+                style = AppTypography.text11Regular
             )
         }
     }
@@ -690,7 +680,7 @@ fun ExamCardRow(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(start = 12.dp)
+//            modifier = Modifier.padding(start = 12.dp)
         ) {
             Icon(
                 imageVector = icon,
@@ -700,8 +690,8 @@ fun ExamCardRow(
             )
             Text(
                 text = text,
-                color = textColor,
-                style = AppTypography.text13Medium
+                color = Grey800,
+                style = AppTypography.text13SemiBold
             )
         }
     }
@@ -745,7 +735,7 @@ fun ExamCardRow(
             Text(
                 text = status.name,
                 color = animatedText,
-                style = AppTypography.label5Medium
+                style = AppTypography.text10Medium
             )
         }
     }

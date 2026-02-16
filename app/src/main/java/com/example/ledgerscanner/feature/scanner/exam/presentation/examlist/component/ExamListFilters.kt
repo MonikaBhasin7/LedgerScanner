@@ -65,7 +65,7 @@ fun FilterChips(
                     label = {
                         Text(
                             text = filter?.name ?: "All",
-                            style = AppTypography.text11SemiBold
+                            style = AppTypography.text10SemiBold
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
@@ -77,7 +77,7 @@ fun FilterChips(
                     shape = RoundedCornerShape(24.dp),
                     border = null,
                     modifier = Modifier
-                        .height(28.dp)
+                        .height(24.dp)
                         .padding(end = 6.dp),
                 )
             }
