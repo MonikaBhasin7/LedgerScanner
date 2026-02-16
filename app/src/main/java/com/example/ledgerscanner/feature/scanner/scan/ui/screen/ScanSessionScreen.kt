@@ -67,7 +67,7 @@ import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
-import com.example.ledgerscanner.feature.scanner.exam.presentation.activity.CreateExamActivity
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 

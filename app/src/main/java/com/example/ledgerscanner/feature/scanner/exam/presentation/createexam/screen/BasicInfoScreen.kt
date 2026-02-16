@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.screen
+package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +33,7 @@ import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.CreateExamViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.viewmodel.CreateExamViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 
 @OptIn(ExperimentalMaterial3Api::class)

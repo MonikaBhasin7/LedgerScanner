@@ -24,7 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LedgerScanner">
         <activity
-            android:name=".feature.scanner.exam.presentation.activity.CreateExamActivity"
+            android:name=".feature.scanner.exam.presentation.createexam.activity.CreateExamActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
             android:name=".feature.scanner.scan.ui.activity.BarcodeScanActivity"
@@ -43,7 +43,7 @@
             android:name=".auth.ui.LoginActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
-            android:name=".feature.scanner.exam.presentation.activity.ExamListingActivity"
+            android:name=".feature.scanner.exam.presentation.examlist.activity.ExamListingActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
             android:name=".feature.scanner.scan.ui.activity.ScanBaseActivity"

@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.screen
+package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,7 +36,7 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.CreateExamViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.viewmodel.CreateExamViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

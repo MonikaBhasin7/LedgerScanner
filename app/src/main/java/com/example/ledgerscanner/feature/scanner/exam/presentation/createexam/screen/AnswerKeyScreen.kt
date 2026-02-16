@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.screen
+package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen
 
 import GenericFilterChip
 import androidx.compose.foundation.background
@@ -45,7 +45,7 @@ import com.example.ledgerscanner.base.utils.navigateFromActivity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.AnswerKeyBulkFillType
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.CreateExamViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.viewmodel.CreateExamViewModel
 
 private const val OPTION_A = 0
 private const val OPTION_B = 1

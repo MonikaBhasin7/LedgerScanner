@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.component
+package com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text

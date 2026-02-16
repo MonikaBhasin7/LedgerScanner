@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.component
+package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

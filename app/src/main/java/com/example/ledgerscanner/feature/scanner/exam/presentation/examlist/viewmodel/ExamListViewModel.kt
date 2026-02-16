@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel
+package com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel

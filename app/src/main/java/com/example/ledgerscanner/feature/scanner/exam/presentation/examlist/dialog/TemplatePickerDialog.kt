@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.dialog
+package com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.dialog
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row

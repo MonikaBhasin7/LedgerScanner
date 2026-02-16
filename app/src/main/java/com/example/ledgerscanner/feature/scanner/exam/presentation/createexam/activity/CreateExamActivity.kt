@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.activity
+package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.activity
 
 import android.os.Build
 import android.os.Bundle
@@ -39,13 +39,13 @@ import com.example.ledgerscanner.base.ui.theme.LedgerScannerTheme
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
-import com.example.ledgerscanner.feature.scanner.exam.presentation.component.SaveAndNextBarWidget
-import com.example.ledgerscanner.feature.scanner.exam.presentation.component.StepListWidget
-import com.example.ledgerscanner.feature.scanner.exam.presentation.screen.AnswerKeyScreen
-import com.example.ledgerscanner.feature.scanner.exam.presentation.screen.BasicInfoScreen
-import com.example.ledgerscanner.feature.scanner.exam.presentation.screen.MarkingDefaultsScreen
-import com.example.ledgerscanner.feature.scanner.exam.presentation.screen.ReviewScreen
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.CreateExamViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.component.SaveAndNextBarWidget
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.component.StepListWidget
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen.AnswerKeyScreen
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen.BasicInfoScreen
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen.MarkingDefaultsScreen
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen.ReviewScreen
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.viewmodel.CreateExamViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

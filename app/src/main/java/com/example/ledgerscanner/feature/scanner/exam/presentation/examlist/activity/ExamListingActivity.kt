@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.activity
+package com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.activity
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -133,10 +133,11 @@ import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamActionDia
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuickActionButton
-import com.example.ledgerscanner.feature.scanner.exam.presentation.component.ExamActionConfirmationDialog
-import com.example.ledgerscanner.feature.scanner.exam.presentation.component.ExamActionsPopup
-import com.example.ledgerscanner.feature.scanner.exam.presentation.dialog.TemplatePickerDialog
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.ExamListViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.ExamActionConfirmationDialog
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.ExamActionsPopup
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.dialog.TemplatePickerDialog
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.viewmodel.ExamListViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template

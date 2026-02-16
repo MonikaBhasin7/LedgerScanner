@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.screen
+package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,7 +37,7 @@ import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.utils.ui.genericClick
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.TemplateSelectionViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.viewmodel.TemplateSelectionViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 
 @Composable

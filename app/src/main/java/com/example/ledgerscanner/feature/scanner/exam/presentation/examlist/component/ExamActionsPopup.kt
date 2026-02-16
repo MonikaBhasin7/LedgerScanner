@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.component
+package com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +32,7 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamActionPopupConfig
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.ExamListViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.viewmodel.ExamListViewModel
 
 @Composable
 fun ExamActionsPopup(

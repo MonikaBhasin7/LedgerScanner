@@ -1,4 +1,4 @@
-package com.example.ledgerscanner.feature.scanner.exam.presentation.screen
+package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,7 +45,7 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
-import com.example.ledgerscanner.feature.scanner.exam.presentation.viewmodel.CreateExamViewModel
+import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.viewmodel.CreateExamViewModel
 
 @Composable
 fun MarkingDefaultsScreen(

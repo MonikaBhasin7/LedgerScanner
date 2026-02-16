@@ -8,7 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.ledgerscanner.auth.AuthState
 import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.auth.ui.LoginActivity
-import com.example.ledgerscanner.feature.scanner.exam.presentation.activity.ExamListingActivity
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.activity.ExamListingActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
