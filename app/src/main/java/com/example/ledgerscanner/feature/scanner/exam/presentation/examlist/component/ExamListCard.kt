@@ -844,10 +844,13 @@ private fun ExamStats(
 
     val statValueColor = if (isArchived) Grey600 else Blue500
     val statBgColor = if (isArchived) Grey200 else Color(0xFFE7F0FA)
+    val statBorderColor = if (isArchived) Grey200 else Blue500.copy(alpha = 0.22f)
     val topValueColor = if (isArchived) Grey600 else Green600
     val topBgColor = if (isArchived) Grey200 else Color(0xFFEAF7EE)
+    val topBorderColor = if (isArchived) Grey200 else Green600.copy(alpha = 0.22f)
     val lowValueColor = if (isArchived) Grey600 else Orange600
     val lowBgColor = if (isArchived) Grey200 else Color(0xFFFFF2E6)
+    val lowBorderColor = if (isArchived) Grey200 else Orange600.copy(alpha = 0.22f)
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         StatTile(
@@ -855,6 +858,7 @@ private fun ExamStats(
             label = "AVG",
             valueColor = statValueColor,
             backgroundColor = statBgColor,
+            borderColor = statBorderColor,
             modifier = Modifier.weight(1f)
         )
         StatTile(
@@ -862,6 +866,7 @@ private fun ExamStats(
             label = "TOP",
             valueColor = topValueColor,
             backgroundColor = topBgColor,
+            borderColor = topBorderColor,
             modifier = Modifier.weight(1f)
         )
         StatTile(
@@ -869,6 +874,7 @@ private fun ExamStats(
             label = "LOW",
             valueColor = lowValueColor,
             backgroundColor = lowBgColor,
+            borderColor = lowBorderColor,
             modifier = Modifier.weight(1f)
         )
     }
@@ -880,13 +886,15 @@ private fun StatTile(
     label: String,
     valueColor: Color,
     backgroundColor: Color,
+    borderColor: Color,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
-            .padding(vertical = 8.dp, horizontal = 4.dp),
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
