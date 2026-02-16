@@ -166,6 +166,8 @@ class ExamListingActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_TEMPLATE = "template"
+        private const val PREFS_EXAM_LIST = "exam_list_prefs"
+        private const val KEY_NO_SCAN_WALKTHROUGH_DISMISSED = "no_scan_walkthrough_dismissed"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -241,7 +243,12 @@ class ExamListingActivity : ComponentActivity() {
         var pendingCompletedExamId by remember { mutableStateOf<Int?>(null) }
         var celebratingExamId by remember { mutableStateOf<Int?>(null) }
         var waitForCompletedCard by remember { mutableStateOf(false) }
-        var walkthroughDismissed by remember { mutableStateOf(false) }
+        val examPrefs = remember {
+            context.getSharedPreferences(PREFS_EXAM_LIST, Context.MODE_PRIVATE)
+        }
+        var walkthroughDismissed by remember {
+            mutableStateOf(examPrefs.getBoolean(KEY_NO_SCAN_WALKTHROUGH_DISMISSED, false))
+        }
         val snackbarHostState = remember { SnackbarHostState() }
         var pendingCommitAction by remember { mutableStateOf<(() -> Unit)?>(null) }
         var pendingUndoAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -636,6 +643,9 @@ class ExamListingActivity : ComponentActivity() {
                         searchQuery = searchQuery,
                         onDismissNoScanWalkthrough = {
                             walkthroughDismissed = true
+                            examPrefs.edit()
+                                .putBoolean(KEY_NO_SCAN_WALKTHROUGH_DISMISSED, true)
+                                .apply()
                         },
                         onExamClick = { examEntity, examAction ->
                             handleExamAction(

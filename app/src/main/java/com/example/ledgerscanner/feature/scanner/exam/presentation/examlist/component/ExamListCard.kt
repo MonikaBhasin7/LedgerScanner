@@ -24,17 +24,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BarChart
@@ -63,6 +68,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -92,7 +100,9 @@ import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuickActionBu
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun ExamCardRow(
         item: ExamEntity,
@@ -114,23 +124,147 @@ fun ExamCardRow(
         val sheetCount = examStatistics?.sheetsCount ?: 0
         val actions = actionsProvider(item.status, sheetCount > 0)
         var showMenu by remember { mutableStateOf(false) }
+        val density = LocalDensity.current
+        var swipeOffsetPx by remember(item.id) { mutableStateOf(0f) }
+        val animatedSwipeOffset by animateFloatAsState(
+            targetValue = swipeOffsetPx,
+            animationSpec = tween(durationMillis = 190),
+            label = "cardSwipeOffset"
+        )
 
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Grey200, RoundedCornerShape(14.dp)),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isArchived) Grey100 else White
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Box(
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val revealWidthPx = with(density) { (maxWidth - 56.dp).toPx() }
+            if (actions.menuItems.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Blue100.copy(alpha = 0.28f))
+                        .border(1.dp, Grey200, RoundedCornerShape(14.dp))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 10.dp)
+                            .padding(bottom = 34.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "Quick actions",
+                            style = AppTypography.text11Medium,
+                            color = Grey600
+                        )
+
+                        actions.menuItems.chunked(2).forEach { rowActions ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowActions.forEach { action ->
+                                    val actionTint =
+                                        if (action.isDangerous) Color(0xFFD32F2F) else Blue500
+                                    val actionBg =
+                                        if (action.isDangerous) Color(0xFFFFEBEE) else White
+                                    val actionBorder =
+                                        if (action.isDangerous) Color(0xFFF2B8BE) else Grey200
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(actionBg)
+                                            .border(1.dp, actionBorder, RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                swipeOffsetPx = 0f
+                                                onActionClick(action)
+                                            }
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = action.icon,
+                                            contentDescription = action.label,
+                                            tint = actionTint,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = action.label,
+                                            style = AppTypography.text11Medium,
+                                            color = if (action.isDangerous) actionTint else Grey800,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 10.dp, bottom = 10.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(White)
+                            .border(1.dp, Grey200, RoundedCornerShape(10.dp))
+                            .clickable { swipeOffsetPx = 0f }
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close actions",
+                            tint = Grey600,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "Close",
+                            style = AppTypography.text10Medium,
+                            color = Grey600
+                        )
+                    }
+                }
+            }
+
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp)
-                    .genericClick { actions.quickAction?.action?.let { onClick(it) } }
+                    .offset { IntOffset(animatedSwipeOffset.roundToInt(), 0) }
+                    .border(1.dp, Grey200, RoundedCornerShape(14.dp))
+                    .pointerInput(item.id, actions.menuItems.size) {
+                        if (actions.menuItems.isEmpty()) return@pointerInput
+                        detectHorizontalDragGestures(
+                            onHorizontalDrag = { _, dragAmount ->
+                                swipeOffsetPx = (swipeOffsetPx + dragAmount).coerceIn(-revealWidthPx, 0f)
+                            },
+                            onDragEnd = {
+                                swipeOffsetPx =
+                                    if (swipeOffsetPx <= -revealWidthPx * 0.35f) -revealWidthPx else 0f
+                            },
+                            onDragCancel = {
+                                swipeOffsetPx =
+                                    if (swipeOffsetPx <= -revealWidthPx * 0.35f) -revealWidthPx else 0f
+                            }
+                        )
+                    },
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isArchived) Grey100 else White
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                        .genericClick {
+                            if (swipeOffsetPx < -8f) {
+                                swipeOffsetPx = 0f
+                            } else {
+                                actions.quickAction?.action?.let { onClick(it) }
+                            }
+                        }
+                ) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
 //                verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -164,7 +298,10 @@ fun ExamCardRow(
 
                     Box {
                         IconButton(
-                            onClick = { showMenu = true },
+                            onClick = {
+                                swipeOffsetPx = 0f
+                                showMenu = true
+                            },
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
@@ -190,12 +327,16 @@ fun ExamCardRow(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(bottom = 12.dp)
                 ) {
+                    LastActivityChip(createdAt = item.createdAt)
                     ExamMetadata(
                         totalQuestions = item.totalQuestions,
                         createdAt = item.createdAt,
                         sheetsCount = sheetCount,
                         status = item.status
                     )
+                    if (item.status == ExamStatus.DRAFT) {
+                        DraftSetupProgressStrip(item = item)
+                    }
                     StatusDetailLine(status = item.status, sheetsCount = sheetCount)
                 }
 
@@ -258,6 +399,7 @@ fun ExamCardRow(
                         .padding(top = 2.dp)
                 )
             }
+        }
         }
     }
 
@@ -604,6 +746,89 @@ fun ExamCardRow(
     }
 
     @Composable
+    private fun LastActivityChip(createdAt: Long) {
+        val ageMillis = (System.currentTimeMillis() - createdAt).coerceAtLeast(0L)
+        val isStale = ageMillis > 7L * 24L * 60L * 60L * 1000L
+        val (bg, textColor) = if (isStale) {
+            Color(0xFFFFF3E0) to Color(0xFFB26A00)
+        } else {
+            Blue100.copy(alpha = 0.55f) to Blue500
+        }
+
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(bg)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Last activity",
+                style = AppTypography.text10Regular,
+                color = textColor
+            )
+            Text(
+                text = relativeTime(createdAt),
+                style = AppTypography.text10SemiBold,
+                color = textColor
+            )
+        }
+    }
+
+    @Composable
+    private fun DraftSetupProgressStrip(item: ExamEntity) {
+        val basicDone = item.examName.isNotBlank() && item.totalQuestions > 0
+        val answerKeyDone =
+            (item.answerKey?.size ?: 0) >= item.totalQuestions && item.totalQuestions > 0
+        val schemeDone = (item.marksPerCorrect ?: 0f) > 0f
+        val steps = listOf(
+            "Basic info" to basicDone,
+            "Answer key" to answerKeyDone,
+            "Scheme" to schemeDone
+        )
+        val completedCount = steps.count { it.second }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "Setup progress  $completedCount/3",
+                style = AppTypography.text11Medium,
+                color = Grey600
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                steps.forEach { (_, done) ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(if (done) Blue500 else Grey200)
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                steps.forEach { (label, done) ->
+                    Text(
+                        text = label,
+                        style = AppTypography.text10Regular,
+                        color = if (done) Blue500 else Grey500,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
     private fun ExamStats(
         avgScore: Int?,
         topScore: Int?,
@@ -795,4 +1020,18 @@ fun ExamCardRow(
     private fun formatTimestamp(timestamp: Long): String {
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         return sdf.format(Date(timestamp))
+    }
+
+    private fun relativeTime(timestamp: Long): String {
+        val diff = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
+        val minute = 60_000L
+        val hour = 60L * minute
+        val day = 24L * hour
+        return when {
+            diff < minute -> "just now"
+            diff < hour -> "${diff / minute}m ago"
+            diff < day -> "${diff / hour}h ago"
+            diff < 2 * day -> "Yesterday"
+            else -> "${diff / day}d ago"
+        }
     }
