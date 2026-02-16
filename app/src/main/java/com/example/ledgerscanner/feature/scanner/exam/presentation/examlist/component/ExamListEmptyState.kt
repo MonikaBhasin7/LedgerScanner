@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Addchart
+import androidx.compose.material.icons.filled.FilterAltOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey600
 import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Grey900
 import com.example.ledgerscanner.base.ui.theme.White
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 
 @Composable
 fun ExamsEmptyState(
@@ -105,6 +107,68 @@ fun ExamsEmptyState(
             }
         }
     }
+
+@Composable
+fun FilteredExamsEmptyState(
+    selectedFilter: ExamStatus?,
+    searchQuery: String,
+    onClearFilters: () -> Unit
+) {
+    val message = when {
+        searchQuery.isNotBlank() && selectedFilter != null ->
+            "No ${selectedFilter.name.lowercase()} exams match \"$searchQuery\"."
+        searchQuery.isNotBlank() ->
+            "No exams match \"$searchQuery\"."
+        selectedFilter != null ->
+            "No ${selectedFilter.name.lowercase()} exams yet."
+        else ->
+            "No exams found."
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 22.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Blue100.copy(alpha = 0.55f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FilterAltOff,
+                    contentDescription = null,
+                    tint = Blue500,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Text(
+                text = "No matching exams",
+                style = AppTypography.text16SemiBold,
+                color = Grey900
+            )
+            Text(
+                text = message,
+                style = AppTypography.text13Regular,
+                color = Grey600,
+                textAlign = TextAlign.Center
+            )
+            GenericButton(
+                text = "Clear Filters",
+                type = ButtonType.SECONDARY,
+                size = ButtonSize.MEDIUM,
+                onClick = onClearFilters
+            )
+        }
+    }
+}
 
 @Composable
 private fun HowItWorksRow(modifier: Modifier = Modifier) {

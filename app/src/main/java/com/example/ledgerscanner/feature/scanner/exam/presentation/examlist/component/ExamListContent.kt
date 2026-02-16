@@ -25,8 +25,11 @@ fun ExamList(
     hiddenExamIds: Set<Int>,
     walkthroughExamId: Int?,
     showNoScanWalkthrough: Boolean,
+    selectedFilter: ExamStatus?,
+    searchQuery: String,
     onDismissNoScanWalkthrough: () -> Unit,
     onCreateExamClick: () -> Unit,
+    onClearFilters: () -> Unit,
     onExamClick: (ExamEntity, ExamAction) -> Unit,
     onRetry: () -> Unit,
     onActionClick: (ExamEntity, ExamAction) -> Unit,
@@ -39,7 +42,15 @@ fun ExamList(
         is UiState.Success -> {
             val items = (examListResponse.data ?: emptyList()).filterNot { hiddenExamIds.contains(it.id) }
             if (items.isEmpty()) {
-                ExamsEmptyState(onCreateExamClick = onCreateExamClick)
+                if (selectedFilter != null || searchQuery.isNotBlank()) {
+                    FilteredExamsEmptyState(
+                        selectedFilter = selectedFilter,
+                        searchQuery = searchQuery,
+                        onClearFilters = onClearFilters
+                    )
+                } else {
+                    ExamsEmptyState(onCreateExamClick = onCreateExamClick)
+                }
                 return
             }
 

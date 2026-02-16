@@ -350,7 +350,10 @@ class ExamListingActivity : ComponentActivity() {
 
         val visibleExamItems = (examListResponse as? UiState.Success)?.data.orEmpty()
             .filterNot { hiddenExamIds.contains(it.id) }
-        val showListControls = examListResponse !is UiState.Success || visibleExamItems.isNotEmpty()
+        val showListControls = examListResponse !is UiState.Success ||
+            visibleExamItems.isNotEmpty() ||
+            examFilter != null ||
+            searchQuery.isNotBlank()
         val firstNoScanExamId = visibleExamItems
             .firstOrNull { exam ->
                 exam.status == ExamStatus.ACTIVE && (examStatistics[exam.id]?.sheetsCount ?: 0) == 0
@@ -613,6 +616,7 @@ class ExamListingActivity : ComponentActivity() {
                         val isLoading = examListResponse is UiState.Loading
                         FilterChips(
                             disableClicking = isLoading,
+                            selectedFilter = examFilter,
                             onSelect = { selectedFilter ->
                                 examFilter = selectedFilter
                             }
@@ -626,6 +630,8 @@ class ExamListingActivity : ComponentActivity() {
                         hiddenExamIds = hiddenExamIds,
                         walkthroughExamId = firstNoScanExamId,
                         showNoScanWalkthrough = showNoScanWalkthrough,
+                        selectedFilter = examFilter,
+                        searchQuery = searchQuery,
                         onDismissNoScanWalkthrough = {
                             walkthroughDismissed = true
                         },
@@ -663,6 +669,11 @@ class ExamListingActivity : ComponentActivity() {
                         },
                         onCreateExamClick = {
                             startActivity(Intent(context, CreateExamActivity::class.java))
+                        },
+                        onClearFilters = {
+                            examFilter = null
+                            searchQuery = ""
+                            examListViewModel.getExamList(null)
                         },
                         onRetry = {
                             examListViewModel.getExamList(examFilter)

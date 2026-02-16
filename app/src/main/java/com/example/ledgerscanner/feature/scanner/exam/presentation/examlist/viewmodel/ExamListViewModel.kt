@@ -15,11 +15,10 @@ import com.example.ledgerscanner.feature.scanner.exam.data.repository.ExamReposi
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -41,24 +40,21 @@ class ExamListViewModel @Inject constructor(
 
     private val _allExams = MutableStateFlow<List<ExamEntity>>(emptyList())
     private var currentSearchQuery: String = ""
+    private var examListCollectionJob: Job? = null
 
     fun getExamList(examStatus: ExamStatus? = null) {
-        viewModelScope.launch {
+        examListCollectionJob?.cancel()
+        examListCollectionJob = viewModelScope.launch(Dispatchers.IO) {
             _examList.value = UiState.Loading()
-
             try {
-                withContext(Dispatchers.IO) {
-                    if (examStatus == null) {
-                        repository.getAllExams().collect { exams ->
-                            _allExams.value = exams
-                            applySearch(currentSearchQuery)
-                        }
-                    } else {
-                        repository.getExamByStatus(examStatus).collect { exams ->
-                            _allExams.value = exams
-                            applySearch(currentSearchQuery)
-                        }
-                    }
+                val source = if (examStatus == null) {
+                    repository.getAllExams()
+                } else {
+                    repository.getExamByStatus(examStatus)
+                }
+                source.collect { exams ->
+                    _allExams.value = exams
+                    applySearch(currentSearchQuery)
                 }
             } catch (e: Exception) {
                 _examList.value = UiState.Error(e.message ?: "Something went wrong")

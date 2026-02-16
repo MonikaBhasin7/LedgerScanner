@@ -20,10 +20,6 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -38,13 +34,14 @@ import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 @Composable
 fun FilterChips(
         disableClicking: Boolean,
+        selectedFilter: ExamStatus?,
         onSelect: (ExamStatus?) -> Unit
     ) {
         val filters = buildList {
             add(null) // "All" option
             addAll(ExamStatus.entries)
         }
-        var selectedIndex by remember { mutableIntStateOf(0) }
+        val selectedIndex = filters.indexOf(selectedFilter).takeIf { it >= 0 } ?: 0
 
         Row(
             modifier = Modifier
@@ -58,7 +55,6 @@ fun FilterChips(
                     selected = selectedIndex == index,
                     onClick = {
                         if (!disableClicking && selectedIndex != index) {
-                            selectedIndex = index
                             onSelect(filter)
                         }
                     },
