@@ -16,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
@@ -38,6 +39,7 @@ class ScanResultViewModel @Inject constructor(
 
     private val _examStatsCache = MutableStateFlow<Map<Int, ExamStatistics>>(emptyMap())
     val examStatsCache = _examStatsCache.asStateFlow()
+    private val loadingExamStats = mutableSetOf<Int>()
 
     private val _selectedFilter = MutableStateFlow(SheetFilter.ALL)
     val selectedFilter = _selectedFilter.asStateFlow()
@@ -250,15 +252,20 @@ class ScanResultViewModel @Inject constructor(
     }
 
     fun loadStatsForExam(examId: Int) {
+        if (_examStatsCache.value.containsKey(examId)) return
+        synchronized(loadingExamStats) {
+            if (!loadingExamStats.add(examId)) return
+        }
         viewModelScope.launch {
             try {
-                scanResultRepository.getStatistics(examId).collect { stats ->
-                    _examStatsCache.update { currentCache ->
-                        currentCache + (examId to stats)
-                    }
-                }
+                val stats = scanResultRepository.getStatistics(examId).first()
+                _examStatsCache.update { currentCache -> currentCache + (examId to stats) }
             } catch (e: Exception) {
                 Log.e("ScannedSheetsViewModel", "Error loading stats for exam $examId", e)
+            } finally {
+                synchronized(loadingExamStats) {
+                    loadingExamStats.remove(examId)
+                }
             }
         }
     }

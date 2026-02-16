@@ -131,7 +131,7 @@ fun ExamCardRow(
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val revealWidthPx = with(density) { (maxWidth - 56.dp).toPx() }
-        if (actions.menuItems.isNotEmpty()) {
+        if (actions.menuItems.isNotEmpty() && animatedSwipeOffset < -1f) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
