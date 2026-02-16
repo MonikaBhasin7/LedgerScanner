@@ -61,7 +61,7 @@ fun FilterChips(
                     label = {
                         Text(
                             text = filter?.name ?: "All",
-                            style = AppTypography.text10SemiBold
+                            style = AppTypography.text12Medium
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
@@ -87,8 +87,8 @@ fun SearchBar(searchQuery: String, onSearchQueryChange: (String) -> Unit) {
             value = searchQuery,
             placeholder = "Search by exam name",
             onValueChange = { onSearchQueryChange(it) },
-            textStyle = AppTypography.text14Medium,
-            placeholderStyle = AppTypography.text13Regular,
+            textStyle = AppTypography.text15Medium,
+            placeholderStyle = AppTypography.text14Regular,
             prefix = {
                 Icon(
                     imageVector = Icons.Outlined.Search,

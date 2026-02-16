@@ -1,7 +1,9 @@
 package com.example.ledgerscanner.base.ui.components
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -11,7 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
@@ -23,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -55,9 +58,9 @@ fun GenericTextField(
     maxLines: Int = 1,
     isError: Boolean = false,
     isPassword: Boolean = false,
-    textStyle: TextStyle = AppTypography.text14Medium,
-    labelStyle: TextStyle = AppTypography.text13Medium,
-    placeholderStyle: TextStyle = AppTypography.text13Regular,
+    textStyle: TextStyle = AppTypography.text15Medium,
+    labelStyle: TextStyle = AppTypography.text14Medium,
+    placeholderStyle: TextStyle = AppTypography.text14Regular,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
@@ -98,62 +101,28 @@ fun GenericTextField(
 
 
     var passwordVisible by remember { mutableStateOf(false) }
-    val fieldModifier = modifier.then(
-        if (onClick != null) Modifier.genericClick { onClick() } else Modifier
-    )
+    val fieldModifier = modifier
+        .then(if (onClick != null) Modifier.genericClick { onClick() } else Modifier)
 
-    OutlinedTextField(
+    val visualTransformation = if (isPassword && !passwordVisible) {
+        PasswordVisualTransformation()
+    } else {
+        VisualTransformation.None
+    }
+
+    BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = fieldModifier,
-        textStyle = textStyle,
+        textStyle = textStyle.copy(color = Black),
         enabled = enabled,
         readOnly = readOnly,
-        isError = isError,
         singleLine = singleLine,
         minLines = minLines,
         maxLines = maxLines,
-        shape = shape,
         interactionSource = interactionSource,
-        colors = effectiveColors,
-
-        // Label
-        label = label?.let { { Text(it, style = labelStyle) } },
-
-        // Placeholder
-        placeholder = placeholder?.let {
-            { Text(it, style = placeholderStyle, color = Grey500) }
-        },
-
-        // Icons
-        leadingIcon = leadingIcon,
-        trailingIcon = trailingIcon ?: if (isPassword) {
-            {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(
-                        imageVector = if (passwordVisible)
-                            Icons.Default.Visibility
-                        else
-                            Icons.Default.VisibilityOff,
-                        contentDescription = if (passwordVisible)
-                            "Hide password"
-                        else
-                            "Show password"
-                    )
-                }
-            }
-        } else null,
-
-        // Additional slots
-        prefix = prefix,
-        suffix = suffix,
-        supportingText = supportingText,
-
-        // Visual transformation for password
-        visualTransformation = if (isPassword && !passwordVisible)
-            PasswordVisualTransformation()
-        else
-            VisualTransformation.None,
+        cursorBrush = SolidColor(Blue500),
+        visualTransformation = visualTransformation,
 
         // Keyboard
         keyboardOptions = if (isPassword)
@@ -161,5 +130,53 @@ fun GenericTextField(
         else
             keyboardOptions,
         keyboardActions = keyboardActions,
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = innerTextField,
+                enabled = enabled,
+                singleLine = singleLine,
+                visualTransformation = visualTransformation,
+                interactionSource = interactionSource,
+                isError = isError,
+                label = label?.let { { Text(it, style = labelStyle) } },
+                placeholder = placeholder?.let {
+                    { Text(it, style = placeholderStyle, color = Grey500) }
+                },
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon ?: if (isPassword) {
+                    {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible)
+                                    Icons.Default.Visibility
+                                else
+                                    Icons.Default.VisibilityOff,
+                                contentDescription = if (passwordVisible)
+                                    "Hide password"
+                                else
+                                    "Show password"
+                            )
+                        }
+                    }
+                } else null,
+                prefix = prefix,
+                suffix = suffix,
+                supportingText = supportingText,
+                colors = effectiveColors,
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                container = {
+                    OutlinedTextFieldDefaults.Container(
+                        enabled = enabled,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = effectiveColors,
+                        shape = shape,
+                        focusedBorderThickness = 1.2.dp,
+                        unfocusedBorderThickness = 1.dp
+                    )
+                }
+            )
+        }
     )
 }
