@@ -41,6 +41,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -115,19 +119,16 @@ fun ExamCardRow(
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(14.dp)
-                    .genericClick { actions.quickAction?.action?.let { onClick(it) } },
-//                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .genericClick { actions.quickAction?.action?.let { onClick(it) } }
             ) {
-                CompletionConfettiBurst(
-                    visible = showCompletionCelebration && item.status == ExamStatus.COMPLETED,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(76.dp)
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+//                verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
 
                 Row(
                     modifier = Modifier
@@ -229,6 +230,16 @@ fun ExamCardRow(
 //                    modifier = Modifier.padding(top = 2.dp),
                     primaryLabelOverride = if (shouldNudgeScan) "Start Scanning" else null,
                     showPulse = shouldNudgeScan
+                )
+                }
+
+                CompletionConfettiBurst(
+                    visible = showCompletionCelebration && item.status == ExamStatus.COMPLETED,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(96.dp)
+                        .padding(top = 2.dp)
                 )
             }
         }
@@ -745,43 +756,24 @@ fun ExamCardRow(
         visible: Boolean,
         modifier: Modifier = Modifier
     ) {
-        val progress by animateFloatAsState(
-            targetValue = if (visible) 1f else 0f,
-            animationSpec = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
-            label = "confettiProgress"
-        )
-        if (progress <= 0f) return
+        if (!visible) return
 
-        val palette = listOf(
-            Blue500,
-            Color(0xFF4F67D8),
-            Color(0xFF2F8A45),
-            Color(0xFFFFB300),
-            Color(0xFFEF6C00)
+        val composition by rememberLottieComposition(
+            LottieCompositionSpec.Asset("confetti_burst.json")
         )
 
-        Canvas(modifier = modifier) {
-            val particles = 30
-            val centerX = size.width / 2f
-            val originY = 6.dp.toPx()
-
-            repeat(particles) { i ->
-                val localProgress = (progress - (i % 6) * 0.03f).coerceIn(0f, 1f)
-                if (localProgress <= 0f) return@repeat
-
-                val spread = ((i.toFloat() / (particles - 1)) - 0.5f) * size.width * 1.1f
-                val x = centerX + spread * localProgress
-                val y = originY + (size.height * 0.78f * localProgress * localProgress)
-                val alpha = (1f - localProgress).coerceIn(0f, 1f)
-                val radius = 2.2.dp.toPx() + (i % 3) * 0.8.dp.toPx()
-
-                drawCircle(
-                    color = palette[i % palette.size].copy(alpha = alpha),
-                    radius = radius,
-                    center = Offset(x, y)
-                )
-            }
-        }
+        val progress by animateLottieCompositionAsState(
+            composition = composition,
+            isPlaying = visible,
+            iterations = 1,
+            restartOnPlay = true,
+            speed = 1.1f
+        )
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = modifier
+        )
     }
 
     private fun formatTimestamp(timestamp: Long): String {
