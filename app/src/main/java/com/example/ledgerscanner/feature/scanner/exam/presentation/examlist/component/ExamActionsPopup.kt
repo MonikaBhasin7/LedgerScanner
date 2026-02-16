@@ -29,16 +29,12 @@ import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Red500
 import com.example.ledgerscanner.base.ui.theme.White
-import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamActionPopupConfig
-import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.viewmodel.ExamListViewModel
 
 @Composable
 fun ExamActionsPopup(
     expanded: Boolean,
-    examEntity: ExamEntity,
-    viewModel: ExamListViewModel,
     actions: ExamActionPopupConfig,
     onActionClick: (ExamAction) -> Unit,
     onDismiss: () -> Unit,
