@@ -1,10 +1,9 @@
 package com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -77,10 +76,7 @@ fun ExamList(
 
                     AnimatedVisibility(
                         visible = !hiddenExamIds.contains(item.id),
-                        enter = fadeIn(animationSpec = tween(220)) + slideInVertically(
-                            animationSpec = tween(220),
-                            initialOffsetY = { it / 12 }
-                        ),
+                        enter = EnterTransition.None,
                         exit = fadeOut(animationSpec = tween(140)) + slideOutVertically(
                             animationSpec = tween(140),
                             targetOffsetY = { -it / 16 }

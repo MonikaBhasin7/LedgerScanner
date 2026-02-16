@@ -8,6 +8,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -194,12 +199,22 @@ fun ExamCardRow(
                     StatusDetailLine(status = item.status, sheetsCount = sheetCount)
                 }
 
-                if (examStatistics != null && examStatistics.hasStats() && sheetCount > 0) {
+                AnimatedVisibility(
+                    visible = examStatistics != null && examStatistics.hasStats() && sheetCount > 0,
+                    enter = fadeIn(animationSpec = tween(300)) + expandVertically(
+                        animationSpec = tween(300),
+                        expandFrom = Alignment.Top
+                    ),
+                    exit = fadeOut(animationSpec = tween(120)) + shrinkVertically(
+                        animationSpec = tween(120),
+                        shrinkTowards = Alignment.Top
+                    )
+                ) {
                     Box(modifier = Modifier.padding(bottom = 10.dp)) {
                         ExamStats(
-                            avgScore = examStatistics.avgScore?.toInt(),
-                            topScore = examStatistics.topScore?.toInt(),
-                            lowestScore = examStatistics.lowestScore?.toInt(),
+                            avgScore = examStatistics?.avgScore?.toInt(),
+                            topScore = examStatistics?.topScore?.toInt(),
+                            lowestScore = examStatistics?.lowestScore?.toInt(),
                             isArchived = isArchived
                         )
                     }
