@@ -29,17 +29,17 @@ class SyncManager @Inject constructor(
      * Uses KEEP policy to avoid duplicating if already scheduled.
      */
     fun schedulePeriodicSync() {
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(
-            15, TimeUnit.MINUTES
-        )
-            .setConstraints(networkConstraints)
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            SyncWorker.WORK_NAME_PERIODIC,
-            ExistingPeriodicWorkPolicy.KEEP,
-            request
-        )
+//        val request = PeriodicWorkRequestBuilder<SyncWorker>(
+//            15, TimeUnit.MINUTES
+//        )
+//            .setConstraints(networkConstraints)
+//            .build()
+//
+//        workManager.enqueueUniquePeriodicWork(
+//            SyncWorker.WORK_NAME_PERIODIC,
+//            ExistingPeriodicWorkPolicy.KEEP,
+//            request
+//        )
 
         Log.d(TAG, "Periodic sync scheduled")
     }
@@ -49,17 +49,17 @@ class SyncManager @Inject constructor(
      * Uses REPLACE policy to avoid stacking multiple immediate syncs.
      */
     fun scheduleImmediateSync() {
-        val request = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(networkConstraints)
-            .build()
-
-        workManager.enqueueUniqueWork(
-            SyncWorker.WORK_NAME_IMMEDIATE,
-            ExistingWorkPolicy.REPLACE,
-            request
-        )
-
-        Log.d(TAG, "Immediate sync scheduled")
+//        val request = OneTimeWorkRequestBuilder<SyncWorker>()
+//            .setConstraints(networkConstraints)
+//            .build()
+//
+//        workManager.enqueueUniqueWork(
+//            SyncWorker.WORK_NAME_IMMEDIATE,
+//            ExistingWorkPolicy.REPLACE,
+//            request
+//        )
+//
+//        Log.d(TAG, "Immediate sync scheduled")
     }
 
     companion object {
