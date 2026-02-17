@@ -1,11 +1,14 @@
 package com.example.ledgerscanner.feature.scanner.statistics.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
@@ -33,16 +35,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,13 +49,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.ledgerscanner.base.ui.components.GenericToolbar
+import com.example.ledgerscanner.base.ui.components.ToolbarAction
+import com.example.ledgerscanner.base.ui.theme.AppTypography
+import com.example.ledgerscanner.base.ui.theme.Black
+import com.example.ledgerscanner.base.ui.theme.Blue100
+import com.example.ledgerscanner.base.ui.theme.Blue500
+import com.example.ledgerscanner.base.ui.theme.Green500
+import com.example.ledgerscanner.base.ui.theme.Grey100
+import com.example.ledgerscanner.base.ui.theme.Grey200
+import com.example.ledgerscanner.base.ui.theme.Grey500
+import com.example.ledgerscanner.base.ui.theme.Grey600
+import com.example.ledgerscanner.base.ui.theme.Grey700
+import com.example.ledgerscanner.base.ui.theme.Grey800
+import com.example.ledgerscanner.base.ui.theme.Orange600
+import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuestionStat
@@ -68,7 +79,6 @@ import com.example.ledgerscanner.feature.scanner.statistics.viewModel.ExamStatis
 // 📅 Created: 08/01/26
 // ===========================================================================
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExamStatisticsScreen(
     navController: NavHostController,
@@ -84,25 +94,23 @@ fun ExamStatisticsScreen(
     }
 
     Scaffold(
+        containerColor = Grey100,
         topBar = {
-            TopAppBar(
-                title = { Text("Exam Statistics") },
-                navigationIcon = {
-                    IconButton(onClick = handleBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Share */ }) {
-                        Icon(Icons.Default.Share, "Share")
-                    }
-                    IconButton(onClick = { /* Download */ }) {
-                        Icon(Icons.Default.Download, "Download")
-                    }
-                    IconButton(onClick = { /* More options */ }) {
-                        Icon(Icons.Default.MoreVert, "More")
-                    }
-                }
+            GenericToolbar(
+                title = "Exam Statistics",
+                onBackClick = handleBack,
+                actions = listOf(
+                    ToolbarAction.Icon(
+                        icon = Icons.Default.Share,
+                        contentDescription = "Share",
+                        onClick = { /* Share */ }
+                    ),
+                    ToolbarAction.Icon(
+                        icon = Icons.Default.Download,
+                        contentDescription = "Download",
+                        onClick = { /* Download */ }
+                    )
+                )
             )
         }
     ) { paddingValues ->
@@ -121,7 +129,7 @@ fun ExamStatisticsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Exam Header
                 item {
@@ -135,26 +143,32 @@ fun ExamStatisticsScreen(
                 // Stats Cards Row 1
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         StatCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             title = "Average Score",
                             value = statistics.getValidAvgScore(),
                             subtitle = "${statistics.sheetsCount} sheets",
-                            subtitleColor = Color(0xFF4CAF50),
+                            subtitleColor = Green500,
                             icon = Icons.Default.TrendingUp,
-                            backgroundColor = Color(0xFFE3F2FD)
+                            backgroundColor = Blue100.copy(alpha = 0.55f)
                         )
                         StatCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             title = "Highest Score",
                             value = statistics.getValidTopScore(),
-                            subtitle = "45/50",
-                            subtitleColor = Color(0xFF4CAF50),
+                            subtitle = "Top performer",
+                            subtitleColor = Green500,
                             icon = Icons.Default.EmojiEvents,
-                            backgroundColor = Color(0xFFE8F5E9)
+                            backgroundColor = Green500.copy(alpha = 0.14f)
                         )
                     }
                 }
@@ -162,26 +176,32 @@ fun ExamStatisticsScreen(
                 // Stats Cards Row 2
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         StatCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             title = "Lowest Score",
                             value = statistics.getValidLowestScore(),
-                            subtitle = "21/50",
-                            subtitleColor = Color(0xFFFF9800),
+                            subtitle = "Needs support",
+                            subtitleColor = Orange600,
                             icon = Icons.Default.TrendingDown,
-                            backgroundColor = Color(0xFFFFF3E0)
+                            backgroundColor = Orange600.copy(alpha = 0.14f)
                         )
                         StatCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             title = "Pass Rate (≥40%)",
                             value = statistics.getValidPassRate(),
-                            subtitle = "26/30",
-                            subtitleColor = Color(0xFF2196F3),
+                            subtitle = "Overall outcome",
+                            subtitleColor = Blue500,
                             icon = Icons.Default.CheckCircle,
-                            backgroundColor = Color(0xFFE3F2FD)
+                            backgroundColor = Blue100.copy(alpha = 0.55f)
                         )
                     }
                 }
@@ -227,7 +247,7 @@ fun ExamStatisticsScreen(
                         ) {
                             Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Export Report")
+                            Text("Export Report", style = AppTypography.text14SemiBold)
                         }
                         Button(
                             onClick = { /* Share insights */ },
@@ -235,7 +255,7 @@ fun ExamStatisticsScreen(
                         ) {
                             Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Share Insights")
+                            Text("Share Insights", style = AppTypography.text14SemiBold)
                         }
                     }
                 }
@@ -246,42 +266,49 @@ fun ExamStatisticsScreen(
 
 @Composable
 private fun ExamHeader(title: String, totalQuestions: Int, sheetsCount: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Grey200, RoundedCornerShape(14.dp)),
+        shape = RoundedCornerShape(14.dp),
+        color = White
     ) {
-        Text(
-            text = "📝",
-            fontSize = 32.sp
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "$totalQuestions Questions • 4 Options • 2 Columns",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "Scanned: Dec 16-20, 2025",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shape = RoundedCornerShape(8.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "$sheetsCount Sheets Analyzed",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+            Icon(
+                imageVector = Icons.Default.Description,
+                contentDescription = null,
+                tint = Blue500,
+                modifier = Modifier.size(24.dp)
             )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = AppTypography.text16SemiBold,
+                    color = Black
+                )
+                Text(
+                    text = "$totalQuestions questions",
+                    style = AppTypography.text13Regular,
+                    color = Grey600
+                )
+            }
+            Surface(
+                color = Blue100,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = "$sheetsCount sheets",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = AppTypography.text12SemiBold,
+                    color = Blue500
+                )
+            }
         }
     }
 }
@@ -298,12 +325,15 @@ private fun StatCard(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         color = backgroundColor,
         tonalElevation = 0.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -312,25 +342,25 @@ private fun StatCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = AppTypography.text12Medium,
+                    color = Grey600
                 )
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Grey700
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                style = AppTypography.text24Bold,
+                color = Black
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.text11Medium,
                 color = subtitleColor
             )
         }
@@ -341,18 +371,19 @@ private fun StatCard(
 private fun ScoreDistributionCard(distribution: Map<String, Int>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Score Distribution",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = AppTypography.text16SemiBold,
+                color = Black
             )
             Text(
                 text = "Number of students per score range",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = AppTypography.text12Regular,
+                color = Grey600
             )
             Spacer(Modifier.height(24.dp))
 
@@ -379,8 +410,8 @@ private fun ScoreDistributionCard(distribution: Map<String, Int>) {
                     ) {
                         Text(
                             text = count.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            style = AppTypography.text16SemiBold,
+                            color = Black
                         )
                         Spacer(Modifier.height(8.dp))
                         Box(
@@ -400,10 +431,11 @@ private fun ScoreDistributionCard(distribution: Map<String, Int>) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                listOf("<40%", "40-60%", "60-80%", "80-90%", ">90%").forEach { label ->
+                listOf("0-25", "26-50", "51-75", "76-100").forEach { label ->
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = AppTypography.text11Medium,
+                        color = Grey600,
                         modifier = Modifier.width(48.dp),
                         textAlign = TextAlign.Center
                     )
@@ -421,13 +453,14 @@ private fun DetailedBreakdownCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Detailed Breakdown",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = AppTypography.text16SemiBold,
+                color = Black
             )
             Spacer(Modifier.height(16.dp))
 
@@ -477,13 +510,14 @@ private fun BreakdownRow(
             Spacer(Modifier.width(12.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium
+                style = AppTypography.text14Medium,
+                color = Grey700
             )
         }
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            style = AppTypography.text16SemiBold,
+            color = Black
         )
     }
 }
@@ -492,18 +526,19 @@ private fun BreakdownRow(
 private fun QuestionAnalysisCard(questionStats: Map<Int, QuestionStat>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Question Analysis",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = AppTypography.text16SemiBold,
+                color = Black
             )
             Text(
                 text = "Questions ranked by difficulty",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = AppTypography.text12Regular,
+                color = Grey600
             )
             Spacer(Modifier.height(16.dp))
 
@@ -523,9 +558,8 @@ private fun QuestionAnalysisCard(questionStats: Map<Int, QuestionStat>) {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Hardest Questions",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = AppTypography.text14SemiBold,
                             color = Color(0xFFC62828),
-                            fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -564,9 +598,8 @@ private fun QuestionAnalysisCard(questionStats: Map<Int, QuestionStat>) {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Easiest Questions",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = AppTypography.text14SemiBold,
                             color = Color(0xFF2E7D32),
-                            fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -607,8 +640,8 @@ private fun QuestionStatRow(
     ) {
         Text(
             text = "Q$questionNumber",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            style = AppTypography.text14Medium,
+            color = Black
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             LinearProgressIndicator(
@@ -623,7 +656,7 @@ private fun QuestionStatRow(
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "$percentage% correct ($correctCount/$totalCount)",
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.text12Medium,
                 color = color
             )
         }
@@ -634,13 +667,14 @@ private fun QuestionStatRow(
 private fun QuestionHeatmapCard(questionStats: Map<Int, QuestionStat>, totalQuestions: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Question Performance Heatmap",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = AppTypography.text16SemiBold,
+                color = Black
             )
             Spacer(Modifier.height(16.dp))
 
@@ -672,9 +706,8 @@ private fun QuestionHeatmapCard(questionStats: Map<Int, QuestionStat>, totalQues
                                 ) {
                                     Text(
                                         text = questionNum.toString(),
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = AppTypography.text11SemiBold,
                                         color = Color.White,
-                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
@@ -702,11 +735,12 @@ private fun QuestionHeatmapCard(questionStats: Map<Int, QuestionStat>, totalQues
 @Composable
 private fun LegendItem(bullet: String, color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = bullet, color = color, fontSize = 20.sp)
+        Text(text = bullet, color = color, style = AppTypography.text16Bold)
         Spacer(Modifier.width(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall
+            style = AppTypography.text12Regular,
+            color = Grey700
         )
     }
 }
@@ -715,20 +749,22 @@ private fun LegendItem(bullet: String, color: Color, label: String) {
 private fun InsightsCard(statistics: com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "💡",
-                    fontSize = 24.sp
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = Blue500,
+                    modifier = Modifier.size(22.dp)
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "Insights",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = AppTypography.text16SemiBold,
+                    color = Black
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -767,7 +803,8 @@ private fun InsightItem(icon: ImageVector, text: String, color: Color) {
         Spacer(Modifier.width(8.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium
+            style = AppTypography.text14Regular,
+            color = Grey800
         )
     }
 }
