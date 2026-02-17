@@ -9,7 +9,8 @@ import kotlinx.parcelize.Parcelize
 data class CreateExamConfig(
     val examEntity: ExamEntity,
     val mode: Mode = Mode.EDIT,
-    val targetScreen: ExamStep = ExamStep.BASIC_INFO
+    val targetScreen: ExamStep = ExamStep.BASIC_INFO,
+    val hasScannedSheets: Boolean = false
 ) : Parcelable {
     enum class Mode {
         EDIT, VIEW

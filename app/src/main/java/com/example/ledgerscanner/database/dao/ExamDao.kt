@@ -5,6 +5,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
+import androidx.room.Upsert
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import kotlinx.coroutines.flow.Flow
@@ -17,11 +19,14 @@ interface ExamDao {
     @Query("SELECT * FROM exams WHERE id = :id LIMIT 1")
     suspend fun getExamById(id: Int): ExamEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertExam(exam: ExamEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(exams: List<ExamEntity>)
+    @Update
+    suspend fun updateExam(exam: ExamEntity)
+
+    @Upsert
+    suspend fun upsertAll(exams: List<ExamEntity>)
 
     @Query("DELETE FROM exams")
     suspend fun clearAll()

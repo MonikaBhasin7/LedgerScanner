@@ -7,22 +7,32 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.data.repository.ExamRepository
+import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : ViewModel() {
+class CreateExamViewModel @Inject constructor(
+    val repository: ExamRepository,
+    private val scanResultRepository: ScanResultRepository
+) : ViewModel() {
 
     private val _examEntity = MutableStateFlow<ExamEntity?>(null)
     val examEntity: StateFlow<ExamEntity?> = _examEntity.asStateFlow()
+    private val _hasScannedSheets = MutableStateFlow(false)
+    val hasScannedSheets: StateFlow<Boolean> = _hasScannedSheets.asStateFlow()
+    private var hasScannedSheetsHint: Boolean = false
     private val _perStepState: MutableStateFlow<Pair<ExamStep, OperationState>> =
         MutableStateFlow(Pair(ExamStep.BASIC_INFO, OperationState.Idle))
     val perStepState: StateFlow<Pair<ExamStep, OperationState>> = _perStepState.asStateFlow()
+    private var scannedSheetsObserverJob: Job? = null
 
     companion object {
         const val TAG = "CreateExamViewModel"
@@ -42,6 +52,25 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
 
     fun setExamEntity(examEntity: ExamEntity) {
         _examEntity.value = examEntity
+        refreshScannedSheetsState(examEntity.id)
+    }
+
+    fun setHasScannedSheetsHint(hasScannedSheets: Boolean) {
+        hasScannedSheetsHint = hasScannedSheets
+        _hasScannedSheets.value = _hasScannedSheets.value || hasScannedSheetsHint
+    }
+
+    private fun refreshScannedSheetsState(examId: Int) {
+        scannedSheetsObserverJob?.cancel()
+        scannedSheetsObserverJob = viewModelScope.launch {
+            scanResultRepository.getCountByExamId(examId)
+                .catch {
+                    _hasScannedSheets.value = hasScannedSheetsHint
+                }
+                .collect { count ->
+                    _hasScannedSheets.value = hasScannedSheetsHint || count > 0
+                }
+        }
     }
 
     fun saveBasicInfo(
@@ -53,13 +82,29 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
         viewModelScope.launch {
             try {
                 changeOperationState(OperationState.Loading)
+                val existingExam = _examEntity.value
+                val hasScans = _hasScannedSheets.value
+
+                if (
+                    hasScans &&
+                    existingExam != null &&
+                    (existingExam.template != template || existingExam.totalQuestions != numberOfQuestions)
+                ) {
+                    changeOperationState(
+                        OperationState.Error(
+                            "Template and question count cannot be changed after scanning starts"
+                        )
+                    )
+                    return@launch
+                }
+
                 _examEntity.value =
                     repository.saveBasicInfo(
                         examName,
                         description,
                         template,
                         numberOfQuestions,
-                        existingExam = _examEntity.value,
+                        existingExam = existingExam,
                     )
                 changeOperationState(OperationState.Success)
             } catch (e: Exception) {
@@ -71,6 +116,12 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
     fun saveAnswerKey(answerKeys: List<Int>, saveInDb: Boolean) {
         viewModelScope.launch {
             try {
+                if (_hasScannedSheets.value) {
+                    changeOperationState(
+                        OperationState.Error("Answer key cannot be changed after scanning starts")
+                    )
+                    return@launch
+                }
                 changeOperationState(OperationState.Loading)
                 val answerKeyMap = answerKeys.withIndex().associate {
                     it.index to it.value
@@ -94,6 +145,12 @@ class CreateExamViewModel @Inject constructor(val repository: ExamRepository) : 
     ) {
         viewModelScope.launch {
             try {
+                if (_hasScannedSheets.value) {
+                    changeOperationState(
+                        OperationState.Error("Marking scheme cannot be changed after scanning starts")
+                    )
+                    return@launch
+                }
                 changeOperationState(OperationState.Loading)
 
                 val correctMarks = marksPerCorrect.toFloatOrNull()

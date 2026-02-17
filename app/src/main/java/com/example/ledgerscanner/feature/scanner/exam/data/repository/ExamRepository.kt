@@ -23,12 +23,18 @@ class ExamRepository @Inject constructor(
         dao.getExamByStatus(status)
 
     suspend fun saveExam(exam: ExamEntity): Long {
-        val result = dao.insertExam(exam.copy(syncStatus = SyncStatus.PENDING))
+        val examToSave = exam.copy(syncStatus = SyncStatus.PENDING)
+        val result = if (examToSave.id == 0) {
+            dao.insertExam(examToSave)
+        } else {
+            dao.updateExam(examToSave)
+            examToSave.id.toLong()
+        }
         syncManager.scheduleImmediateSync()
         return result
     }
 
-    suspend fun saveExams(exams: List<ExamEntity>) = dao.insertAll(exams)
+    suspend fun saveExams(exams: List<ExamEntity>) = dao.upsertAll(exams)
 
     suspend fun clear() = dao.clearAll()
     suspend fun saveBasicInfo(
@@ -39,14 +45,27 @@ class ExamRepository @Inject constructor(
         existingExam: ExamEntity? = null,
     ): ExamEntity {
         if (existingExam != null) {
+            val didTemplateOrQuestionCountChange =
+                existingExam.template != template || existingExam.totalQuestions != numberOfQuestions
             val updated = existingExam.copy(
                 examName = examName,
                 description = description,
+                status = if (
+                    didTemplateOrQuestionCountChange &&
+                    existingExam.status == ExamStatus.ACTIVE
+                ) {
+                    ExamStatus.DRAFT
+                } else {
+                    existingExam.status
+                },
                 template = template,
                 totalQuestions = numberOfQuestions,
+                answerKey = if (didTemplateOrQuestionCountChange) null else existingExam.answerKey,
+                marksPerCorrect = if (didTemplateOrQuestionCountChange) null else existingExam.marksPerCorrect,
+                marksPerWrong = if (didTemplateOrQuestionCountChange) null else existingExam.marksPerWrong,
                 syncStatus = SyncStatus.PENDING,
             )
-            dao.insertExam(updated)
+            dao.updateExam(updated)
             syncManager.scheduleImmediateSync()
             return updated
         }

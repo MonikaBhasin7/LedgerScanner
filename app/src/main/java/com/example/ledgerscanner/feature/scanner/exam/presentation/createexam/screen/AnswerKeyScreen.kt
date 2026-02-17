@@ -64,12 +64,14 @@ fun AnswerKeyScreen(
     val context = LocalContext.current
     var selectedBulkFill by remember { mutableStateOf<AnswerKeyBulkFillType?>(null) }
     val examEntity by createExamViewModel.examEntity.collectAsState()
+    val hasScannedSheets by createExamViewModel.hasScannedSheets.collectAsState()
     val questionCount = examEntity?.totalQuestions ?: 0
-    val answerKeys = remember {
+    val answerKeys = remember(questionCount) {
         MutableList<Int?>(questionCount) { null }.toMutableStateList()
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(questionCount, examEntity?.id) {
+        answerKeys.indices.forEach { index -> answerKeys[index] = null }
         examEntity?.answerKey?.let { ak ->
             if (ak.isNotEmpty()) {
                 ak.forEach { (key, value) ->
@@ -87,15 +89,20 @@ fun AnswerKeyScreen(
         }
     }
 
-    LaunchedEffect(allAnswered, answerKeys.toList()) {
+    LaunchedEffect(allAnswered, answerKeys.toList(), hasScannedSheets, viewMode) {
         val isViewMode = CreateExamConfig.Mode.VIEW == viewMode
+        val isLocked = hasScannedSheets
         updateBottomBar(
             BottomBarConfig(
-                enabled = allAnswered,
+                enabled = if (isLocked) true else allAnswered,
                 buttonText = if (isViewMode) "Back" else "Next",
                 onNext = {
                     if (isViewMode) {
                         navController.navigateFromActivity(context)
+                        return@BottomBarConfig
+                    }
+                    if (isLocked) {
+                        createExamViewModel.changeOperationState(OperationState.Success)
                         return@BottomBarConfig
                     }
 
@@ -152,7 +159,7 @@ fun AnswerKeyScreen(
 
         BulkFillWidget(
             selectedLabel = selectedBulkFill,
-            enabled = viewMode == CreateExamConfig.Mode.EDIT,
+            enabled = viewMode == CreateExamConfig.Mode.EDIT && !hasScannedSheets,
             onSelect = {
                 selectedBulkFill = it
                 setAnswerKey()
@@ -163,7 +170,7 @@ fun AnswerKeyScreen(
 
         AnswerKeyWidget(
             answerKeys = answerKeys,
-            enabled = viewMode == CreateExamConfig.Mode.EDIT,
+            enabled = viewMode == CreateExamConfig.Mode.EDIT && !hasScannedSheets,
             onSelectAnswer = { index, answer ->
                 if (answerKeys[index] != answer) {
                     answerKeys[index] = answer

@@ -648,10 +648,12 @@ class ExamListingActivity : ComponentActivity() {
                                 .apply()
                         },
                         onExamClick = { examEntity, examAction ->
+                            val hasScannedSheets = (examStatistics[examEntity.id]?.sheetsCount ?: 0) > 0
                             handleExamAction(
                                 context,
                                 examEntity,
                                 examAction,
+                                hasScannedSheets = hasScannedSheets,
                                 showDeleteDialog = {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
                                 },
@@ -691,10 +693,12 @@ class ExamListingActivity : ComponentActivity() {
                             examListViewModel.getExamList(examFilter)
                         },
                         onActionClick = { examEntity, examAction ->
+                            val hasScannedSheets = (examStatistics[examEntity.id]?.sheetsCount ?: 0) > 0
                             handleExamAction(
                                 context,
                                 examEntity,
                                 examAction,
+                                hasScannedSheets = hasScannedSheets,
                                 showDeleteDialog = {
                                     showDeleteAndDuplicateDialog = ExamActionDialog.Delete(it)
                                 },
@@ -869,6 +873,7 @@ class ExamListingActivity : ComponentActivity() {
         context: Context,
         examEntity: ExamEntity,
         examAction: ExamAction,
+        hasScannedSheets: Boolean,
         showDeleteDialog: (ExamEntity) -> Unit,
         showDuplicateDialog: (ExamEntity) -> Unit,
         showMarkCompletedDialog: (ExamEntity) -> Unit,
@@ -882,6 +887,7 @@ class ExamListingActivity : ComponentActivity() {
                         putExtra(
                             CreateExamActivity.CONFIG, CreateExamConfig(
                                 examEntity = examEntity,
+                                hasScannedSheets = hasScannedSheets
                             )
                         )
                     }

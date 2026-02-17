@@ -70,6 +70,7 @@ class CreateExamActivity : ComponentActivity() {
 
         config?.let {
             createExamViewModel.setExamEntity(it.examEntity)
+            createExamViewModel.setHasScannedSheetsHint(it.hasScannedSheets)
         }
 
         setContent {
@@ -77,7 +78,6 @@ class CreateExamActivity : ComponentActivity() {
             val navController = rememberNavController()
             val perStepState by createExamViewModel.perStepState.collectAsState()
             var bottomBarConfig by remember { mutableStateOf(BottomBarConfig()) }
-            var showExitDialog by remember { mutableStateOf(false) }
 
             BackHandler {
                 if (perStepState.first != ExamStep.BASIC_INFO) {
@@ -85,25 +85,8 @@ class CreateExamActivity : ComponentActivity() {
                     createExamViewModel.updateStepState(prevStep, OperationState.Idle)
                     navController.popBackStack()
                 } else {
-                    showExitDialog = true
+                    finish()
                 }
-            }
-
-            if (showExitDialog) {
-                AlertDialog(
-                    onDismissRequest = { showExitDialog = false },
-                    title = { Text("Discard changes?") },
-                    text = { Text("You have unsaved progress. Are you sure you want to exit?") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showExitDialog = false
-                            finish()
-                        }) { Text("Discard") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showExitDialog = false }) { Text("Cancel") }
-                    }
-                )
             }
 
             LaunchedEffect(perStepState) {
@@ -140,7 +123,7 @@ class CreateExamActivity : ComponentActivity() {
                             createExamViewModel.updateStepState(prevStep, OperationState.Idle)
                             navController.popBackStack()
                         } else {
-                            showExitDialog = true
+                            finish()
                         }
                     })
                 }, bottomBar = {

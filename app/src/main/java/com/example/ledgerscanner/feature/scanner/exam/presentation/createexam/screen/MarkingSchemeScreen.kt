@@ -58,6 +58,7 @@ fun MarkingDefaultsScreen(
     var marksPerWrong by remember { mutableStateOf("0.25") }
     var negativeMarking by remember { mutableStateOf(true) }
     val examEntity by createExamViewModel.examEntity.collectAsState()
+    val hasScannedSheets by createExamViewModel.hasScannedSheets.collectAsState()
 
     val isValid by remember {
         derivedStateOf {
@@ -83,11 +84,15 @@ fun MarkingDefaultsScreen(
         }
     }
 
-    LaunchedEffect(isValid, marksPerCorrect, marksPerWrong, negativeMarking) {
+    LaunchedEffect(isValid, marksPerCorrect, marksPerWrong, negativeMarking, hasScannedSheets) {
         updateBottomBar(
             BottomBarConfig(
-                enabled = isValid,
+                enabled = if (hasScannedSheets) true else isValid,
                 onNext = {
+                    if (hasScannedSheets) {
+                        createExamViewModel.changeOperationState(OperationState.Success)
+                        return@BottomBarConfig
+                    }
                     val currentCorrect = marksPerCorrect.toFloatOrNull()
                     val currentWrong = marksPerWrong.toFloatOrNull()
                     val savedWrong = if (negativeMarking) examEntity?.marksPerWrong else 0f
@@ -124,11 +129,13 @@ fun MarkingDefaultsScreen(
                 GenericTextField(
                     value = marksPerCorrect,
                     onValueChange = {
-                        // Allow only numbers and decimal point, max 100
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            val value = it.toFloatOrNull()
-                            if (value == null || value <= 100f) {
-                                marksPerCorrect = it
+                        if (!hasScannedSheets) {
+                            // Allow only numbers and decimal point, max 100
+                            if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                val value = it.toFloatOrNull()
+                                if (value == null || value <= 100f) {
+                                    marksPerCorrect = it
+                                }
                             }
                         }
                     },
@@ -144,9 +151,11 @@ fun MarkingDefaultsScreen(
                                 .background(White)
                                 .border(1.dp, Grey300, CircleShape)
                                 .genericClick {
-                                    val current = marksPerCorrect.toFloatOrNull() ?: 1f
-                                    if (current < 100f) {
-                                        marksPerCorrect = (current + 1f).toString()
+                                    if (!hasScannedSheets) {
+                                        val current = marksPerCorrect.toFloatOrNull() ?: 1f
+                                        if (current < 100f) {
+                                            marksPerCorrect = (current + 1f).toString()
+                                        }
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -167,6 +176,7 @@ fun MarkingDefaultsScreen(
                         )
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    enabled = !hasScannedSheets,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -175,17 +185,19 @@ fun MarkingDefaultsScreen(
                 GenericTextField(
                     value = marksPerWrong,
                     onValueChange = {
-                        // Allow only positive numbers and decimal point, max 100
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            val value = it.toFloatOrNull()
-                            if (value == null || value <= 100f) {
-                                marksPerWrong = it
+                        if (!hasScannedSheets) {
+                            // Allow only positive numbers and decimal point, max 100
+                            if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                val value = it.toFloatOrNull()
+                                if (value == null || value <= 100f) {
+                                    marksPerWrong = it
+                                }
                             }
                         }
                     },
                     placeholder = "0.25",
                     label = "Marks per wrong",
-                    enabled = negativeMarking,
+                    enabled = negativeMarking && !hasScannedSheets,
                     labelStyle = AppTypography.text14Medium,
                     prefix = {
                         Row {
@@ -197,7 +209,7 @@ fun MarkingDefaultsScreen(
                                     .background(White)
                                     .border(1.dp, Grey300, CircleShape)
                                     .genericClick {
-                                        if (negativeMarking) {
+                                        if (negativeMarking && !hasScannedSheets) {
                                             val current = marksPerWrong.toFloatOrNull() ?: 0.25f
                                             if (current < 100f) {
                                                 marksPerWrong = (current + 0.25f).toString()
@@ -259,7 +271,9 @@ fun MarkingDefaultsScreen(
                 GenericSwitch(
                     checked = negativeMarking,
                     onCheckedChange = {
-                        negativeMarking = it
+                        if (!hasScannedSheets) {
+                            negativeMarking = it
+                        }
                     }
                 )
             }

@@ -59,6 +59,8 @@ fun BasicInfoScreen(
     var autofill by remember { mutableStateOf(false) }
 
     val examEntity by createExamViewModel.examEntity.collectAsState()
+    val hasScannedSheets by createExamViewModel.hasScannedSheets.collectAsState()
+    var initialTemplate by remember { mutableStateOf<Template?>(null) }
 
     LaunchedEffect(Unit) {
         examEntity?.let {
@@ -67,12 +69,13 @@ fun BasicInfoScreen(
             examDescription = it.description ?: ""
             numberOfQuestionsText = it.totalQuestions.toString()
             selectedTemplate = it.template
+            initialTemplate = it.template
         }
     }
 
-    // When a template is selected, clear numberOfQuestionsText so user re-enters
+    // When template is changed by user, force question count re-entry.
     LaunchedEffect(selectedTemplate) {
-        if (selectedTemplate != null && !autofill) {
+        if (selectedTemplate != null && selectedTemplate != initialTemplate) {
             numberOfQuestionsText = ""
         }
     }
@@ -165,7 +168,9 @@ fun BasicInfoScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = false,
                     onValueChange = {},
-                    onClick = { showSelectTemplate = true }
+                    onClick = if (hasScannedSheets) null else {
+                        { showSelectTemplate = true }
+                    }
                 )
             }
 
@@ -177,6 +182,7 @@ fun BasicInfoScreen(
                     prefix = { Text("# ", color = Grey500) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     onValueChange = { input ->
+                        if (hasScannedSheets) return@GenericTextField
                         val totalQues = selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
 
                         // Allow only digits, strip leading zeros
@@ -195,7 +201,7 @@ fun BasicInfoScreen(
                             numberOfQuestionsText = filtered
                         }
                     },
-                    readOnly = selectedTemplate == null,
+                    readOnly = selectedTemplate == null || hasScannedSheets,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
