@@ -77,6 +77,7 @@ fun ReviewScreen(
     ) {
         examEntity?.let { exam ->
             ExamSummaryCard(
+                modifier = Modifier.padding(top = 4.dp),
                 exam = exam,
                 onEditBasicInfo = { onEditStep(ExamStep.BASIC_INFO) },
                 onEditAnswerKey = { onEditStep(ExamStep.ANSWER_KEY) },
@@ -89,7 +90,7 @@ fun ReviewScreen(
             ) {
                 Text(
                     text = "No exam data available",
-                    style = AppTypography.body2Medium,
+                    style = AppTypography.text15Medium,
                     color = Grey500
                 )
             }
@@ -121,7 +122,7 @@ private fun ExamSummaryCard(
         ) {
             Text(
                 text = "Exam Summary",
-                style = AppTypography.h4Bold
+                style = AppTypography.text18Bold
             )
             StatusBadge(status = exam.status.name)
         }
@@ -206,13 +207,13 @@ private fun ExamSummaryCard(
         ) {
             Text(
                 text = "Created on",
-                style = AppTypography.body3Regular,
+                style = AppTypography.text14Regular,
                 color = Grey500
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = createdDate,
-                style = AppTypography.body1Medium
+                style = AppTypography.text15Medium
             )
         }
     }
@@ -237,13 +238,13 @@ private fun SummaryRow(
         ) {
             Text(
                 text = label,
-                style = AppTypography.body3Regular,
+                style = AppTypography.text14Regular,
                 color = Grey500
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
-                style = AppTypography.body1Medium
+                style = AppTypography.text15Medium
             )
         }
 
@@ -267,7 +268,7 @@ private fun EditButton(
     ) {
         Text(
             text = "Edit",
-            style = AppTypography.label3Medium,
+            style = AppTypography.text14SemiBold,
             color = Blue500
         )
     }
@@ -287,7 +288,7 @@ private fun StatusBadge(
     ) {
         Text(
             text = status,
-            style = AppTypography.label4Medium,
+            style = AppTypography.text12Medium,
             color = Grey500
         )
     }

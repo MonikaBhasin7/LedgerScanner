@@ -159,24 +159,25 @@ class CreateExamActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(horizontal = 16.dp)
                         ) {
-                            StepListWidget(
-                                steps = ExamStep.entries,
-                                currentStep = perStepState.first,
-                                onStepSelected = { index ->
-                                    val targetStep = ExamStep.entries[index]
-                                    if (targetStep.ordinal < perStepState.first.ordinal) {
-                                        createExamViewModel.updateStepState(
-                                            targetStep,
-                                            OperationState.Idle
-                                        )
-                                        navController.navigate(targetStep.title) {
-                                            popUpTo(targetStep.title) { inclusive = true }
+                            Box(modifier = Modifier.padding(bottom = 16.dp, top = 12.dp)) {
+                                StepListWidget(
+                                    steps = ExamStep.entries,
+                                    currentStep = perStepState.first,
+                                    onStepSelected = { index ->
+                                        val targetStep = ExamStep.entries[index]
+                                        if (targetStep.ordinal < perStepState.first.ordinal) {
+                                            createExamViewModel.updateStepState(
+                                                targetStep,
+                                                OperationState.Idle
+                                            )
+                                            navController.navigate(targetStep.title) {
+                                                popUpTo(targetStep.title) { inclusive = true }
+                                            }
                                         }
                                     }
-                                }
-                            )
+                                )
+                            }
 
-                            Spacer(modifier = Modifier.height(12.dp))
 
                             HandleNavigation(navController, config, updateBottomBar = {
                                 bottomBarConfig = it

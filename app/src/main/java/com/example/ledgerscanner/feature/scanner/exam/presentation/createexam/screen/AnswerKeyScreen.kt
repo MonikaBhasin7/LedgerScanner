@@ -42,6 +42,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.navigateFromActivity
+import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.AnswerKeyBulkFillType
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
@@ -147,7 +148,7 @@ fun AnswerKeyScreen(
         modifier = modifier
             .fillMaxWidth()
     ) {
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         BulkFillWidget(
             selectedLabel = selectedBulkFill,
@@ -158,7 +159,7 @@ fun AnswerKeyScreen(
             }
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         AnswerKeyWidget(
             answerKeys = answerKeys,
@@ -184,10 +185,10 @@ fun AnswerKeyWidget(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Answer Key", style = AppTypography.body2Regular, color = Grey500)
+            Text("Answer Key", style = AppTypography.text14SemiBold, color = Grey500)
             Text(
                 "Tap a choice to mark correct",
-                style = AppTypography.body2Regular,
+                style = AppTypography.text14Regular,
                 color = Grey500
             )
         }
@@ -240,7 +241,7 @@ fun QuestionCard(
             .background(Grey100)
             .padding(12.dp)
     ) {
-        Text("Q$questionNumber", style = AppTypography.label1SemiBold)
+        Text("Q$questionNumber", style = AppTypography.text15SemiBold)
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -295,7 +296,7 @@ fun OptionButton(
 ) {
     Box(
         modifier = modifier
-            .height(44.dp)
+//            .height(44.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(if (selected) Green500 else White)
             .border(
@@ -303,13 +304,14 @@ fun OptionButton(
                 color = if (selected) Color.Transparent else Grey200,
                 shape = RoundedCornerShape(10.dp)
             )
-            .clickable { if (enabled) onClick() },
+            .padding(vertical = 8.dp, horizontal = 2.dp)
+            .genericClick { if (enabled) onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             color = if (selected) White else Black,
-            style = AppTypography.label1SemiBold
+            style = AppTypography.text15SemiBold
         )
     }
 }
@@ -326,13 +328,15 @@ fun BulkFillWidget(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Bulk fill", style = AppTypography.body2Regular, color = Grey500)
-            Text("Quickly set patterns", style = AppTypography.body2Regular, color = Grey500)
+            Text("Bulk fill", style = AppTypography.text14SemiBold, color = Grey500)
+            Text("Quickly set patterns", style = AppTypography.text14Regular, color = Grey500)
         }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AnswerKeyBulkFillType.entries.forEach { type ->
                 GenericFilterChip(

@@ -1,5 +1,6 @@
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
@@ -32,7 +34,7 @@ fun GenericFilterChip(
                 Text(
                     text = label,
                     color = if (selected) White else Blue500,
-                    style = AppTypography.label2Medium,
+                    style = AppTypography.text14Regular,
                     textAlign = TextAlign.Center
                 )
             }
@@ -44,7 +46,7 @@ fun GenericFilterChip(
             labelColor = Blue500,
             selectedLabelColor = White
         ),
-        modifier = modifier,
+        modifier = modifier.height(28.dp),
         border = null
     )
 }

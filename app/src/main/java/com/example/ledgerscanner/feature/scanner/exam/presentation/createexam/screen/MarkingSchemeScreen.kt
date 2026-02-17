@@ -134,7 +134,7 @@ fun MarkingDefaultsScreen(
                     },
                     placeholder = "1",
                     label = "Marks per correct",
-                    labelStyle = AppTypography.body3Medium,
+                    labelStyle = AppTypography.text14Medium,
                     prefix = {
                         Box(
                             modifier = Modifier
@@ -162,7 +162,7 @@ fun MarkingDefaultsScreen(
                     suffix = {
                         Text(
                             text = "points",
-                            style = AppTypography.body2Regular,
+                            style = AppTypography.text14Regular,
                             color = Grey500
                         )
                     },
@@ -186,7 +186,7 @@ fun MarkingDefaultsScreen(
                     placeholder = "0.25",
                     label = "Marks per wrong",
                     enabled = negativeMarking,
-                    labelStyle = AppTypography.body3Medium,
+                    labelStyle = AppTypography.text14Medium,
                     prefix = {
                         Row {
                             Box(
@@ -220,7 +220,7 @@ fun MarkingDefaultsScreen(
                     suffix = {
                         Text(
                             text = "points",
-                            style = AppTypography.body2Regular,
+                            style = AppTypography.text14Regular,
                             color = Grey500
                         )
                     },
@@ -235,7 +235,7 @@ fun MarkingDefaultsScreen(
         Column {
             Text(
                 text = "Negative marking",
-                style = AppTypography.body3Medium,
+                style = AppTypography.text14Medium,
                 color = Grey500,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
@@ -246,13 +246,13 @@ fun MarkingDefaultsScreen(
                     .clip(RoundedCornerShape(12.dp))
                     .background(White)
                     .border(1.dp, Grey200, RoundedCornerShape(12.dp))
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = if (negativeMarking) "On" else "Off",
-                    style = AppTypography.body2Medium,
+                    style = AppTypography.text15Medium,
                     color = Grey700
                 )
 

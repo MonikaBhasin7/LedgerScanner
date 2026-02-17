@@ -2,11 +2,13 @@ package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.s
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pages
@@ -126,7 +128,8 @@ fun BasicInfoScreen(
     Box {
         Column(
             modifier = modifier
-                .fillMaxSize()
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             GenericTextField(
                 label = "Exam Name",
@@ -136,71 +139,66 @@ fun BasicInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             GenericTextField(
                 label = "Description (optional)",
                 value = examDescription,
                 placeholder = "Short description or instructions",
                 onValueChange = { examDescription = it },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 120.dp),
+                    .fillMaxWidth(),
                 singleLine = false,
                 maxLines = 5,
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Box(modifier = Modifier.padding(top = 6.dp)) {
+                GenericTextField(
+                    label = "Exam to be conducted on which answer sheet",
+                    value = selectedTemplateName,
+                    placeholder = "No Sheet Selected",
+                    prefix = {
+                        Icon(
+                            imageVector = Icons.Default.Pages,
+                            contentDescription = null,
+                            tint = Grey500,
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false,
+                    onValueChange = {},
+                    onClick = { showSelectTemplate = true }
+                )
+            }
 
-            GenericTextField(
-                label = "Exam to be conducted on which answer sheet",
-                value = selectedTemplateName,
-                placeholder = "No Sheet Selected",
-                prefix = {
-                    Icon(
-                        imageVector = Icons.Default.Pages,
-                        contentDescription = null,
-                        tint = Grey500,
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = false,
-                onValueChange = {},
-                onClick = { showSelectTemplate = true }
-            )
+            Box(modifier = Modifier.padding(top = 6.dp)) {
+                GenericTextField(
+                    label = "Number of questions",
+                    value = numberOfQuestionsText,
+                    placeholder = "e.g., 50",
+                    prefix = { Text("# ", color = Grey500) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    onValueChange = { input ->
+                        val totalQues = selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
 
-            Spacer(modifier = Modifier.height(12.dp))
+                        // Allow only digits, strip leading zeros
+                        val filtered = input.filter { it.isDigit() }.trimStart('0')
 
-            GenericTextField(
-                label = "Number of questions",
-                value = numberOfQuestionsText,
-                placeholder = "e.g., 50",
-                prefix = { Text("# ", color = Grey500) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                onValueChange = { input ->
-                    val totalQues = selectedTemplate?.getTotalQuestions() ?: Int.MAX_VALUE
+                        if (filtered.isEmpty()) {
+                            numberOfQuestionsText = ""
+                            return@GenericTextField
+                        }
 
-                    // Allow only digits, strip leading zeros
-                    val filtered = input.filter { it.isDigit() }.trimStart('0')
+                        // Parse number safely
+                        val enteredValue = filtered.toIntOrNull() ?: return@GenericTextField
 
-                    if (filtered.isEmpty()) {
-                        numberOfQuestionsText = ""
-                        return@GenericTextField
-                    }
-
-                    // Parse number safely
-                    val enteredValue = filtered.toIntOrNull() ?: return@GenericTextField
-
-                    // Validate against total questions
-                    if (enteredValue in 1..totalQues) {
-                        numberOfQuestionsText = filtered
-                    }
-                },
-                readOnly = selectedTemplate == null,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
+                        // Validate against total questions
+                        if (enteredValue in 1..totalQues) {
+                            numberOfQuestionsText = filtered
+                        }
+                    },
+                    readOnly = selectedTemplate == null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
 
         if (showSelectTemplate) {
