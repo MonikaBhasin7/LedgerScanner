@@ -82,8 +82,12 @@ class CreateExamActivity : ComponentActivity() {
             BackHandler {
                 if (perStepState.first != ExamStep.BASIC_INFO) {
                     val prevStep = perStepState.first.prev()
-                    createExamViewModel.updateStepState(prevStep, OperationState.Idle)
-                    navController.popBackStack()
+                    val didPop = navController.popBackStack()
+                    if (!didPop) {
+                        navController.navigate(prevStep.title) {
+                            popUpTo(perStepState.first.title) { inclusive = true }
+                        }
+                    }
                 } else {
                     finish()
                 }
@@ -120,8 +124,12 @@ class CreateExamActivity : ComponentActivity() {
                     GenericToolbar(title = getToolbarTitle(), onBackClick = {
                         if (perStepState.first != ExamStep.BASIC_INFO) {
                             val prevStep = perStepState.first.prev()
-                            createExamViewModel.updateStepState(prevStep, OperationState.Idle)
-                            navController.popBackStack()
+                            val didPop = navController.popBackStack()
+                            if (!didPop) {
+                                navController.navigate(prevStep.title) {
+                                    popUpTo(perStepState.first.title) { inclusive = true }
+                                }
+                            }
                         } else {
                             finish()
                         }

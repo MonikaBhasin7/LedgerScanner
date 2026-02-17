@@ -130,6 +130,7 @@ import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamCon
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.DrawerItem
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamActionDialog
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.ExamActionConfirmationDialog
@@ -882,11 +883,17 @@ class ExamListingActivity : ComponentActivity() {
     ) {
         when (examAction) {
             ExamAction.ContinueSetup, ExamAction.EditExam -> {
+                val targetScreen = if (examEntity.status == ExamStatus.DRAFT) {
+                    resolveDraftTargetStep(examEntity)
+                } else {
+                    ExamStep.BASIC_INFO
+                }
                 context.startActivity(
                     Intent(context, CreateExamActivity::class.java).apply {
                         putExtra(
                             CreateExamActivity.CONFIG, CreateExamConfig(
                                 examEntity = examEntity,
+                                targetScreen = targetScreen,
                                 hasScannedSheets = hasScannedSheets
                             )
                         )
@@ -935,6 +942,23 @@ class ExamListingActivity : ComponentActivity() {
                 showDeleteDialog(examEntity)
             }
         }
+    }
+
+    private fun resolveDraftTargetStep(examEntity: ExamEntity): ExamStep {
+        if (examEntity.examName.isBlank() || examEntity.totalQuestions <= 0) {
+            return ExamStep.BASIC_INFO
+        }
+
+        val answerKey = examEntity.answerKey
+        if (answerKey == null || answerKey.size < examEntity.totalQuestions) {
+            return ExamStep.ANSWER_KEY
+        }
+
+        if (examEntity.marksPerCorrect == null || examEntity.marksPerCorrect <= 0f) {
+            return ExamStep.MARKING
+        }
+
+        return ExamStep.REVIEW
     }
 
 
