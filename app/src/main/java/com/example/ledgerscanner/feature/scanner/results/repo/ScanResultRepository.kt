@@ -135,6 +135,8 @@ class ScanResultRepository @Inject constructor(
             // Calculate median and pass rate
             val medianScore = calculateMedian(allResults.map { it.scorePercent })
             val passRate = (allResults.count { it.scorePercent >= 40f }.toFloat() / allResults.size) * 100
+            val firstScannedAt = allResults.minOfOrNull { it.scannedAt }
+            val lastScannedAt = allResults.maxOfOrNull { it.scannedAt }
 
             ExamStatistics(
                 avgScore = basicStats.avgScore,
@@ -144,6 +146,8 @@ class ScanResultRepository @Inject constructor(
                 totalCorrect = totalCorrect,
                 totalWrong = totalWrong,
                 totalUnanswered = totalUnanswered,
+                firstScannedAt = firstScannedAt,
+                lastScannedAt = lastScannedAt,
                 questionStats = questionStats,
                 scoreDistribution = scoreDistribution,
                 medianScore = medianScore,

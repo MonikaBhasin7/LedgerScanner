@@ -79,8 +79,10 @@ class OmrProcessor @Inject constructor() {
         onDebug: (String, Bitmap) -> Unit
     ): Boolean {
         var allAnchorsFound = true
+        // Defensive snapshot to avoid ConcurrentModificationException when UI thread updates overlay.
+        val overlaySnapshot = overlayRects.map { RectF(it) }
 
-        overlayRects.forEachIndexed { index, overlayRect ->
+        overlaySnapshot.forEachIndexed { index, overlayRect ->
             var roi: Mat? = null
 
             try {

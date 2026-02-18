@@ -179,12 +179,13 @@ private fun ToolbarIconAction(
             .clickable { onClick() }
             .clip(RoundedCornerShape(12.dp))
             .background(color = Blue100)
-            .padding(8.dp),
+            .padding(6.dp),
     ) {
         androidx.compose.material3.Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = Blue500
+            tint = Blue500,
+            modifier = Modifier.size(24.dp)
         )
     }
 }

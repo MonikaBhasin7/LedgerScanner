@@ -638,5 +638,5 @@ class OverlayView @JvmOverloads constructor(
 
     fun getPreviewRect(): RectF = RectF(previewRect)
 
-    fun getAnchorSquaresOnScreen(): List<RectF> = anchorsOnPreviewInRect
+    fun getAnchorSquaresOnScreen(): List<RectF> = anchorsOnPreviewInRect.map { RectF(it) }
 }

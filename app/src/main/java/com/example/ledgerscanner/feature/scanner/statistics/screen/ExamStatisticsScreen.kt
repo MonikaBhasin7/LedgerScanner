@@ -22,10 +22,10 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TrendingDown
@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -61,9 +62,7 @@ import com.example.ledgerscanner.base.ui.theme.Black
 import com.example.ledgerscanner.base.ui.theme.Blue100
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Green500
-import com.example.ledgerscanner.base.ui.theme.Grey100
 import com.example.ledgerscanner.base.ui.theme.Grey200
-import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey600
 import com.example.ledgerscanner.base.ui.theme.Grey700
 import com.example.ledgerscanner.base.ui.theme.Grey800
@@ -74,6 +73,9 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuestionStat
 import com.example.ledgerscanner.feature.scanner.statistics.viewModel.ExamStatisticsViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // ===========================================================================
 // 👤 Author: Monika Bhasin
@@ -95,7 +97,7 @@ fun ExamStatisticsScreen(
     }
 
     Scaffold(
-        containerColor = Grey100,
+        containerColor = Color(0xFFF4F7FB),
         topBar = {
             GenericToolbar(
                 title = "Exam Statistics",
@@ -128,23 +130,25 @@ fun ExamStatisticsScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(paddingValues),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Exam Header
                 item {
                     ExamHeader(
-                        examEntity.examName,
-                        examEntity.totalQuestions,
-                        statistics.sheetsCount
+                        title = examEntity.examName,
+                        totalQuestions = examEntity.totalQuestions,
+                        optionsPerQuestion = examEntity.template.options_per_question,
+                        sheetsCount = statistics.sheetsCount,
+                        firstScannedAt = statistics.firstScannedAt,
+                        lastScannedAt = statistics.lastScannedAt
                     )
                 }
-
                 // Stats Cards Row 1
                 item {
                     Row(
                         modifier = Modifier
+                            .padding(horizontal = 14.dp)
                             .fillMaxWidth()
                             .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -178,6 +182,7 @@ fun ExamStatisticsScreen(
                 item {
                     Row(
                         modifier = Modifier
+                            .padding(horizontal = 14.dp)
                             .fillMaxWidth()
                             .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -209,37 +214,49 @@ fun ExamStatisticsScreen(
 
                 // Score Distribution
                 item {
-                    ScoreDistributionCard(statistics.scoreDistribution)
+                    Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                        ScoreDistributionCard(statistics.scoreDistribution)
+                    }
                 }
 
                 // Detailed Breakdown
                 item {
-                    DetailedBreakdownCard(
-                        totalCorrect = statistics.totalCorrect,
-                        totalWrong = statistics.totalWrong,
-                        totalUnanswered = statistics.totalUnanswered
-                    )
+                    Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                        DetailedBreakdownCard(
+                            totalCorrect = statistics.totalCorrect,
+                            totalWrong = statistics.totalWrong,
+                            totalUnanswered = statistics.totalUnanswered
+                        )
+                    }
                 }
 
                 // Question Analysis
                 item {
-                    QuestionAnalysisCard(statistics.questionStats)
+                    Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                        QuestionAnalysisCard(statistics.questionStats)
+                    }
                 }
 
                 // Question Performance Heatmap
                 item {
-                    QuestionHeatmapCard(statistics.questionStats, examEntity.totalQuestions)
+                    Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                        QuestionHeatmapCard(statistics.questionStats, examEntity.totalQuestions)
+                    }
                 }
 
                 // Insights
                 item {
-                    InsightsCard(statistics)
+                    Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                        InsightsCard(statistics)
+                    }
                 }
 
                 // Action Buttons
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .padding(horizontal = 14.dp)
+                            .fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
@@ -266,52 +283,95 @@ fun ExamStatisticsScreen(
 }
 
 @Composable
-private fun ExamHeader(title: String, totalQuestions: Int, sheetsCount: Int) {
+private fun ExamHeader(
+    title: String,
+    totalQuestions: Int,
+    optionsPerQuestion: Int,
+    sheetsCount: Int,
+    firstScannedAt: Long?,
+    lastScannedAt: Long?
+) {
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Grey200, RoundedCornerShape(14.dp)),
-        shape = RoundedCornerShape(14.dp),
-        color = White
+            .fillMaxWidth(),
+        color = Color.Transparent
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFE5EEF8),
+                            Color(0xFFDCEAF8),
+                            Color(0xFFEFF5FC)
+                        )
+                    )
+                )
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Description,
-                contentDescription = null,
-                tint = Blue500,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EditNote,
+                    contentDescription = null,
+                    tint = Blue500,
+                    modifier = Modifier
+                        .size(24.dp)
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = title,
-                    style = AppTypography.text16SemiBold,
-                    color = Black
-                )
-                Text(
-                    text = "$totalQuestions questions",
-                    style = AppTypography.text13Regular,
-                    color = Grey600
+                    style = AppTypography.text18SemiBold,
+                    color = Color(0xFF0F1B2D)
                 )
             }
-            Surface(
-                color = Blue100,
-                shape = RoundedCornerShape(10.dp)
+
+            Text(
+                text = "$totalQuestions Questions • $optionsPerQuestion Options • OMR Analysis",
+                style = AppTypography.text14Regular,
+                color = Color(0xFF7D8FA6)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "$sheetsCount sheets",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = AppTypography.text12SemiBold,
-                    color = Blue500
+                    text = "Scanned: ${formatScannedDateRange(firstScannedAt, lastScannedAt)}",
+                    style = AppTypography.text14Regular,
+                    color = Color(0xFF7D8FA6)
                 )
+
+                Surface(
+                    color = Color(0xFF2F80ED),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = "$sheetsCount Sheets Analyzed",
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                        style = AppTypography.text14SemiBold,
+                        color = White
+                    )
+                }
             }
         }
     }
+}
+
+private fun formatScannedDateRange(firstScannedAt: Long?, lastScannedAt: Long?): String {
+    if (firstScannedAt == null || lastScannedAt == null) return "--"
+
+    val start = Date(firstScannedAt)
+    val end = Date(lastScannedAt)
+    val startMonthDay = SimpleDateFormat("MMM d", Locale.getDefault()).format(start)
+    val endMonthDayYear = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(end)
+    val sameDay = firstScannedAt == lastScannedAt
+
+    return if (sameDay) endMonthDayYear else "$startMonthDay - $endMonthDayYear"
 }
 
 @Composable
@@ -371,9 +431,12 @@ private fun StatCard(
 @Composable
 private fun ScoreDistributionCard(distribution: Map<String, Int>) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = White)
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Grey200, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -462,9 +525,12 @@ private fun DetailedBreakdownCard(
     totalUnanswered: Int
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = White)
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Grey200, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFCFDFF)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -535,9 +601,12 @@ private fun BreakdownRow(
 @Composable
 private fun QuestionAnalysisCard(questionStats: Map<Int, QuestionStat>) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = White)
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Grey200, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -562,8 +631,8 @@ private fun QuestionAnalysisCard(questionStats: Map<Int, QuestionStat>) {
 
             // Hardest Questions
             Surface(
-                color = Color(0xFFFCE4EC),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFFFFF2F4),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -602,8 +671,8 @@ private fun QuestionAnalysisCard(questionStats: Map<Int, QuestionStat>) {
 
             // Easiest Questions
             Surface(
-                color = Color(0xFFE8F5E9),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFFF1FAF2),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -684,9 +753,12 @@ private fun QuestionStatRow(
 @Composable
 private fun QuestionHeatmapCard(questionStats: Map<Int, QuestionStat>, totalQuestions: Int) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = White)
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Grey200, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFCF8)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -768,9 +840,12 @@ private fun LegendItem(bullet: String, color: Color, label: String) {
 @Composable
 private fun InsightsCard(statistics: ExamStatistics) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0xFFC9E4FF), RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

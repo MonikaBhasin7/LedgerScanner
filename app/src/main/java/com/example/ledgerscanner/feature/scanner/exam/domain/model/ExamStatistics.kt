@@ -18,6 +18,8 @@ data class ExamStatistics(
     val totalCorrect: Int = 0,
     val totalWrong: Int = 0,
     val totalUnanswered: Int = 0,
+    val firstScannedAt: Long? = null,
+    val lastScannedAt: Long? = null,
     val questionStats: Map<Int, QuestionStat> = emptyMap(),
     val scoreDistribution: Map<String, Int> = emptyMap()
 ) {
