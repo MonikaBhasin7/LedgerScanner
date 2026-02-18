@@ -13,6 +13,11 @@ enum class MemberRole {
     fun isAdmin() = this == ADMIN
 }
 
+enum class MemberGender {
+    MALE,
+    FEMALE
+}
+
 @Singleton
 class TokenStore @Inject constructor(
     @ApplicationContext private val context: Context
@@ -32,6 +37,7 @@ class TokenStore @Inject constructor(
             .putLong(KEY_INSTITUTE_ID, member.instituteId)
             .putString(KEY_MEMBER_NAME, member.name)
             .putString(KEY_MEMBER_PHONE, member.phoneNumber)
+            .putString(KEY_MEMBER_GENDER, member.gender)
             .putString(KEY_MEMBER_ROLE, member.role)
             .apply()
     }
@@ -48,6 +54,15 @@ class TokenStore @Inject constructor(
         return runCatching { MemberRole.valueOf(role.uppercase()) }.getOrNull()
     }
 
+    fun getMemberGender(): MemberGender? {
+        val gender = prefs.getString(KEY_MEMBER_GENDER, null) ?: return null
+        return when (gender.trim().uppercase()) {
+            "MALE", "M" -> MemberGender.MALE
+            "FEMALE", "F" -> MemberGender.FEMALE
+            else -> null
+        }
+    }
+
     fun clear() {
         prefs.edit().clear().apply()
     }
@@ -60,6 +75,7 @@ class TokenStore @Inject constructor(
         private const val KEY_INSTITUTE_ID = "institute_id"
         private const val KEY_MEMBER_NAME = "member_name"
         private const val KEY_MEMBER_PHONE = "member_phone"
+        private const val KEY_MEMBER_GENDER = "member_gender"
         private const val KEY_MEMBER_ROLE = "member_role"
     }
 }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,14 +27,14 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.ledgerscanner.auth.MemberRole
+import com.example.ledgerscanner.auth.MemberGender
 import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue100
@@ -65,6 +64,9 @@ fun ExamNavigationDrawerContent(
     val memberName = remember(tokenStore) { tokenStore.getMemberName() }
     val memberPhone = remember { tokenStore.getMemberPhone() }
     val memberRole = remember { tokenStore.getMemberRole() }
+    val memberGender = remember { tokenStore.getMemberGender() }
+    val initial = remember(memberName) { memberName?.trim()?.firstOrNull()?.uppercaseChar() ?: 'L' }
+    val avatarEmoji = remember(initial, memberGender) { avatarForInitial(initial, memberGender) }
     val sectionGap = 12.dp
     val itemGap = 4.dp
     Column(
@@ -87,14 +89,14 @@ fun ExamNavigationDrawerContent(
                 androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(White.copy(alpha = 0.18f)),
+                            .background(White.copy(alpha = 0.18f))
+                            .padding(4.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = (memberName ?: "L").take(1).uppercase(),
-                            style = AppTypography.text16Bold,
+                            text = avatarEmoji,
+                            style = AppTypography.text28Bold,
                             color = White
                         )
                     }
@@ -167,6 +169,29 @@ fun ExamNavigationDrawerContent(
             selected = selectedDestination == DrawerDestination.Logout,
             onClick = { onDestinationSelected(DrawerDestination.Logout) }
         )
+    }
+}
+
+private fun avatarForInitial(initial: Char, gender: MemberGender?): String {
+    val maleAvatars = mapOf(
+        'A' to "👨🏻", 'B' to "👨🏼", 'C' to "👨🏽", 'D' to "👨🏾", 'E' to "👨🏿",
+        'F' to "👨‍💼", 'G' to "👨‍💻", 'H' to "👨‍🎨", 'I' to "👨‍🔬", 'J' to "👨‍🚀",
+        'K' to "👨‍🍳", 'L' to "👨‍⚕️", 'M' to "👨‍🏫", 'N' to "👨‍🎓", 'O' to "👨‍⚖️",
+        'P' to "👨‍🚒", 'Q' to "👨‍✈️", 'R' to "👨‍🔧", 'S' to "👨‍🌾", 'T' to "👨‍🎤",
+        'U' to "👨‍🎸", 'V' to "👨‍🎭", 'W' to "👨‍🏭", 'X' to "👨‍💼", 'Y' to "👨‍💻",
+        'Z' to "👨‍🔬"
+    )
+    val femaleAvatars = mapOf(
+        'A' to "👩🏻", 'B' to "👩🏼", 'C' to "👩🏽", 'D' to "👩🏾", 'E' to "👩🏿",
+        'F' to "👩‍💼", 'G' to "👩‍💻", 'H' to "👩‍🎨", 'I' to "👩‍🔬", 'J' to "👩‍🚀",
+        'K' to "👩‍🍳", 'L' to "👩‍⚕️", 'M' to "👩‍🏫", 'N' to "👩‍🎓", 'O' to "👩‍⚖️",
+        'P' to "👩‍🚒", 'Q' to "👩‍✈️", 'R' to "👩‍🔧", 'S' to "👩‍🌾", 'T' to "👩‍🎤",
+        'U' to "👩‍🎸", 'V' to "👩‍🎭", 'W' to "👩‍🏭", 'X' to "👩‍💼", 'Y' to "👩‍💻",
+        'Z' to "👩‍🔬"
+    )
+    return when (gender) {
+        MemberGender.FEMALE -> femaleAvatars[initial] ?: "👩‍💼"
+        else -> maleAvatars[initial] ?: "👨‍💼"
     }
 }
 

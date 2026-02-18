@@ -34,6 +34,7 @@ data class MemberInfo(
     @SerializedName("id") val id: Long,
     @SerializedName("name") val name: String,
     @SerializedName("phoneNumber") val phoneNumber: String,
+    @SerializedName("gender") val gender: String? = null,
     @SerializedName("role") val role: String,
     @SerializedName("instituteId") val instituteId: Long
 )
