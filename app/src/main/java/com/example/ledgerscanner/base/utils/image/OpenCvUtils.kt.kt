@@ -12,6 +12,8 @@ import org.opencv.core.MatOfPoint2f
 import org.opencv.core.Point
 import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
+import kotlin.math.abs
+import kotlin.math.hypot
 
 object OpenCvUtils {
 
@@ -284,82 +286,162 @@ object OpenCvUtils {
      * Proper cleanup of ALL OpenCV Mats to prevent memory leaks.
      */
     fun detectAnchorInRoi(roiGray: Mat): Point? {
-        val bin = Mat()
-        val hierarchy = Mat()
-        val contours = mutableListOf<MatOfPoint>()
-
+        if (roiGray.empty()) return null
+        val blurred = Mat()
+        val binOtsu = Mat()
+        val binFixed = Mat()
+        val binAdaptive = Mat()
         try {
-            Imgproc.threshold(
+            Imgproc.GaussianBlur(
                 roiGray,
-                bin, 60.0,
+                blurred,
+                org.opencv.core.Size(3.0, 3.0),
+                0.0
+            )
+
+            Imgproc.threshold(
+                blurred,
+                binOtsu,
+                0.0,
+                255.0,
+                Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU
+            )
+            Imgproc.adaptiveThreshold(
+                blurred,
+                binAdaptive,
+                255.0,
+                Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
+                Imgproc.THRESH_BINARY_INV,
+                21,
+                6.0
+            )
+            val meanIntensity = org.opencv.core.Core.mean(blurred).`val`[0]
+            val fixedThreshold = (meanIntensity - 35.0).coerceIn(35.0, 145.0)
+            Imgproc.threshold(
+                blurred,
+                binFixed,
+                fixedThreshold,
                 255.0,
                 Imgproc.THRESH_BINARY_INV
             )
 
+            val roiW = roiGray.cols()
+            val roiH = roiGray.rows()
+            val fastCandidates = listOf(
+                findBestAnchorCandidate(binOtsu, roiW, roiH),
+                findBestAnchorCandidate(binFixed, roiW, roiH)
+            ).filterNotNull()
+            if (fastCandidates.isNotEmpty()) {
+                return fastCandidates.maxByOrNull { it.score }?.point
+            }
+
+            // Fallback only when fast thresholds fail on difficult lighting.
+            Imgproc.adaptiveThreshold(
+                blurred,
+                binAdaptive,
+                255.0,
+                Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
+                Imgproc.THRESH_BINARY_INV,
+                21,
+                6.0
+            )
+            return findBestAnchorCandidate(binAdaptive, roiW, roiH)?.point
+        } finally {
+            blurred.release()
+            binOtsu.release()
+            binFixed.release()
+            binAdaptive.release()
+        }
+    }
+
+    private data class AnchorCandidate(
+        val point: Point,
+        val score: Double
+    )
+
+    private fun findBestAnchorCandidate(binary: Mat, roiW: Int, roiH: Int): AnchorCandidate? {
+        val hierarchy = Mat()
+        val contours = mutableListOf<MatOfPoint>()
+        try {
             Imgproc.findContours(
-                bin,
+                binary,
                 contours,
                 hierarchy,
                 Imgproc.RETR_EXTERNAL,
                 Imgproc.CHAIN_APPROX_SIMPLE
             )
+            if (contours.isEmpty()) return null
 
-            val roiW = roiGray.cols()
-            val roiH = roiGray.rows()
-            val roiArea = (roiW * roiH).toDouble()
-            val minArea = 0.002 * roiArea
-            val maxArea = 0.25 * roiArea
+            val roiArea = (roiW * roiH).toDouble().coerceAtLeast(1.0)
+            val minArea = 0.0015 * roiArea
+            val maxArea = 0.35 * roiArea
+            val roiCenterX = roiW / 2.0
+            val roiCenterY = roiH / 2.0
+            val maxDist = hypot(roiCenterX, roiCenterY).coerceAtLeast(1.0)
 
-            for (c in contours) {
-                // Create and release temp mats in each iteration
-                val mp2f = MatOfPoint2f(*c.toArray())
+            var best: AnchorCandidate? = null
+            contours.forEach { contour ->
+                val mp2f = MatOfPoint2f(*contour.toArray())
                 val peri = Imgproc.arcLength(mp2f, true)
+                if (peri <= 1e-6) {
+                    mp2f.release()
+                    return@forEach
+                }
                 val approx = MatOfPoint2f()
-                Imgproc.approxPolyDP(mp2f, approx, 0.04 * peri, true)
-                mp2f.release() // Release immediately after use
-
+                Imgproc.approxPolyDP(mp2f, approx, 0.035 * peri, true)
+                mp2f.release()
                 if (approx.total() != 4L) {
                     approx.release()
-                    continue
+                    return@forEach
                 }
 
                 val approxMP = MatOfPoint(*approx.toArray())
-                approx.release() // Release approx — data copied to approxMP
-
+                approx.release()
                 if (!Imgproc.isContourConvex(approxMP)) {
                     approxMP.release()
-                    continue
+                    return@forEach
                 }
 
                 val rect = Imgproc.boundingRect(approxMP)
-                val aspect = rect.width.toDouble() / rect.height.toDouble()
                 val area = Imgproc.contourArea(approxMP)
+                val aspect = rect.width.toDouble() / rect.height.toDouble().coerceAtLeast(1.0)
                 val rectArea = (rect.width * rect.height).toDouble().coerceAtLeast(1.0)
                 val solidity = area / rectArea
-
                 val peri2Mp = MatOfPoint2f(*approxMP.toArray())
                 val peri2 = Imgproc.arcLength(peri2Mp, true)
                 peri2Mp.release()
+                val circularity = if (peri2 > 1e-6) 4.0 * Math.PI * area / (peri2 * peri2) else 0.0
 
-                val circularity =
-                    if (peri2 > 1e-6) 4.0 * Math.PI * area / (peri2 * peri2) else 0.0
+                val areaRatio = area / roiArea
+                val aspectScore = (1.0 - abs(1.0 - aspect)).coerceIn(0.0, 1.0)
+                val areaScore = (1.0 - abs(areaRatio - 0.025) / 0.025).coerceIn(0.0, 1.0)
+                val centerX = rect.x + rect.width / 2.0
+                val centerY = rect.y + rect.height / 2.0
+                val dist = hypot(centerX - roiCenterX, centerY - roiCenterY)
+                val centerScore = (1.0 - dist / maxDist).coerceIn(0.0, 1.0)
 
-                if (aspect in 0.8..1.25 && solidity > 0.70 && area in minArea..maxArea && circularity < 0.85) {
-                    val cx = rect.x + rect.width / 2.0
-                    val cy = rect.y + rect.height / 2.0
+                val passesShape = aspect in 0.70..1.35 &&
+                        solidity > 0.60 &&
+                        area in minArea..maxArea &&
+                        circularity < 0.93
+                if (!passesShape) {
                     approxMP.release()
-                    return Point(cx, cy)
+                    return@forEach
                 }
 
+                val score = (aspectScore * 0.35) +
+                        (solidity.coerceIn(0.0, 1.0) * 0.25) +
+                        (areaScore * 0.25) +
+                        (centerScore * 0.15)
+
+                if (best == null || score > best!!.score) {
+                    best = AnchorCandidate(Point(centerX, centerY), score)
+                }
                 approxMP.release()
             }
-
-            return null
-
+            return best
         } finally {
-            bin.release()
             hierarchy.release()
-            // Contour Mats are managed by OpenCV findContours — no explicit release needed
         }
     }
 }

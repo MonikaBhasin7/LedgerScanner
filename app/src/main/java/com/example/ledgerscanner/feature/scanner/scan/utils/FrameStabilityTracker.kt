@@ -16,7 +16,7 @@ class FrameStabilityTracker @Inject constructor() {
 
     companion object {
         /** Number of consecutive stable frames required (~300ms at 20fps) */
-        const val REQUIRED_STABLE_FRAMES = 7
+        const val REQUIRED_STABLE_FRAMES = 5
 
         /** Max allowed per-anchor movement in pixels between consecutive frames */
         const val MOVEMENT_THRESHOLD_PX = 5.0

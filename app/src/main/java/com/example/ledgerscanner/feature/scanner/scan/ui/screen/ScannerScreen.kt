@@ -16,19 +16,34 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -39,15 +54,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.view.doOnLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -62,6 +81,7 @@ import com.example.ledgerscanner.base.ui.theme.AppTypography
 import com.example.ledgerscanner.base.ui.theme.Blue500
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
+import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.image.ImageUtils
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
@@ -79,6 +99,7 @@ import java.util.concurrent.atomic.AtomicLong
 private const val CORNER_RADIUS_DP = 12
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ScannerScreen(
     navController: NavHostController,
     examEntity: ExamEntity,
@@ -116,6 +137,7 @@ fun ScannerScreen(
     }
 
     CameraViewOrPermissionCard(
+        modifier = Modifier.fillMaxSize(),
         context = context,
         lifecycleOwner = lifecycleOwner,
         omrScannerViewModel = omrScannerViewModel,
@@ -145,6 +167,7 @@ fun ScannerScreen(
 
 @Composable
 private fun CameraViewOrPermissionCard(
+    modifier: Modifier = Modifier,
     context: Context,
     lifecycleOwner: LifecycleOwner,
     omrScannerViewModel: OmrScannerViewModel,
@@ -157,6 +180,14 @@ private fun CameraViewOrPermissionCard(
     onResumeCooldown: (Long) -> Unit,
     onPermissionRequest: () -> Unit,
 ) {
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val safeInsets = WindowInsets.safeDrawing
+    val safeLeftPx = safeInsets.getLeft(density, layoutDirection)
+    val safeTopPx = safeInsets.getTop(density)
+    val safeRightPx = safeInsets.getRight(density, layoutDirection)
+    val safeBottomPx = safeInsets.getBottom(density)
+
     val brightnessQuality by omrScannerViewModel.brightnessQuality.collectAsState()
     val cameraRef = remember {
         java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>(null)
@@ -186,7 +217,7 @@ private fun CameraViewOrPermissionCard(
 
     when (cameraPermissionStatus) {
         PermissionStatus.PermissionGranted -> {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = modifier.fillMaxSize()) {
                 CameraPreview(
                     context = context,
                     lifecycleOwner = lifecycleOwner,
@@ -197,7 +228,11 @@ private fun CameraViewOrPermissionCard(
                     onScanError = onScanError,
                     cooldownUntilMs = cooldownUntilMs,
                     onResumeCooldown = onResumeCooldown,
-                    cameraRef = cameraRef
+                    cameraRef = cameraRef,
+                    safeLeftPx = safeLeftPx,
+                    safeTopPx = safeTopPx,
+                    safeRightPx = safeRightPx,
+                    safeBottomPx = safeBottomPx
                 )
 
                 // Overlay brightness quality indicator
@@ -206,7 +241,12 @@ private fun CameraViewOrPermissionCard(
                         report = report,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(top = 80.dp)
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(
+                                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                                )
+                            )
+                            .padding(top = 112.dp)
                     )
                 }
 
@@ -223,13 +263,21 @@ private fun CameraViewOrPermissionCard(
                     },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 16.dp, end = 16.dp)
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Top + WindowInsetsSides.End
+                            )
+                        )
+                        .padding(top = 112.dp, end = 12.dp)
                 )
             }
         }
 
         else -> {
-            PermissionPlaceholderCard(onEnableClick = onPermissionRequest)
+            PermissionPlaceholderCard(
+                modifier = modifier,
+                onEnableClick = onPermissionRequest
+            )
         }
     }
 }
@@ -245,7 +293,11 @@ private fun CameraPreview(
     onScanError: (String) -> Unit,
     cooldownUntilMs: Long,
     onResumeCooldown: (Long) -> Unit,
-    cameraRef: java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>
+    cameraRef: java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>,
+    safeLeftPx: Int,
+    safeTopPx: Int,
+    safeRightPx: Int,
+    safeBottomPx: Int
 ) {
     val scope = rememberCoroutineScope()
 
@@ -309,7 +361,11 @@ private fun CameraPreview(
                 isCapturing = isCapturing,
                 cooldownRef = cooldownRef,
                 onScanError = onScanError,
-                cameraRef = cameraRef
+                cameraRef = cameraRef,
+                safeLeftPx = safeLeftPx,
+                safeTopPx = safeTopPx,
+                safeRightPx = safeRightPx,
+                safeBottomPx = safeBottomPx
             )
         }
     )
@@ -328,7 +384,11 @@ private fun createCameraContainer(
     isCapturing: AtomicBoolean,
     cooldownRef: AtomicLong,
     onScanError: (String) -> Unit,
-    cameraRef: java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>
+    cameraRef: java.util.concurrent.atomic.AtomicReference<androidx.camera.core.Camera?>,
+    safeLeftPx: Int,
+    safeTopPx: Int,
+    safeRightPx: Int,
+    safeBottomPx: Int
 ): FrameLayout {
     val container = FrameLayout(context)
 
@@ -358,6 +418,21 @@ private fun createCameraContainer(
             FrameLayout.LayoutParams.MATCH_PARENT
         )
     )
+
+    // Primary source: Compose safeDrawing insets (works reliably in Compose hierarchy)
+    overlay.setSafeInsets(safeLeftPx, safeTopPx, safeRightPx, safeBottomPx)
+
+    // Fallback source: Android view insets from container
+    ViewCompat.setOnApplyWindowInsetsListener(container) { _, insets ->
+        val bars = insets.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        )
+        if (bars.left != 0 || bars.top != 0 || bars.right != 0 || bars.bottom != 0) {
+            overlay.setSafeInsets(bars.left, bars.top, bars.right, bars.bottom)
+        }
+        insets
+    }
+    ViewCompat.requestApplyInsets(container)
 
     // Set default preview rect after first layout
     container.doOnLayout {
@@ -413,7 +488,7 @@ private fun setupImageAnalysis(
     val analysisUseCase = ImageAnalysis.Builder()
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
-        .setTargetResolution(android.util.Size(1920, 1080))
+        .setTargetResolution(android.util.Size(1280, 720))
         .build()
 
     analysisUseCase.setAnalyzer(cameraExecutor) { imageProxy ->
@@ -450,19 +525,21 @@ private fun setupImageAnalysis(
                     examEntity,
                     overlay.getAnchorSquaresOnScreen(),
                     previewBounds = overlay.getPreviewRect(),
-                    debug = com.example.ledgerscanner.BuildConfig.ENABLE_IMAGE_LOGS,
+                    debug = false,
                     onAnchorsDetected = {
                         // Update overlay with detected anchors
-                        overlay.setDetectedAnchors(it)
+                        overlay.post { overlay.setDetectedAnchors(it) }
                     },
                     onStabilityUpdate = { stability ->
-                        overlay.setStabilityProgress(
-                            stability.stableFrameCount,
-                            stability.requiredFrames
-                        )
+                        overlay.post {
+                            overlay.setStabilityProgress(
+                                stability.stableFrameCount,
+                                stability.requiredFrames
+                            )
+                        }
                     },
                     onGeometryUpdate = { geometry ->
-                        overlay.setGeometryRejected(!geometry.isValid)
+                        overlay.post { overlay.setGeometryRejected(!geometry.isValid) }
                     },
                     onBrightnessUpdate = { level ->
                         val lightingQuality = when (level) {
@@ -482,7 +559,7 @@ private fun setupImageAnalysis(
                             }
                             else -> OverlayView.LightingQuality.GOOD
                         }
-                        overlay.setLightingQuality(lightingQuality)
+                        overlay.post { overlay.setLightingQuality(lightingQuality) }
                     }
                 )
                 when (scanResult) {
@@ -576,10 +653,13 @@ private fun TorchToggleButton(
 }
 
 @Composable
-private fun PermissionPlaceholderCard(onEnableClick: () -> Unit) {
+private fun PermissionPlaceholderCard(
+    modifier: Modifier = Modifier,
+    onEnableClick: () -> Unit
+) {
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(
                 color = Grey200,

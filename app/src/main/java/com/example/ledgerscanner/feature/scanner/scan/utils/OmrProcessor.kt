@@ -75,6 +75,7 @@ class OmrProcessor @Inject constructor() {
         previewRect: RectF,
         gray: Mat,
         centersOut: MutableList<AnchorPoint>,
+        enableDebug: Boolean = false,
         onDebug: (String, Bitmap) -> Unit
     ): Boolean {
         var allAnchorsFound = true
@@ -93,7 +94,9 @@ class OmrProcessor @Inject constructor() {
                 // Extract region of interest
                 roi = Mat(gray, matRect)
 
-                onDebug("roi_anchor_$index", roi.toBitmapSafe())
+                if (enableDebug) {
+                    onDebug("roi_anchor_$index", roi.toBitmapSafe())
+                }
 
                 // Detect anchor in ROI
                 val anchorInRoi = OpenCvUtils.detectAnchorInRoi(roi)

@@ -115,7 +115,7 @@ class OmrScannerViewModel @Inject constructor(
             // Step 2.5: CHECK BRIGHTNESS QUALITY (NEW)
             val brightnessReport = imageQualityChecker.checkBrightness(
                 processingContext.grayMat!!,
-                analyzeHistogram = true
+                analyzeHistogram = false
             )
             _brightnessQuality.value = brightnessReport
             onBrightnessUpdate(brightnessReport.brightnessCheck.level)
@@ -352,6 +352,7 @@ class OmrScannerViewModel @Inject constructor(
             previewRect = previewRect,
             gray = grayMat,
             centersOut = centersInBuffer,
+            enableDebug = debug,
             onDebug = { key, image ->
                 debugBitmaps[key] = image
             }

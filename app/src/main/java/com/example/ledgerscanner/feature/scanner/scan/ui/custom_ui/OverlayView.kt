@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import com.example.ledgerscanner.feature.scanner.scan.model.AnchorPoint
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import kotlin.math.abs
@@ -16,9 +17,9 @@ class OverlayView @JvmOverloads constructor(
 
     companion object {
         const val TAG = "OverlayView"
-        private const val ANCHOR_SIZE = 130f
-        private const val CORNER_BRACKET_LENGTH = 80f
-        private const val CORNER_BRACKET_WIDTH = 6f
+        private const val ANCHOR_SIZE = 150f
+        private const val CORNER_BRACKET_LENGTH = 72f
+        private const val CORNER_BRACKET_WIDTH = 5f
     }
 
     // Template data
@@ -38,6 +39,10 @@ class OverlayView @JvmOverloads constructor(
     private var lightingQuality: LightingQuality = LightingQuality.GOOD
     private var isCapturing = false
     private var captureCountdown = 0
+    private var safeInsetLeft = 0
+    private var safeInsetTop = 0
+    private var safeInsetRight = 0
+    private var safeInsetBottom = 0
 
     // Stability tracking
     private var stabilityFrameCount = 0
@@ -46,12 +51,13 @@ class OverlayView @JvmOverloads constructor(
     // Animation
     private var pulseProgress = 0f
     private val pulseSpeed = 0.05f
+    private var topScrimShader: LinearGradient? = null
 
     // Paints - Expected Anchors (Hollow)
     private val expectedAnchorStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 4f
-        color = Color.WHITE
+        strokeWidth = 3f
+        color = Color.parseColor("#B3FFFFFF")
     }
 
     // Paints - Detected Anchors (Filled)
@@ -65,14 +71,14 @@ class OverlayView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = CORNER_BRACKET_WIDTH
         strokeCap = Paint.Cap.ROUND
-        color = Color.WHITE
+        color = Color.parseColor("#E6FFFFFF")
     }
 
     // Paints - Frame Border
     private val frameBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 4f
-        color = Color.WHITE
+        strokeWidth = 3f
+        color = Color.parseColor("#CCFFFFFF")
     }
 
     // Paints - Connection Lines
@@ -89,31 +95,53 @@ class OverlayView @JvmOverloads constructor(
         color = Color.parseColor("#4CAF50")
     }
 
-    // Paints - Status Text
-    private val statusTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 48f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.CENTER
-        setShadowLayer(8f, 0f, 0f, Color.BLACK)
+    private val topScrimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
     }
 
-    // Paints - Template Info
+    private val statusCardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#CC101418")
+    }
+
+    private val statusCardBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        color = Color.parseColor("#40FFFFFF")
+    }
+
+    private val statusCountChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#4CAF50")
+    }
+
+    // Paints - Status Text
+    private val statusMessagePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 34f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.LEFT
+    }
+
+    private val statusCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 28f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val hintTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 26f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        textAlign = Paint.Align.LEFT
+    }
+
     private val templateInfoPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 32f
+        textSize = 30f
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         textAlign = Paint.Align.CENTER
-        setShadowLayer(6f, 0f, 0f, Color.BLACK)
-    }
-
-    // Paints - Guidance Text
-    private val guidanceTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 36f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.CENTER
-        setShadowLayer(6f, 0f, 0f, Color.BLACK)
     }
 
     // Paints - Countdown
@@ -133,11 +161,35 @@ class OverlayView @JvmOverloads constructor(
     }
 
     // Paints - Lighting Indicator
-    private val lightingIconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW
-        textSize = 48f
-        textAlign = Paint.Align.CENTER
-        setShadowLayer(6f, 0f, 0f, Color.BLACK)
+    private val lightingTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#FFE082")
+        textSize = 24f
+        textAlign = Paint.Align.LEFT
+    }
+
+    private val lightingChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#CC3E2F11")
+    }
+
+    private val stabilityTrackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#40FFFFFF")
+    }
+
+    private val stabilityFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#4CAF50")
+    }
+
+    private val detectedAnchorGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#4CAF50")
+    }
+
+    private val detectedAnchorCenterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.WHITE
     }
 
     enum class AlignmentQuality(val color: Int, val message: String) {
@@ -165,6 +217,14 @@ class OverlayView @JvmOverloads constructor(
 
     fun setPreviewRect(rect: RectF) {
         previewRect.set(rect)
+        invalidate()
+    }
+
+    fun setSafeInsets(left: Int, top: Int, right: Int, bottom: Int) {
+        safeInsetLeft = left
+        safeInsetTop = top
+        safeInsetRight = right
+        safeInsetBottom = bottom
         invalidate()
     }
 
@@ -291,6 +351,15 @@ class OverlayView @JvmOverloads constructor(
         if (previewRect.width() <= 0f || previewRect.height() <= 0f) {
             previewRect.set(0f, 0f, w.toFloat(), h.toFloat())
         }
+        topScrimShader = LinearGradient(
+            0f,
+            0f,
+            0f,
+            h * 0.35f,
+            Color.parseColor("#AA000000"),
+            Color.TRANSPARENT,
+            Shader.TileMode.CLAMP
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -302,6 +371,9 @@ class OverlayView @JvmOverloads constructor(
         // Update pulse animation
         pulseProgress += pulseSpeed
         if (pulseProgress > 1f) pulseProgress = 0f
+
+        // Soft top scrim for status readability
+        drawTopScrim(canvas)
 
         // 1. Draw template info at top
 //        drawTemplateInfo(canvas)
@@ -332,7 +404,7 @@ class OverlayView @JvmOverloads constructor(
         drawStabilityProgressBar(canvas)
 
         // 8. Draw guidance hints
-//        drawGuidanceHints(canvas)
+        drawGuidanceHints(canvas)
 
         // 9. Draw lighting indicator if needed
         if (lightingQuality != LightingQuality.GOOD) {
@@ -352,6 +424,11 @@ class OverlayView @JvmOverloads constructor(
         if (hasActiveAnimation) {
             postInvalidateOnAnimation()
         }
+    }
+
+    private fun drawTopScrim(canvas: Canvas) {
+        topScrimPaint.shader = topScrimShader
+        canvas.drawRect(0f, 0f, width.toFloat(), height * 0.35f, topScrimPaint)
     }
 
     private fun calculateExpectedAnchorPositions() {
@@ -429,21 +506,14 @@ class OverlayView @JvmOverloads constructor(
             val pulseFactor = 1f + (pulseProgress * 0.3f)
             val radius = 20f * pulseFactor
 
-            // Glow effect (outer circle)
-            val glowPaint = Paint(detectedAnchorFillPaint).apply {
-                alpha = (100 * (1f - pulseProgress)).toInt().coerceIn(0, 255)
-            }
-            canvas.drawCircle(rect.centerX(), rect.centerY(), radius + 10f, glowPaint)
+            detectedAnchorGlowPaint.alpha = (90 * (1f - pulseProgress)).toInt().coerceIn(0, 255)
+            canvas.drawCircle(rect.centerX(), rect.centerY(), radius + 10f, detectedAnchorGlowPaint)
 
             // Main circle
             canvas.drawCircle(rect.centerX(), rect.centerY(), radius, detectedAnchorFillPaint)
 
             // Inner white dot
-            val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                style = Paint.Style.FILL
-                color = Color.WHITE
-            }
-            canvas.drawCircle(rect.centerX(), rect.centerY(), 6f, innerPaint)
+            canvas.drawCircle(rect.centerX(), rect.centerY(), 6f, detectedAnchorCenterPaint)
         }
     }
 
@@ -461,43 +531,70 @@ class OverlayView @JvmOverloads constructor(
     }
 
     private fun drawStatusMessage(canvas: Canvas) {
-        statusTextPaint.color = alignmentQuality.color
+        val cardHeight = 94f
+        val horizontalMargin = 20f
+        val cardTop = safeInsetTop + 16f
+        val cardBottom = cardTop + cardHeight
+        val cardLeft = safeInsetLeft + horizontalMargin
+        val cardRight = width.toFloat() - safeInsetRight - horizontalMargin
+        val cardRect = RectF(cardLeft, cardTop, cardRight, cardBottom)
+        val radius = 26f
+
+        canvas.drawRoundRect(cardRect, radius, radius, statusCardPaint)
+        statusCardBorderPaint.color = ColorUtils.setAlphaComponent(alignmentQuality.color, 170)
+        canvas.drawRoundRect(cardRect, radius, radius, statusCardBorderPaint)
+
+        val countChipRadius = 24f
+        val chipCx = cardRight - 44f
+        val chipCy = cardRect.centerY()
+        statusCountChipPaint.color = ColorUtils.setAlphaComponent(alignmentQuality.color, 230)
+        canvas.drawCircle(chipCx, chipCy, countChipRadius, statusCountChipPaint)
+        canvas.drawText("${detectedAnchors?.size ?: 0}/4", chipCx, chipCy + 9f, statusCountPaint)
+
         val message = if (alignmentQuality == AlignmentQuality.STABILIZING) {
-            "${detectedAnchors?.size ?: 0}/4 • Hold steady... $stabilityFrameCount/$stabilityRequiredFrames"
+            "Hold steady ($stabilityFrameCount/$stabilityRequiredFrames)"
         } else {
-            "${detectedAnchors?.size ?: 0}/4 • ${alignmentQuality.message}"
+            alignmentQuality.message
         }
-        canvas.drawText(message, previewRect.centerX(), previewRect.top + 130f, statusTextPaint)
+        statusMessagePaint.color = Color.WHITE
+        statusMessagePaint.textAlign = Paint.Align.CENTER
+        val messageCenterX = (cardLeft + chipCx - countChipRadius - 10f) / 2f
+        canvas.drawText(message, messageCenterX, chipCy + 11f, statusMessagePaint)
+        statusMessagePaint.textAlign = Paint.Align.LEFT
     }
 
     private fun drawGuidanceHints(canvas: Canvas) {
-        val hints = mutableListOf<String>()
-
-        when (alignmentQuality) {
-            AlignmentQuality.NONE -> hints.add("Position sheet in frame")
-            AlignmentQuality.POOR -> hints.add("Include all 4 corners")
-            AlignmentQuality.PARTIAL -> hints.add("Adjust angle slightly")
-            else -> {}
+        val hint = when (alignmentQuality) {
+            AlignmentQuality.NONE -> "Move camera until all four corner boxes are visible."
+            AlignmentQuality.POOR -> "Keep sheet flat and include all corners in frame."
+            AlignmentQuality.PARTIAL -> "Almost done. Tilt less and center the sheet."
+            AlignmentQuality.SHEET_CURVED -> "Sheet is bent. Press it flat on a surface."
+            else -> null
         }
-
-        // Draw hints
-        var yPos = previewRect.bottom - 80f
-        hints.forEach { hint ->
-            canvas.drawText(hint, previewRect.centerX(), yPos, guidanceTextPaint)
-            yPos -= 50f
+        if (hint != null) {
+            val x = safeInsetLeft + 24f
+            val y = height.toFloat() - safeInsetBottom - 32f
+            canvas.drawText(hint, x, y, hintTextPaint)
         }
     }
 
     private fun drawLightingIndicator(canvas: Canvas) {
-        val icon = when (lightingQuality) {
-            LightingQuality.TOO_DARK -> "🌙 Too dark"
-            LightingQuality.TOO_BRIGHT -> "☀️ Too bright"
-            LightingQuality.GLARE -> "✨ Glare detected"
+        val message = when (lightingQuality) {
+            LightingQuality.TOO_DARK -> "Low light. Move to brighter area."
+            LightingQuality.TOO_BRIGHT -> "Too bright. Reduce direct light."
+            LightingQuality.GLARE -> "Glare found. Change angle slightly."
             else -> return
         }
 
-        lightingIconPaint.color = Color.YELLOW
-        canvas.drawText(icon, previewRect.centerX(), previewRect.top + 200f, lightingIconPaint)
+        val textWidth = lightingTextPaint.measureText(message)
+        val chipPadding = 18f
+        val chipTop = safeInsetTop + 128f
+        val chipBottom = chipTop + 46f
+        val centerX = width / 2f
+        val chipLeft = centerX - (textWidth / 2f) - chipPadding
+        val chipRight = centerX + (textWidth / 2f) + chipPadding
+        canvas.drawRoundRect(chipLeft, chipTop, chipRight, chipBottom, 20f, 20f, lightingChipPaint)
+        canvas.drawText(message, chipLeft + chipPadding, chipBottom - 14f, lightingTextPaint)
     }
 
     private fun drawCountdown(canvas: Canvas) {
@@ -526,26 +623,17 @@ class OverlayView @JvmOverloads constructor(
     private fun drawStabilityProgressBar(canvas: Canvas) {
         if (alignmentQuality != AlignmentQuality.STABILIZING) return
 
-        val barWidth = previewRect.width() * 0.5f
-        val barHeight = 8f
-        val barX = previewRect.centerX() - barWidth / 2
-        val barY = previewRect.top + 150f
+        val barWidth = width * 0.45f
+        val barHeight = 10f
+        val barX = (width / 2f) - barWidth / 2
+        val barY = safeInsetTop + 126f
 
-        // Background bar
-        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = Color.parseColor("#40FFFFFF")
-        }
-        canvas.drawRoundRect(barX, barY, barX + barWidth, barY + barHeight, 4f, 4f, bgPaint)
+        canvas.drawRoundRect(barX, barY, barX + barWidth, barY + barHeight, 6f, 6f, stabilityTrackPaint)
 
         // Progress fill
         val progress = stabilityFrameCount.toFloat() / stabilityRequiredFrames.toFloat()
         val fillWidth = barWidth * progress.coerceIn(0f, 1f)
-        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = Color.parseColor("#4CAF50")
-        }
-        canvas.drawRoundRect(barX, barY, barX + fillWidth, barY + barHeight, 4f, 4f, fillPaint)
+        canvas.drawRoundRect(barX, barY, barX + fillWidth, barY + barHeight, 6f, 6f, stabilityFillPaint)
     }
 
     fun getPreviewRect(): RectF = RectF(previewRect)
