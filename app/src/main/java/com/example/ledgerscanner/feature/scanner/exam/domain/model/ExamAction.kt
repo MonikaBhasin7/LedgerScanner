@@ -50,5 +50,6 @@ data class ExamActionPopupConfig(
 data class QuickActionButton(
     val action: ExamAction,
     val style: ButtonType = ButtonType.PRIMARY,
-    val secondaryAction: ExamAction? = null // For split buttons
+    val secondaryAction: ExamAction? = null, // For split buttons
+    val tertiaryAction: ExamAction? = null
 )

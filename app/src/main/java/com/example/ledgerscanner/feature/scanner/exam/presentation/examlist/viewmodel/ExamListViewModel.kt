@@ -159,8 +159,6 @@ class ExamListViewModel @Inject constructor(
 
             ExamStatus.ACTIVE -> ExamActionPopupConfig(
                 menuItems = buildList {
-                    add(ExamAction.ViewResults)
-                    add(ExamAction.ViewReport)
                     add(ExamAction.MarkCompleted)
                     add(ExamAction.EditExam)
                     add(ExamAction.Duplicate)
@@ -169,7 +167,8 @@ class ExamListViewModel @Inject constructor(
                 quickAction = QuickActionButton(
                     action = ExamAction.ScanSheets,
                     style = ButtonType.PRIMARY,
-                    secondaryAction = if (hasScannedSheets) ExamAction.ViewResults else null
+                    secondaryAction = if (hasScannedSheets) ExamAction.ViewResults else null,
+                    tertiaryAction = if (hasScannedSheets) ExamAction.ViewReport else null
                 ),
             )
 

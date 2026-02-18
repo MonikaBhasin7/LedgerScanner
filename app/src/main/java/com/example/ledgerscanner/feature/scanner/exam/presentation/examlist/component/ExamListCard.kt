@@ -556,6 +556,45 @@ fun ExamQuickActionButton(
 ) {
     if (config == null) return
 
+    if (config.tertiaryAction != null) {
+        val secondaryAction = config.secondaryAction ?: return
+        Column(
+            modifier = modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GenericButton(
+                    text = primaryLabelOverride ?: config.action.label,
+                    type = config.style,
+                    size = ButtonSize.SMALL,
+                    icon = config.action.icon,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onClick(config.action) }
+                )
+                GenericButton(
+                    text = secondaryAction.label,
+                    type = ButtonType.SECONDARY,
+                    size = ButtonSize.SMALL,
+                    icon = secondaryAction.icon,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onClick(secondaryAction) }
+                )
+            }
+            GenericButton(
+                text = config.tertiaryAction.label,
+                type = ButtonType.SECONDARY,
+                size = ButtonSize.SMALL,
+                icon = config.tertiaryAction.icon,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onClick(config.tertiaryAction) }
+            )
+        }
+        return
+    }
+
     // Completed exam matches the reference: main outlined button + compact icon action
     if (config.style == ButtonType.SECONDARY && config.secondaryAction != null) {
         Row(
