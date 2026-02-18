@@ -71,6 +71,7 @@ import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuestionStat
 import com.example.ledgerscanner.feature.scanner.statistics.viewModel.ExamStatisticsViewModel
 
@@ -387,58 +388,67 @@ private fun ScoreDistributionCard(distribution: Map<String, Int>) {
             )
             Spacer(Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                val ranges = listOf("0-25", "26-50", "51-75", "76-100")
-                val colors = listOf(
-                    Color(0xFFF44336),
-                    Color(0xFFFF9800),
-                    Color(0xFFFFEB3B),
-                    Color(0xFF4CAF50)
+            val totalSheets = distribution.values.sum()
+            if (totalSheets == 0) {
+                Text(
+                    text = "No score distribution data yet.",
+                    style = AppTypography.text13Regular,
+                    color = Grey600
                 )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    val ranges = listOf("0-25", "26-50", "51-75", "76-100")
+                    val colors = listOf(
+                        Color(0xFFF44336),
+                        Color(0xFFFF9800),
+                        Color(0xFFFFEB3B),
+                        Color(0xFF4CAF50)
+                    )
 
-                ranges.forEachIndexed { index, range ->
-                    val count = distribution[range] ?: 0
-                    val maxCount = distribution.values.maxOrNull() ?: 1
-                    val heightFraction = if (maxCount > 0) count.toFloat() / maxCount else 0f
+                    ranges.forEachIndexed { index, range ->
+                        val count = distribution[range] ?: 0
+                        val maxCount = distribution.values.maxOrNull() ?: 1
+                        val heightFraction = if (maxCount > 0) count.toFloat() / maxCount else 0f
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = count.toString(),
-                            style = AppTypography.text16SemiBold,
-                            color = Black
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(48.dp)
-                                .height((120 * heightFraction).dp.coerceAtLeast(20.dp))
-                                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                                .background(colors[index])
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = count.toString(),
+                                style = AppTypography.text16SemiBold,
+                                color = Black
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .width(48.dp)
+                                    .height((120 * heightFraction).dp.coerceAtLeast(20.dp))
+                                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                                    .background(colors[index])
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                listOf("0-25", "26-50", "51-75", "76-100").forEach { label ->
-                    Text(
-                        text = label,
-                        style = AppTypography.text11Medium,
-                        color = Grey600,
-                        modifier = Modifier.width(48.dp),
-                        textAlign = TextAlign.Center
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    listOf("0-25", "26-50", "51-75", "76-100").forEach { label ->
+                        Text(
+                            text = label,
+                            style = AppTypography.text11Medium,
+                            color = Grey600,
+                            modifier = Modifier.width(48.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
@@ -541,6 +551,14 @@ private fun QuestionAnalysisCard(questionStats: Map<Int, QuestionStat>) {
                 color = Grey600
             )
             Spacer(Modifier.height(16.dp))
+            if (questionStats.isEmpty()) {
+                Text(
+                    text = "No question-wise data available yet.",
+                    style = AppTypography.text13Regular,
+                    color = Grey600
+                )
+                return@Column
+            }
 
             // Hardest Questions
             Surface(
@@ -645,7 +663,7 @@ private fun QuestionStatRow(
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             LinearProgressIndicator(
-                progress = { percentage / 100f },
+                progress = { (percentage / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier
                     .width(80.dp)
                     .height(8.dp)
@@ -689,8 +707,9 @@ private fun QuestionHeatmapCard(questionStats: Map<Int, QuestionStat>, totalQues
                             val questionNum = row * 10 + col + 1
                             if (questionNum <= totalQuestions) {
                                 val stat = questionStats[questionNum]
-                                val percentage = stat?.correctPercentage?.toInt() ?: 0
+                                val percentage = stat?.correctPercentage?.toInt()
                                 val color = when {
+                                    percentage == null -> Grey200
                                     percentage < 40 -> Color(0xFFF44336)
                                     percentage < 60 -> Color(0xFFFF9800)
                                     percentage < 80 -> Color(0xFFFFEB3B)
@@ -707,7 +726,7 @@ private fun QuestionHeatmapCard(questionStats: Map<Int, QuestionStat>, totalQues
                                     Text(
                                         text = questionNum.toString(),
                                         style = AppTypography.text11SemiBold,
-                                        color = Color.White,
+                                        color = if (percentage == null) Grey700 else Color.White,
                                     )
                                 }
                             }
@@ -723,6 +742,7 @@ private fun QuestionHeatmapCard(questionStats: Map<Int, QuestionStat>, totalQues
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
+                LegendItem("●", Grey200, "No attempts")
                 LegendItem("●", Color(0xFFF44336), "<40%")
                 LegendItem("●", Color(0xFFFF9800), "40-60%")
                 LegendItem("●", Color(0xFFFFEB3B), "60-80%")
@@ -746,7 +766,7 @@ private fun LegendItem(bullet: String, color: Color, label: String) {
 }
 
 @Composable
-private fun InsightsCard(statistics: com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics) {
+private fun InsightsCard(statistics: ExamStatistics) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -769,23 +789,68 @@ private fun InsightsCard(statistics: com.example.ledgerscanner.feature.scanner.e
             }
             Spacer(Modifier.height(12.dp))
 
-            InsightItem(
-                icon = Icons.Default.Info,
-                text = "Q15 and Q23 need review - only 40-45% correct",
-                color = Color(0xFF2196F3)
-            )
-            InsightItem(
-                icon = Icons.Default.Warning,
-                text = "4 students scored below passing grade - consider remedial",
-                color = Color(0xFFFF9800)
-            )
-            InsightItem(
-                icon = Icons.Default.CheckCircle,
-                text = "Strong performance in Q1-Q10 (avg 85%+)",
-                color = Color(0xFF4CAF50)
-            )
+            buildInsights(statistics).forEach { insight ->
+                InsightItem(
+                    icon = insight.icon,
+                    text = insight.text,
+                    color = insight.color
+                )
+            }
         }
     }
+}
+
+private data class InsightEntry(
+    val icon: ImageVector,
+    val text: String,
+    val color: Color
+)
+
+private fun buildInsights(statistics: ExamStatistics): List<InsightEntry> {
+    if (statistics.sheetsCount == 0) {
+        return listOf(
+            InsightEntry(
+                icon = Icons.Default.Info,
+                text = "No scanned sheets yet. Scan sheets to view insights.",
+                color = Blue500
+            )
+        )
+    }
+
+    val insights = mutableListOf<InsightEntry>()
+    val hardest = statistics.questionStats.values.minByOrNull { it.correctPercentage }
+    val easiest = statistics.questionStats.values.maxByOrNull { it.correctPercentage }
+    val passRate = statistics.passRate ?: 0f
+
+    if (hardest != null) {
+        insights += InsightEntry(
+            icon = Icons.Default.Warning,
+            text = "Q${hardest.questionNumber} is hardest (${hardest.correctPercentage.toInt()}% correct).",
+            color = Color(0xFFFF9800)
+        )
+    }
+    if (easiest != null) {
+        insights += InsightEntry(
+            icon = Icons.Default.CheckCircle,
+            text = "Q${easiest.questionNumber} is strongest (${easiest.correctPercentage.toInt()}% correct).",
+            color = Color(0xFF4CAF50)
+        )
+    }
+    insights += if (passRate < 40f) {
+        InsightEntry(
+            icon = Icons.Default.Error,
+            text = "Pass rate is low (${passRate.toInt()}%). Consider remedial support.",
+            color = Color(0xFFF44336)
+        )
+    } else {
+        InsightEntry(
+            icon = Icons.Default.Info,
+            text = "Pass rate is ${passRate.toInt()}% across ${statistics.sheetsCount} sheets.",
+            color = Color(0xFF2196F3)
+        )
+    }
+
+    return insights.take(3)
 }
 
 @Composable

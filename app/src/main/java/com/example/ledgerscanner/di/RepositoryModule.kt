@@ -41,11 +41,12 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideScanResultRepository(
-        dao: ScanResultDao,
+        scanResultDao: ScanResultDao,
+        examDao: ExamDao,
         @ApplicationContext context: Context,
         syncManager: SyncManager
     ): ScanResultRepository =
-        ScanResultRepository(dao, context, syncManager)
+        ScanResultRepository(scanResultDao, examDao, context, syncManager)
 
     @Provides
     @Singleton

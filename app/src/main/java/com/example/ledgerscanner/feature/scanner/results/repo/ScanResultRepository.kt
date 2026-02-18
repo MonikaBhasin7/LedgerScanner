@@ -1,6 +1,7 @@
 package com.example.ledgerscanner.feature.scanner.results.repo
 
 import android.content.Context
+import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.dao.ScanResultDao
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.database.entity.setStudentDetails
@@ -17,6 +18,7 @@ import javax.inject.Inject
 
 class ScanResultRepository @Inject constructor(
     private val scanResultDao: ScanResultDao,
+    private val examDao: ExamDao,
     @ApplicationContext private val context: Context,
     private val syncManager: SyncManager
 ) {
@@ -78,6 +80,7 @@ class ScanResultRepository @Inject constructor(
     fun getStatistics(examId: Int): Flow<ExamStatistics> {
         return scanResultDao.getBasicStatisticsByExamId(examId).map { basicStats ->
             val allResults = scanResultDao.getAllByExamIdOnce(examId)
+            val exam = examDao.getExamById(examId)
 
             if (allResults.isEmpty()) {
                 return@map ExamStatistics(
@@ -94,7 +97,10 @@ class ScanResultRepository @Inject constructor(
             var totalUnanswered = 0
 
             // Question-wise statistics
-            val questionStatsMap = mutableMapOf<Int, MutableList<Boolean>>()
+            val answerKey = exam?.answerKey.orEmpty()
+            val totalQuestions = exam?.totalQuestions
+                ?: allResults.maxOfOrNull { it.totalQuestions }
+                ?: 0
 
             // Score distribution
             val scoreDistribution = mutableMapOf(
@@ -110,34 +116,21 @@ class ScanResultRepository @Inject constructor(
                 totalUnanswered += result.blankCount
 
                 // Score distribution
-                when (result.scorePercent.toInt()) {
+                val boundedPercent = result.scorePercent.toInt().coerceIn(0, 100)
+                when (boundedPercent) {
                     in 0..25 -> scoreDistribution["0-25"] = scoreDistribution["0-25"]!! + 1
                     in 26..50 -> scoreDistribution["26-50"] = scoreDistribution["26-50"]!! + 1
                     in 51..75 -> scoreDistribution["51-75"] = scoreDistribution["51-75"]!! + 1
                     in 76..100 -> scoreDistribution["76-100"] = scoreDistribution["76-100"]!! + 1
                 }
 
-                // Question-wise stats
-//                result.evaluationDetails.forEachIndexed { index, detail ->
-//                    val questionNum = index + 1
-//                    questionStatsMap.getOrPut(questionNum) { mutableListOf() }
-//                        .add(detail.isCorrect)
-//                }
             }
 
-            // Convert question stats to QuestionStat objects
-            val questionStats = questionStatsMap.map { (questionNum, results) ->
-                val correctCount = results.count { it }
-                val totalAttempts = results.size
-                val correctPercentage = (correctCount.toFloat() / totalAttempts) * 100
-
-                questionNum to QuestionStat(
-                    questionNumber = questionNum,
-                    correctCount = correctCount,
-                    totalAttempts = totalAttempts,
-                    correctPercentage = correctPercentage
-                )
-            }.toMap()
+            val questionStats = buildQuestionStats(
+                results = allResults,
+                totalQuestions = totalQuestions,
+                answerKey = answerKey
+            )
 
             // Calculate median and pass rate
             val medianScore = calculateMedian(allResults.map { it.scorePercent })
@@ -168,6 +161,63 @@ class ScanResultRepository @Inject constructor(
         } else {
             sorted[size / 2]
         }
+    }
+
+    private fun buildQuestionStats(
+        results: List<ScanResultEntity>,
+        totalQuestions: Int,
+        answerKey: Map<Int, Int>
+    ): Map<Int, QuestionStat> {
+        if (totalQuestions <= 0 || results.isEmpty()) return emptyMap()
+
+        val attemptsByQuestion = mutableMapOf<Int, Int>()
+        val correctByQuestion = mutableMapOf<Int, Int>()
+        val hasAnswerKey = answerKey.isNotEmpty()
+
+        for (questionNum in 1..totalQuestions) {
+            attemptsByQuestion[questionNum] = 0
+            correctByQuestion[questionNum] = 0
+        }
+
+        results.forEach { result ->
+            for (questionNum in 1..totalQuestions) {
+                val userAnswers = result.studentAnswers[questionNum].orEmpty()
+                if (userAnswers.isEmpty()) continue
+
+                attemptsByQuestion[questionNum] = (attemptsByQuestion[questionNum] ?: 0) + 1
+
+                if (hasAnswerKey) {
+                    val correctOption = answerKey[questionNum] ?: continue
+                    val hasMultipleMarks = result.multipleMarksDetected?.contains(questionNum) == true
+                    val isCorrect = !hasMultipleMarks &&
+                            userAnswers.size == 1 &&
+                            userAnswers.first() == correctOption
+                    if (isCorrect) {
+                        correctByQuestion[questionNum] = (correctByQuestion[questionNum] ?: 0) + 1
+                    }
+                } else {
+                    // Fallback when answer key is absent: show attempt-rate so UI is not empty.
+                    correctByQuestion[questionNum] = (correctByQuestion[questionNum] ?: 0) + 1
+                }
+            }
+        }
+
+        return (1..totalQuestions)
+            .mapNotNull { questionNum ->
+                val totalAttempts = attemptsByQuestion[questionNum] ?: 0
+                if (totalAttempts == 0) return@mapNotNull null
+
+                val correctCount = correctByQuestion[questionNum] ?: 0
+                val correctPercentage = (correctCount.toFloat() / totalAttempts) * 100f
+
+                questionNum to QuestionStat(
+                    questionNumber = questionNum,
+                    correctCount = correctCount,
+                    totalAttempts = totalAttempts,
+                    correctPercentage = correctPercentage
+                )
+            }
+            .toMap()
     }
 
     suspend fun deleteSheet(sheetId: Int) {
