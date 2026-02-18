@@ -66,8 +66,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -127,14 +125,15 @@ import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.ui.genericClick
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
-import com.example.ledgerscanner.feature.scanner.exam.domain.model.DrawerItem
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamActionDialog
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.ExamActionConfirmationDialog
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.DrawerDestination
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.ExamList
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.ExamNavigationDrawerContent
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.FilterChips
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.SearchBar
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.dialog.TemplatePickerDialog
@@ -215,8 +214,6 @@ class ExamListingActivity : ComponentActivity() {
                 ExamListingScreen(
                     viewModel = examListViewModel,
                     onLogout = { logoutViewModel.logout() },
-                    memberName = tokenStore.getMemberName(),
-                    memberPhone = tokenStore.getMemberPhone()
                 )
             }
         }
@@ -226,8 +223,6 @@ class ExamListingActivity : ComponentActivity() {
     private fun ExamListingScreen(
         viewModel: ExamListViewModel,
         onLogout: () -> Unit,
-        memberName: String?,
-        memberPhone: String?
     ) {
         val context = LocalContext.current
         var showTemplatePicker by remember { mutableStateOf(false) }
@@ -260,6 +255,7 @@ class ExamListingActivity : ComponentActivity() {
             initialValue = androidx.compose.material3.DrawerValue.Closed
         )
         val drawerScope = rememberCoroutineScope()
+        var selectedDrawerDestination by remember { mutableStateOf(DrawerDestination.Exams) }
 
 
         // Initial load
@@ -356,7 +352,10 @@ class ExamListingActivity : ComponentActivity() {
             }
         }
 
-        val visibleExamItems = (examListResponse as? UiState.Success)?.data.orEmpty()
+        val allExamItems = (examListResponse as? UiState.Success)?.data.orEmpty()
+        val activeExamCount = allExamItems.count { it.status == ExamStatus.ACTIVE }
+        val completedExamCount = allExamItems.count { it.status == ExamStatus.COMPLETED }
+        val visibleExamItems = allExamItems
             .filterNot { hiddenExamIds.contains(it.id) }
         val showListControls = examListResponse !is UiState.Success ||
             visibleExamItems.isNotEmpty() ||
@@ -408,129 +407,39 @@ class ExamListingActivity : ComponentActivity() {
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                ModalDrawerSheet {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Header strip
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Blue500)
-                                .padding(horizontal = 16.dp, vertical = 18.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(White),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = (memberName ?: "U").take(1).uppercase(),
-                                        style = AppTypography.h4Bold,
-                                        color = Blue500
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = memberName ?: "User",
-                                        style = AppTypography.h4Bold,
-                                        color = White
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = memberPhone ?: "",
-                                        style = AppTypography.body4Medium,
-                                        color = White
-                                    )
+                ModalDrawerSheet(
+                    modifier = Modifier.widthIn(max = 360.dp),
+                    drawerContainerColor = White
+                ) {
+                    ExamNavigationDrawerContent(
+                        selectedDestination = selectedDrawerDestination,
+                        activeExamCount = activeExamCount,
+                        completedExamCount = completedExamCount,
+                        onDestinationSelected = { destination ->
+                            selectedDrawerDestination = destination
+                            drawerScope.launch {
+                                drawerState.close()
+                                when (destination) {
+                                    DrawerDestination.Exams -> Unit
+                                    DrawerDestination.CreateExam -> {
+                                        context.startActivity(
+                                            Intent(context, CreateExamActivity::class.java)
+                                        )
+                                    }
+
+                                    DrawerDestination.CreateTemplate -> {
+                                        context.startActivity(
+                                            Intent(context, CreateTemplateActivity::class.java)
+                                        )
+                                    }
+
+                                    DrawerDestination.Logout -> {
+                                        showLogoutDialog = true
+                                    }
                                 }
                             }
                         }
-
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Quick Actions",
-                                style = AppTypography.label2SemiBold,
-                                color = Grey600
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            val items = listOf(
-                                DrawerItem("Exams", Icons.Outlined.ListAlt) {
-                                    drawerScope.launch { drawerState.close() }
-                                },
-                                DrawerItem("Create Exam", Icons.Outlined.PostAdd) {
-                                    drawerScope.launch { drawerState.close() }
-                                    context.startActivity(
-                                        Intent(
-                                            context,
-                                            CreateExamActivity::class.java
-                                        )
-                                    )
-                                },
-                                DrawerItem("Create Template", Icons.Outlined.Description) {
-                                    drawerScope.launch { drawerState.close() }
-                                    context.startActivity(
-                                        Intent(
-                                            context,
-                                            CreateTemplateActivity::class.java
-                                        )
-                                    )
-                                },
-                            )
-
-                            items.forEach { item ->
-                                NavigationDrawerItem(
-                                    label = { Text(item.label, style = AppTypography.body2Medium) },
-                                    selected = false,
-                                    icon = {
-                                        Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = null,
-                                            tint = Blue500
-                                        )
-                                    },
-                                    onClick = item.onClick,
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = NavigationDrawerItemDefaults.colors(
-                                        unselectedContainerColor = Color.Transparent,
-                                        selectedContainerColor = Blue100,
-                                        unselectedTextColor = Grey900,
-                                        selectedTextColor = Blue500
-                                    )
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = "Account",
-                                style = AppTypography.label2SemiBold,
-                                color = Grey600
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            NavigationDrawerItem(
-                                label = { Text("Logout", style = AppTypography.body2Medium) },
-                                selected = false,
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Logout,
-                                        contentDescription = null,
-                                        tint = Blue500
-                                    )
-                                },
-                                onClick = {
-                                    drawerScope.launch { drawerState.close() }
-                                    showLogoutDialog = true
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = NavigationDrawerItemDefaults.colors(
-                                    unselectedContainerColor = Color.Transparent,
-                                    selectedContainerColor = Blue100
-                                )
-                            )
-                        }
-                    }
+                    )
                 }
             }
         ) {

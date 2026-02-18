@@ -6,6 +6,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+enum class MemberRole {
+    ADMIN,
+    MEMBER;
+
+    fun isAdmin() = this == ADMIN
+}
+
 @Singleton
 class TokenStore @Inject constructor(
     @ApplicationContext private val context: Context
@@ -36,7 +43,10 @@ class TokenStore @Inject constructor(
     fun getInstituteId(): Long? = prefs.getLong(KEY_INSTITUTE_ID, -1L).takeIf { it > 0 }
     fun getMemberName(): String? = prefs.getString(KEY_MEMBER_NAME, null)
     fun getMemberPhone(): String? = prefs.getString(KEY_MEMBER_PHONE, null)
-    fun getMemberRole(): String? = prefs.getString(KEY_MEMBER_ROLE, null)
+    fun getMemberRole(): MemberRole? {
+        val role = prefs.getString(KEY_MEMBER_ROLE, null) ?: return null
+        return runCatching { MemberRole.valueOf(role.uppercase()) }.getOrNull()
+    }
 
     fun clear() {
         prefs.edit().clear().apply()
