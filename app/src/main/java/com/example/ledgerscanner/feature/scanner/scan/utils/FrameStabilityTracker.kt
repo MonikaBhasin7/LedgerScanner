@@ -15,8 +15,8 @@ import kotlin.math.sqrt
 class FrameStabilityTracker @Inject constructor() {
 
     companion object {
-        /** Number of consecutive stable frames required (~300ms at 20fps) */
-        const val REQUIRED_STABLE_FRAMES = 5
+        /** Number of consecutive stable frames required (kept low for fast scan UX) */
+        const val REQUIRED_STABLE_FRAMES = 3
 
         /** Max allowed per-anchor movement in pixels between consecutive frames */
         const val MOVEMENT_THRESHOLD_PX = 5.0

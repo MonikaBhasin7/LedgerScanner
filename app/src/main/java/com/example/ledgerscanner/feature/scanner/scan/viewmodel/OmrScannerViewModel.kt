@@ -162,14 +162,7 @@ class OmrScannerViewModel @Inject constructor(
                 return@withContext UiState.Error(ErrorMessages.ANCHORS_NOT_DETECTED)
             }
 
-            // Step 3.5: Stability gate — require steady hand before expensive processing
-            val stability = frameStabilityTracker.addFrame(anchorDetectionResult.centers)
-            onStabilityUpdate(stability)
-            if (!stability.isStable) {
-                return@withContext UiState.Idle()
-            }
-
-            // Step 3.7: Geometry validation — reject curved/uneven sheets
+            // Step 3.5: Geometry validation — reject curved/uneven sheets
             val geometry = anchorGeometryValidator.validate(anchorDetectionResult.centers)
             onGeometryUpdate(geometry)
             if (!geometry.isValid) {
@@ -177,6 +170,15 @@ class OmrScannerViewModel @Inject constructor(
                 return@withContext UiState.Error(
                     geometry.rejectionReason ?: "Sheet is not flat. Please flatten it"
                 )
+            }
+
+            // Step 3.7: Lightweight stability gate with fast path for high-confidence frames
+            val stability = frameStabilityTracker.addFrame(anchorDetectionResult.centers)
+            onStabilityUpdate(stability)
+            val highConfidenceFastPath =
+                anchorDetectionResult.success && stability.maxMovement <= FAST_PATH_MAX_MOVEMENT_PX
+            if (!stability.isStable && !highConfidenceFastPath) {
+                return@withContext UiState.Idle()
             }
 
             // Step 4: Warp image
@@ -495,5 +497,6 @@ class OmrScannerViewModel @Inject constructor(
     companion object {
         private const val TAG = "OmrScannerViewModel"
         private const val EXPECTED_ANCHOR_COUNT = 4
+        private const val FAST_PATH_MAX_MOVEMENT_PX = 2.0
     }
 }
