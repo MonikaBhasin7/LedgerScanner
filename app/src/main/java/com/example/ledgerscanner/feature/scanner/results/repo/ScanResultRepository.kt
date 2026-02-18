@@ -116,12 +116,12 @@ class ScanResultRepository @Inject constructor(
                 totalUnanswered += result.blankCount
 
                 // Score distribution
-                val boundedPercent = result.scorePercent.toInt().coerceIn(0, 100)
-                when (boundedPercent) {
-                    in 0..25 -> scoreDistribution["0-25"] = scoreDistribution["0-25"]!! + 1
-                    in 26..50 -> scoreDistribution["26-50"] = scoreDistribution["26-50"]!! + 1
-                    in 51..75 -> scoreDistribution["51-75"] = scoreDistribution["51-75"]!! + 1
-                    in 76..100 -> scoreDistribution["76-100"] = scoreDistribution["76-100"]!! + 1
+                val percent = result.scorePercent
+                when {
+                    percent <= 25f -> scoreDistribution["0-25"] = scoreDistribution["0-25"]!! + 1
+                    percent <= 50f -> scoreDistribution["26-50"] = scoreDistribution["26-50"]!! + 1
+                    percent <= 75f -> scoreDistribution["51-75"] = scoreDistribution["51-75"]!! + 1
+                    else -> scoreDistribution["76-100"] = scoreDistribution["76-100"]!! + 1
                 }
 
             }
@@ -185,14 +185,20 @@ class ScanResultRepository @Inject constructor(
 
         results.forEach { result ->
             for (questionNum in 1..totalQuestions) {
-                val userAnswers = result.studentAnswers[questionNum].orEmpty()
+                val userAnswers = result.studentAnswers[questionNum]
+                    ?: result.studentAnswers[questionNum - 1]
+                    ?: emptyList()
                 if (userAnswers.isEmpty()) continue
 
                 attemptsByQuestion[questionNum] = (attemptsByQuestion[questionNum] ?: 0) + 1
 
                 if (hasAnswerKey) {
-                    val correctOption = answerKey[questionNum] ?: continue
-                    val hasMultipleMarks = result.multipleMarksDetected?.contains(questionNum) == true
+                    val correctOption = answerKey[questionNum]
+                        ?: answerKey[questionNum - 1]
+                        ?: continue
+                    val hasMultipleMarks =
+                        result.multipleMarksDetected?.contains(questionNum) == true ||
+                                result.multipleMarksDetected?.contains(questionNum - 1) == true
                     val isCorrect = !hasMultipleMarks &&
                             userAnswers.size == 1 &&
                             userAnswers.first() == correctOption

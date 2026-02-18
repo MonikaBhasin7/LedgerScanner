@@ -75,6 +75,7 @@ import com.example.ledgerscanner.base.ui.theme.Red600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.DateAndTimeUtils
 import com.example.ledgerscanner.base.utils.ui.genericClick
+import com.example.ledgerscanner.base.extensions.toCleanString
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.results.utils.ScanResultUtils
 import java.io.File
@@ -91,7 +92,7 @@ fun ScannedSheetCard(
     onLongClick: () -> Unit = {},
     onViewDetails: () -> Unit = {}
 ) {
-    val percent = sheet.scorePercent.toInt().coerceIn(0, 100)
+    val percent = sheet.scorePercent
     val attempted = (sheet.totalQuestions - sheet.blankCount).coerceAtLeast(0)
     var statTooltip by remember(sheet.id) { mutableStateOf<StatTooltipInfo?>(null) }
     val cardInteractionSource = remember { MutableInteractionSource() }
@@ -336,14 +337,14 @@ private fun CardPreviewImage(imagePath: String?) {
 }
 
 @Composable
-private fun PercentagePill(percent: Int) {
+private fun PercentagePill(percent: Float) {
     Box(
         modifier = Modifier
             .background(Blue50, RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(
-            text = "$percent%",
+            text = "${percent.toCleanString()}%",
             style = AppTypography.text12Bold,
             color = Blue700
         )
@@ -366,7 +367,8 @@ private fun MetaPill(text: String) {
 }
 
 @Composable
-private fun ScorePanel(score: Int, totalQuestions: Int, percent: Int) {
+private fun ScorePanel(score: Float, totalQuestions: Int, percent: Float) {
+    val progressValue = if (percent <= 0f) 0f else percent / 100f
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -381,18 +383,18 @@ private fun ScorePanel(score: Int, totalQuestions: Int, percent: Int) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                                 Text(
-                                    text = "Score $score/$totalQuestions",
+                                    text = "Score ${score.toCleanString()}/$totalQuestions",
                                     style = AppTypography.text13SemiBold,
                                     color = Blue700
                                 )
                                 Text(
-                                    text = "$percent%",
+                                    text = "${percent.toCleanString()}%",
                                     style = AppTypography.text14Bold,
                                     color = Blue700
                                 )
             }
             LinearProgressIndicator(
-                progress = { percent / 100f },
+                progress = { progressValue },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp),

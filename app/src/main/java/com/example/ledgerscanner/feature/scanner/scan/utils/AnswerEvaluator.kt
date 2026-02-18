@@ -35,7 +35,7 @@ class AnswerEvaluator @Inject constructor() {
         val answerMap = mutableMapOf<Int, AnswerModel>()
         for (i in 0 until totalQuestions) { // FIXED: was 0 until totalQuestions - 1
             answerMap[i] = AnswerModel(
-                correctAnswer = answerKey[i] ?: -1 // -1 means no answer key for this question
+                correctAnswer = answerKey[i] ?: answerKey[i + 1] ?: -1
             )
         }
 
@@ -94,7 +94,7 @@ class AnswerEvaluator @Inject constructor() {
         // Previously clamped to 0-100, hiding true score when marks go negative
         val maxMarks = totalQuestions * marksPerCorrect
         val percentage = if (maxMarks > 0) {
-            ((marksObtained / maxMarks) * 100).coerceAtMost(100f)
+            (marksObtained / maxMarks) * 100
         } else {
             0f
         }

@@ -1,5 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.exam.domain.model
 
+import com.example.ledgerscanner.base.extensions.toCleanString
 
 data class BasicExamStatistics(
     val avgScore: Float? = null,
@@ -28,36 +29,36 @@ data class ExamStatistics(
     }
 
     private fun isValidScore(score: Float?): Boolean {
-        return score != null && score in 0f..100f && !score.isNaN() && !score.isInfinite()
+        return score != null && !score.isNaN() && !score.isInfinite()
     }
 
     fun getValidAvgScore(): String {
         return if (hasStats() && isValidScore(avgScore)) {
-            "${avgScore!!.toInt()}%"
+            "${avgScore!!.toCleanString()}%"
         } else "--"
     }
 
     fun getValidTopScore(): String {
         return if (hasStats() && isValidScore(topScore)) {
-            "${topScore!!.toInt()}%"
+            "${topScore!!.toCleanString()}%"
         } else "--"
     }
 
     fun getValidLowestScore(): String {
         return if (hasStats() && isValidScore(lowestScore)) {
-            "${lowestScore!!.toInt()}%"
+            "${lowestScore!!.toCleanString()}%"
         } else "--"
     }
 
     fun getValidMedianScore(): String {
         return if (hasStats() && isValidScore(medianScore)) {
-            "${medianScore!!.toInt()}%"
+            "${medianScore!!.toCleanString()}%"
         } else "--"
     }
 
     fun getValidPassRate(): String {
         return if (hasStats() && isValidScore(passRate)) {
-            "${passRate!!.toInt()}%"
+            "${passRate!!.toCleanString()}%"
         } else "--"
     }
 }

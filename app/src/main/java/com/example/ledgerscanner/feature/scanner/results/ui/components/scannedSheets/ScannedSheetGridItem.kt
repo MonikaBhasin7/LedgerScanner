@@ -55,6 +55,7 @@ import com.example.ledgerscanner.base.ui.theme.Red50
 import com.example.ledgerscanner.base.ui.theme.Red600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.DateAndTimeUtils
+import com.example.ledgerscanner.base.extensions.toCleanString
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 import com.example.ledgerscanner.feature.scanner.results.utils.ScanResultUtils
 import java.io.File
@@ -70,7 +71,7 @@ fun ScannedSheetGridItem(
     onLongClick: () -> Unit = {},
     onViewDetails: () -> Unit = {}
 ) {
-    val percent = sheet.scorePercent.toInt().coerceIn(0, 100)
+    val percent = sheet.scorePercent
     val attempted = (sheet.totalQuestions - sheet.blankCount).coerceAtLeast(0)
     val cardInteractionSource = remember { MutableInteractionSource() }
 
@@ -228,14 +229,14 @@ fun ScannedSheetGridItem(
 }
 
 @Composable
-private fun GridPercentagePill(percent: Int) {
+private fun GridPercentagePill(percent: Float) {
     Box(
         modifier = Modifier
             .background(Blue50, RoundedCornerShape(999.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
-            text = "$percent%",
+            text = "${percent.toCleanString()}%",
             style = AppTypography.text11Bold,
             color = Blue700
         )
@@ -259,10 +260,11 @@ private fun GridMetaPill(text: String) {
 
 @Composable
 private fun GridScorePanel(
-    score: Int,
+    score: Float,
     totalQuestions: Int,
-    percent: Int
+    percent: Float
 ) {
+    val progressValue = if (percent <= 0f) 0f else percent / 100f
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -277,18 +279,18 @@ private fun GridScorePanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "$score/$totalQuestions",
+                    text = "${score.toCleanString()}/$totalQuestions",
                     style = AppTypography.text12SemiBold,
                     color = Blue700
                 )
                 Text(
-                    text = "$percent%",
+                    text = "${percent.toCleanString()}%",
                     style = AppTypography.text13Bold,
                     color = Blue700
                 )
             }
             LinearProgressIndicator(
-                progress = { percent / 100f },
+                progress = { progressValue },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp),

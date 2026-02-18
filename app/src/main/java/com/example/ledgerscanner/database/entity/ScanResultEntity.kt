@@ -37,14 +37,14 @@ data class ScanResultEntity(
     val debugImagesPath: Map<String, String>? = null,
     val scannedAt: Long = System.currentTimeMillis(),
 
-    // ✅ ALL ANSWERS IN ONE MAP
-    val studentAnswers: Map<Int, List<Int>>, // {1: 0, 2: 1, 3: 2, ...}
+    // Stores per-question selected options. Historically seen in both 0-based and 1-based keys.
+    val studentAnswers: Map<Int, List<Int>>,
 
     // ✅ ISSUES IN ONE MAP (optional)
     val multipleMarksDetected: List<Int>? = null, // [7, 12, 23] - question numbers with multiple marks
 
     // Score Summary
-    val score: Int,
+    val score: Float,
     val totalQuestions: Int,
     val correctCount: Int,
     val wrongCount: Int,
@@ -81,17 +81,28 @@ fun ScanResultEntity.getLowConfidenceCount(): Int {
 }
 
 /**
+ * Get answers for a zero-based question index.
+ * Supports both 0-based and 1-based stored map keys.
+ */
+fun ScanResultEntity.getAnswersForQuestionIndex(questionIndex: Int): List<Int> {
+    return studentAnswers[questionIndex]
+        ?: studentAnswers[questionIndex + 1]
+        ?: emptyList()
+}
+
+/**
  * Check if a specific question was attempted
  */
 fun ScanResultEntity.isQuestionAttempted(questionIndex: Int): Boolean {
-    return studentAnswers[questionIndex]?.isNotEmpty() == true
+    return getAnswersForQuestionIndex(questionIndex).isNotEmpty()
 }
 
 /**
  * Check if a specific question has multiple marks
  */
 fun ScanResultEntity.hasQuestionMultipleMarks(questionIndex: Int): Boolean {
-    return multipleMarksDetected?.contains(questionIndex) == true
+    return multipleMarksDetected?.contains(questionIndex) == true ||
+            multipleMarksDetected?.contains(questionIndex + 1) == true
 }
 
 /**
@@ -99,7 +110,8 @@ fun ScanResultEntity.hasQuestionMultipleMarks(questionIndex: Int): Boolean {
  * Requires ExamEntity to compare with correct answer
  */
 fun ScanResultEntity.isQuestionCorrect(questionIndex: Int, correctAnswer: Int): Boolean {
-    val userAnswers = studentAnswers[questionIndex] ?: return false
+    val userAnswers = getAnswersForQuestionIndex(questionIndex)
+    if (userAnswers.isEmpty()) return false
     return userAnswers.size == 1 && userAnswers.first() == correctAnswer
 }
 
@@ -108,7 +120,7 @@ fun ScanResultEntity.isQuestionCorrect(questionIndex: Int, correctAnswer: Int): 
  * Requires ExamEntity to get correct answer
  */
 fun ScanResultEntity.getQuestionStatus(questionIndex: Int, correctAnswer: Int): AnswerStatus {
-    val userAnswers = studentAnswers[questionIndex] ?: emptyList()
+    val userAnswers = getAnswersForQuestionIndex(questionIndex)
 
     return when {
         userAnswers.isEmpty() -> AnswerStatus.UNANSWERED
@@ -130,11 +142,13 @@ fun ScanResultEntity.needsReview(): Boolean {
  */
 fun ScanResultEntity.getQuestionConfidence(questionIndex: Int): Double? {
     return questionConfidences?.get(questionIndex)
+        ?: questionConfidences?.get(questionIndex + 1)
 }
 
 /**
  * Check if a question has low confidence
  */
 fun ScanResultEntity.hasLowConfidence(questionIndex: Int): Boolean {
-    return lowConfidenceQuestions?.contains(questionIndex) == true
+    return lowConfidenceQuestions?.contains(questionIndex) == true ||
+            lowConfidenceQuestions?.contains(questionIndex + 1) == true
 }

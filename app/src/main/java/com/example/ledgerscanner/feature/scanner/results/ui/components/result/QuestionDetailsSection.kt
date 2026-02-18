@@ -32,6 +32,7 @@ import com.example.ledgerscanner.base.ui.theme.Red500
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.database.entity.ScanResultEntity
+import com.example.ledgerscanner.database.entity.getAnswersForQuestionIndex
 import com.example.ledgerscanner.database.entity.getQuestionStatus
 import com.example.ledgerscanner.database.entity.isQuestionAttempted
 import com.example.ledgerscanner.feature.scanner.results.model.AnswerStatus
@@ -76,10 +77,12 @@ fun QuestionDetailsSection(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // ✅ Get sorted list of questions
-                val allQuestions = scanResultEntity.studentAnswers.entries
-                    .sortedBy { it.key }
-                    .toList()
+                // Build question rows by index range so both 0-based and 1-based stored keys work.
+                val allQuestions = (0 until examEntity.totalQuestions)
+                    .map { index ->
+                        index to scanResultEntity.getAnswersForQuestionIndex(index)
+                    }
+                    .filter { (_, answers) -> answers.isNotEmpty() }
 
                 val itemsToShow = if (expanded) {
                     allQuestions
@@ -91,7 +94,9 @@ fun QuestionDetailsSection(
                     QuestionDetailItem(
                         questionIndex = questionIndex,
                         userAnswers = userAnswers,
-                        correctAnswer = examEntity.answerKey?.get(questionIndex) ?: -1,
+                        correctAnswer = examEntity.answerKey?.get(questionIndex)
+                            ?: examEntity.answerKey?.get(questionIndex + 1)
+                            ?: -1,
                         scanResultEntity = scanResultEntity
                     )
                 }

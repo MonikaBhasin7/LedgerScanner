@@ -318,7 +318,7 @@ class OmrScannerViewModel @Inject constructor(
                     scannedAt = System.currentTimeMillis(),
                     studentAnswers = studentAnswers,
                     multipleMarksDetected = evaluation.multipleMarksQuestions,
-                    score = evaluation.marksObtained.toInt(),
+                    score = evaluation.marksObtained,
                     totalQuestions = evaluation.totalQuestions,
                     correctCount = evaluation.correctCount,
                     wrongCount = evaluation.incorrectCount,

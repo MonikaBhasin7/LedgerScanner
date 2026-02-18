@@ -77,6 +77,8 @@ fun AnswerKeyScreen(
                 ak.forEach { (key, value) ->
                     if (key in answerKeys.indices) {
                         answerKeys[key] = value
+                    } else if (key in 1..questionCount) {
+                        answerKeys[key - 1] = value
                     }
                 }
             }
@@ -107,7 +109,10 @@ fun AnswerKeyScreen(
                     }
 
                     val hasChanges = answerKeys.indices.any { index ->
-                        answerKeys[index] != examEntity?.answerKey?.get(index)
+                        answerKeys[index] != (
+                                examEntity?.answerKey?.get(index)
+                                    ?: examEntity?.answerKey?.get(index + 1)
+                                )
                     }
 
                     if (hasChanges) {

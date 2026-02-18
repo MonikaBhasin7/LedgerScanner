@@ -11,7 +11,7 @@ import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.database.entity.ScanResultEntity
 
 @TypeConverters(TypeConverter::class)
-@Database(entities = [ExamEntity::class, ScanResultEntity::class], version = 3, exportSchema = true)
+@Database(entities = [ExamEntity::class, ScanResultEntity::class], version = 4, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun examDao(): ExamDao
     abstract fun scanResultDao(): ScanResultDao
@@ -29,5 +29,6 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE scan_results ADD COLUMN enrollmentNumber TEXT DEFAULT NULL")
             }
         }
+
     }
 }

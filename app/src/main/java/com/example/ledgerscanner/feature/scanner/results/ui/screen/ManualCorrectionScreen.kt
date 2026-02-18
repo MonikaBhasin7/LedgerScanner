@@ -40,6 +40,8 @@ import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.Red600
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.database.entity.ScanResultEntity
+import com.example.ledgerscanner.database.entity.getAnswersForQuestionIndex
+import com.example.ledgerscanner.database.entity.getQuestionConfidence
 
 @Composable
 fun ManualCorrectionScreen(
@@ -73,9 +75,10 @@ fun ManualCorrectionScreen(
             // Question preview with detected answer
             QuestionReviewCard(
                 questionIndex = currentQuestion,
-                detectedAnswer = scanResult.studentAnswers.get(currentQuestion),
-                confidence = scanResult.questionConfidences?.get(currentQuestion),
-                correctAnswer = examEntity.answerKey?.get(currentQuestion),
+                detectedAnswer = scanResult.getAnswersForQuestionIndex(currentQuestion),
+                confidence = scanResult.getQuestionConfidence(currentQuestion),
+                correctAnswer = examEntity.answerKey?.get(currentQuestion)
+                    ?: examEntity.answerKey?.get(currentQuestion + 1),
                 onAnswerChange = { newAnswer ->
                     // Update the answer
                 }

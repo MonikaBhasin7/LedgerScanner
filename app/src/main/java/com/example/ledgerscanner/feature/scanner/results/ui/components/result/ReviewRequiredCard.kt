@@ -79,9 +79,11 @@ fun ReviewRequiredCard(
                     color = Grey800
                 )
 
+                val usesZeroBasedKeys = lowConfidenceQuestions.keys.contains(0)
                 lowConfidenceQuestions.forEach { (qNum, conf) ->
+                    val displayQuestion = if (usesZeroBasedKeys) qNum + 1 else qNum
                     Text(
-                        text = "Q${qNum + 1} (${(conf?.times(100))?.toInt()}%)",
+                        text = "Q$displayQuestion (${(conf?.times(100))?.toInt()}%)",
                         style = AppTypography.text14SemiBold,
                         color = Orange700
                     )

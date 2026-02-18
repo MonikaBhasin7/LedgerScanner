@@ -55,7 +55,7 @@ data class ScanResultSyncRequest(
     val scannedAt: Long,
     val studentAnswersJson: String,
     val multipleMarksJson: String?,
-    val score: Int,
+    val score: Float,
     val totalQuestions: Int,
     val correctCount: Int,
     val wrongCount: Int,

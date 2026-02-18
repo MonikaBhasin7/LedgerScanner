@@ -88,6 +88,7 @@ import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Orange600
 import com.example.ledgerscanner.base.ui.theme.White
 import com.example.ledgerscanner.base.utils.ui.genericClick
+import com.example.ledgerscanner.base.extensions.toCleanString
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamAction
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamActionPopupConfig
@@ -323,7 +324,8 @@ fun ExamCardRow(
 
                     Column {
                         Box(modifier = Modifier.padding(bottom = 8.dp)) {
-                            LastActivityChip(createdAt = item.createdAt)
+                            val lastActivityAt = examStatistics?.lastScannedAt ?: item.createdAt
+                            LastActivityChip(lastActivityAt = lastActivityAt)
                         }
                         Box(modifier = Modifier.padding(bottom = 8.dp)) {
                             ExamMetadata(
@@ -356,9 +358,9 @@ fun ExamCardRow(
                     ) {
                         Box(modifier = Modifier.padding(bottom = 10.dp)) {
                             ExamStats(
-                                avgScore = examStatistics?.avgScore?.toInt(),
-                                topScore = examStatistics?.topScore?.toInt(),
-                                lowestScore = examStatistics?.lowestScore?.toInt(),
+                                avgScore = examStatistics?.avgScore,
+                                topScore = examStatistics?.topScore,
+                                lowestScore = examStatistics?.lowestScore,
                                 isArchived = isArchived
                             )
                         }
@@ -787,8 +789,8 @@ private fun ExamMetadata(
 }
 
 @Composable
-private fun LastActivityChip(createdAt: Long) {
-    val ageMillis = (System.currentTimeMillis() - createdAt).coerceAtLeast(0L)
+private fun LastActivityChip(lastActivityAt: Long) {
+    val ageMillis = (System.currentTimeMillis() - lastActivityAt).coerceAtLeast(0L)
     val isStale = ageMillis > 7L * 24L * 60L * 60L * 1000L
     val (bg, textColor) = if (isStale) {
         Color(0xFFFFF3E0) to Color(0xFFB26A00)
@@ -810,7 +812,7 @@ private fun LastActivityChip(createdAt: Long) {
             color = textColor
         )
         Text(
-            text = relativeTime(createdAt),
+            text = relativeTime(lastActivityAt),
             style = AppTypography.text10SemiBold,
             color = textColor
         )
@@ -872,14 +874,14 @@ private fun DraftSetupProgressStrip(item: ExamEntity) {
 
 @Composable
 private fun ExamStats(
-    avgScore: Int?,
-    topScore: Int?,
-    lowestScore: Int?,
+    avgScore: Float?,
+    topScore: Float?,
+    lowestScore: Float?,
     isArchived: Boolean = false
 ) {
-    val validAvg = avgScore?.coerceIn(0, 100) ?: 0
-    val validTop = topScore?.coerceIn(0, 100) ?: 0
-    val validLow = lowestScore?.coerceIn(0, 100) ?: 0
+    val validAvg = avgScore?.takeIf { !it.isNaN() && !it.isInfinite() }?.toCleanString()
+    val validTop = topScore?.takeIf { !it.isNaN() && !it.isInfinite() }?.toCleanString()
+    val validLow = lowestScore?.takeIf { !it.isNaN() && !it.isInfinite() }?.toCleanString()
 
     val statValueColor = if (isArchived) Grey600 else Blue500
     val statBgColor = if (isArchived) Grey200 else Color(0xFFE7F0FA)
@@ -893,7 +895,7 @@ private fun ExamStats(
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         StatTile(
-            value = "$validAvg%",
+            value = validAvg?.let { "$it%" } ?: "--",
             label = "AVG",
             valueColor = statValueColor,
             backgroundColor = statBgColor,
@@ -901,7 +903,7 @@ private fun ExamStats(
             modifier = Modifier.weight(1f)
         )
         StatTile(
-            value = "$validTop%",
+            value = validTop?.let { "$it%" } ?: "--",
             label = "TOP",
             valueColor = topValueColor,
             backgroundColor = topBgColor,
@@ -909,7 +911,7 @@ private fun ExamStats(
             modifier = Modifier.weight(1f)
         )
         StatTile(
-            value = "$validLow%",
+            value = validLow?.let { "$it%" } ?: "--",
             label = "LOW",
             valueColor = lowValueColor,
             backgroundColor = lowBgColor,
