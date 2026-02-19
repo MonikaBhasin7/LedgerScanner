@@ -38,6 +38,7 @@ import com.example.ledgerscanner.feature.scanner.results.ui.components.result.Re
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.SaveStatusDialog
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ScoreSummaryCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.StudentDetailsSection
+import com.example.ledgerscanner.feature.scanner.results.utils.updateAnswerAndRecalculate
 import com.example.ledgerscanner.feature.scanner.results.viewmodel.ScanResultViewModel
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.BarcodeScanActivity
 
@@ -53,6 +54,7 @@ fun ScanResultScreen(
     val handleBack = rememberBackHandler(navController)
 
     var questionDetailsExpanded by remember { mutableStateOf(false) }
+    var editableScanResult by remember(scanResultEntity) { mutableStateOf(scanResultEntity) }
     val studentDetailsRef = remember {
         mutableStateOf(StudentDetailsForScanResult(null, null, null))
     }
@@ -79,7 +81,7 @@ fun ScanResultScreen(
     val saveAndContinue: () -> Unit = {
         scanResultViewModel.saveSheet(
             studentDetailsRef.value,
-            scanResultEntity,
+            editableScanResult,
             examEntity.id
         )
     }
@@ -131,16 +133,16 @@ fun ScanResultScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             OmrSheetPreview(
-                scanResultEntity.clickedRawImagePath,
-                scanResultEntity.scannedImagePath,
-                scanResultEntity.debugImagesPath
+                editableScanResult.clickedRawImagePath,
+                editableScanResult.scannedImagePath,
+                editableScanResult.debugImagesPath
             )
 
             Spacer(Modifier.height(16.dp))
 
             StudentDetailsSection(
                 barcodeId = barcodeValueState.value,
-                enrollmentNumber = scanResultEntity.enrollmentNumber,
+                enrollmentNumber = editableScanResult.enrollmentNumber,
                 studentDetailsRef = studentDetailsRef,
                 barcodeLocked = barcodeLockedState.value,
                 onBarcodeChange = { value ->
@@ -159,21 +161,28 @@ fun ScanResultScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            ScoreSummaryCard(scanResultEntity, examEntity)
+            ScoreSummaryCard(editableScanResult, examEntity)
 
-            Spacer(Modifier.height(16.dp))
-
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             ReviewRequiredCard(
-                scanResultEntity,
-                onReviewClick = {
+                scanResultEntity = editableScanResult,
+                examEntity = examEntity,
+                originalScanResultEntity = scanResultEntity,
+                onAnswerChange = { questionIndex, selectedOption ->
+                    editableScanResult = editableScanResult.updateAnswerAndRecalculate(
+                        examEntity = examEntity,
+                        questionIndex = questionIndex,
+                        selectedOption = selectedOption
+                    )
                 },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 8.dp)
             )
 
+            Spacer(Modifier.height(8.dp))
+            
             QuestionDetailsSection(
-                scanResultEntity = scanResultEntity,
+                scanResultEntity = editableScanResult,
                 examEntity = examEntity,
                 expanded = questionDetailsExpanded,
                 onToggle = { questionDetailsExpanded = !questionDetailsExpanded }
