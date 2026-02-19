@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.ledgerscanner.database.AppDatabase
 import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.dao.ScanResultDao
+import com.example.ledgerscanner.database.dao.TemplateDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,7 +28,8 @@ object DatabaseModule {
             DB_NAME
         ).addMigrations(
             AppDatabase.MIGRATION_1_2,
-            AppDatabase.MIGRATION_2_3
+            AppDatabase.MIGRATION_2_3,
+            AppDatabase.MIGRATION_4_5
         )
             .build()
     }
@@ -37,4 +39,7 @@ object DatabaseModule {
 
     @Provides
     fun provideScanResultDao(db: AppDatabase): ScanResultDao = db.scanResultDao()
+
+    @Provides
+    fun provideTemplateDao(db: AppDatabase): TemplateDao = db.templateDao()
 }

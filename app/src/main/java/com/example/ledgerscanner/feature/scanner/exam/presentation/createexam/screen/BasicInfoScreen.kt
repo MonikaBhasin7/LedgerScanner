@@ -1,5 +1,10 @@
 package com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.screen
 
+import android.app.Activity
+import android.content.Intent
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -30,11 +35,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.ledgerscanner.base.network.OperationState
-import com.example.ledgerscanner.base.ui.components.GenericDialog
 import com.example.ledgerscanner.base.ui.components.GenericTextField
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.BottomBarConfig
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.CreateExamConfig
+import com.example.ledgerscanner.feature.scanner.exam.presentation.templateselection.TemplateSelectionActivity
 import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.viewmodel.CreateExamViewModel
 import com.example.ledgerscanner.feature.scanner.scan.model.Template
 
@@ -48,12 +53,10 @@ fun BasicInfoScreen(
     viewMode: CreateExamConfig.Mode
 ) {
     val context = LocalContext.current
-
     var examName by rememberSaveable { mutableStateOf("") }
     var examDescription by rememberSaveable { mutableStateOf("") }
     var numberOfQuestionsText by rememberSaveable { mutableStateOf("") }
 
-    var showSelectTemplate by rememberSaveable { mutableStateOf(false) }
     var selectedTemplate by rememberSaveable { mutableStateOf<Template?>(null) }
     val selectedTemplateName = selectedTemplate?.name ?: ""
     var autofill by remember { mutableStateOf(false) }
@@ -63,6 +66,7 @@ fun BasicInfoScreen(
     var initialTemplate by remember { mutableStateOf<Template?>(null) }
 
     LaunchedEffect(Unit) {
+        createExamViewModel.syncTemplatesInBackground()
         examEntity?.let {
             autofill = true
             examName = it.examName
@@ -77,6 +81,25 @@ fun BasicInfoScreen(
     LaunchedEffect(selectedTemplate) {
         if (selectedTemplate != null && selectedTemplate != initialTemplate) {
             numberOfQuestionsText = ""
+        }
+    }
+
+    val templatePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val data = result.data ?: return@rememberLauncherForActivityResult
+        val template = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            data.getParcelableExtra(
+                TemplateSelectionActivity.EXTRA_SELECTED_TEMPLATE,
+                Template::class.java
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            data.getParcelableExtra(TemplateSelectionActivity.EXTRA_SELECTED_TEMPLATE)
+        }
+        if (template != null) {
+            selectedTemplate = template
         }
     }
 
@@ -169,7 +192,11 @@ fun BasicInfoScreen(
                     enabled = false,
                     onValueChange = {},
                     onClick = if (hasScannedSheets) null else {
-                        { showSelectTemplate = true }
+                        {
+                            templatePickerLauncher.launch(
+                                Intent(context, TemplateSelectionActivity::class.java)
+                            )
+                        }
                     }
                 )
             }
@@ -204,15 +231,6 @@ fun BasicInfoScreen(
                     readOnly = selectedTemplate == null || hasScannedSheets,
                     modifier = Modifier.fillMaxWidth()
                 )
-            }
-        }
-
-        if (showSelectTemplate) {
-            GenericDialog {
-                SelectTemplateScreen { template ->
-                    selectedTemplate = template
-                    showSelectTemplate = false
-                }
             }
         }
     }

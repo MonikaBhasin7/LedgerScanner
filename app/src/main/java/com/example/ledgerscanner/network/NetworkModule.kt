@@ -1,6 +1,4 @@
 package com.example.ledgerscanner.network
-import com.example.ledgerscanner.network.CurlLoggingInterceptor
-
 import com.example.ledgerscanner.BuildConfig
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -65,4 +63,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideSyncApi(retrofit: Retrofit): SyncApi = retrofit.create(SyncApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTemplateApi(retrofit: Retrofit): TemplateApi = retrofit.create(TemplateApi::class.java)
 }

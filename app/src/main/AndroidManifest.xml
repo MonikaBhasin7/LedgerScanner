@@ -27,6 +27,9 @@
             android:name=".feature.scanner.exam.presentation.createexam.activity.CreateExamActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
+            android:name=".feature.scanner.exam.presentation.templateselection.TemplateSelectionActivity"
+            android:theme="@style/Theme.LedgerScanner" />
+        <activity
             android:name=".feature.scanner.scan.ui.activity.BarcodeScanActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity

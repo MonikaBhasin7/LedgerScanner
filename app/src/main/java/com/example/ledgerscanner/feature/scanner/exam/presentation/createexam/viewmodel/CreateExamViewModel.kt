@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.OperationState
 import com.example.ledgerscanner.database.entity.ExamEntity
+import com.example.ledgerscanner.feature.scanner.exam.data.repository.TemplateCatalogRepository
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatus
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStep
 import com.example.ledgerscanner.feature.scanner.exam.data.repository.ExamRepository
@@ -21,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CreateExamViewModel @Inject constructor(
     val repository: ExamRepository,
-    private val scanResultRepository: ScanResultRepository
+    private val scanResultRepository: ScanResultRepository,
+    private val templateCatalogRepository: TemplateCatalogRepository
 ) : ViewModel() {
 
     private val _examEntity = MutableStateFlow<ExamEntity?>(null)
@@ -29,6 +31,7 @@ class CreateExamViewModel @Inject constructor(
     private val _hasScannedSheets = MutableStateFlow(false)
     val hasScannedSheets: StateFlow<Boolean> = _hasScannedSheets.asStateFlow()
     private var hasScannedSheetsHint: Boolean = false
+    private var templateSyncJob: Job? = null
     private val _perStepState: MutableStateFlow<Pair<ExamStep, OperationState>> =
         MutableStateFlow(Pair(ExamStep.BASIC_INFO, OperationState.Idle))
     val perStepState: StateFlow<Pair<ExamStep, OperationState>> = _perStepState.asStateFlow()
@@ -58,6 +61,13 @@ class CreateExamViewModel @Inject constructor(
     fun setHasScannedSheetsHint(hasScannedSheets: Boolean) {
         hasScannedSheetsHint = hasScannedSheets
         _hasScannedSheets.value = _hasScannedSheets.value || hasScannedSheetsHint
+    }
+
+    fun syncTemplatesInBackground() {
+        if (templateSyncJob?.isActive == true) return
+        templateSyncJob = viewModelScope.launch {
+            templateCatalogRepository.syncTemplatesFromServer()
+        }
     }
 
     private fun refreshScannedSheetsState(examId: Int) {

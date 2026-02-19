@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ledgerscanner.base.network.OperationResult
 import com.example.ledgerscanner.base.network.UiState
+import com.example.ledgerscanner.feature.scanner.exam.data.repository.TemplateCatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val templateCatalogRepository: TemplateCatalogRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<LoginUiState>>(UiState.Success(LoginUiState()))
@@ -89,6 +91,9 @@ class AuthViewModel @Inject constructor(
                 is OperationResult.Success -> {
                     _uiState.value = UiState.Success(data.copy(errorMessage = null))
                     _loginSuccess.value = true
+                    viewModelScope.launch {
+                        templateCatalogRepository.syncTemplatesFromServer()
+                    }
                 }
                 is OperationResult.Error -> {
                     val message = result.message.ifBlank { "Invalid OTP. Please try again." }

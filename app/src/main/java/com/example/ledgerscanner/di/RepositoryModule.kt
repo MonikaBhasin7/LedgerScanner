@@ -6,6 +6,7 @@ import com.example.ledgerscanner.auth.TokenStore
 import com.example.ledgerscanner.database.dao.ExamDao
 import com.example.ledgerscanner.database.dao.ScanResultDao
 import com.example.ledgerscanner.feature.scanner.exam.data.repository.ExamRepository
+import com.example.ledgerscanner.feature.scanner.exam.data.repository.TemplateCatalogRepository
 import com.example.ledgerscanner.feature.scanner.exam.data.repository.TemplateSelectionRepository
 import com.example.ledgerscanner.feature.scanner.results.repo.ScanResultRepository
 import com.example.ledgerscanner.network.AuthApi
@@ -51,9 +52,9 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideTemplateSelectionRepository(
-        @ApplicationContext context: Context
+        templateCatalogRepository: TemplateCatalogRepository
     ): TemplateSelectionRepository =
-        TemplateSelectionRepository(context)
+        TemplateSelectionRepository(templateCatalogRepository)
 
     @Provides
     @Singleton
