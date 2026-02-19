@@ -41,7 +41,10 @@ class TemplateSelectionActivity : ComponentActivity() {
                                 Intent().putExtra(EXTRA_SELECTED_TEMPLATE, template)
                             )
                             finish()
-                        }
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
                     )
                 }
             }

@@ -191,7 +191,7 @@ private fun TemplateCard(template: Template, onClick: () -> Unit) {
 
             Text(
                 text = template.name ?: "Untitled Template",
-                style = AppTypography.text14SemiBold,
+                style = AppTypography.text15Bold,
                 color = Grey700,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -204,28 +204,9 @@ private fun TemplateCard(template: Template, onClick: () -> Unit) {
             ) {
                 TemplateMetricPill(
                     label = "$safeQuestionCount Questions",
-                    modifier = Modifier.weight(1f)
                 )
                 TemplateMetricPill(
                     label = "$safeOptionCount Options",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Version ${template.version ?: "1.0"}",
-                    style = AppTypography.text12Regular,
-                    color = Grey500
-                )
-                Text(
-                    text = "Select",
-                    style = AppTypography.text12SemiBold,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -244,7 +225,7 @@ private fun TemplateMetricPill(
     ) {
         Text(
             text = label,
-            style = AppTypography.text11Medium,
+            style = AppTypography.text12Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
             maxLines = 1,
