@@ -1,14 +1,15 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.components.result
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,21 +17,22 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.ledgerscanner.base.ui.theme.AppTypography
+import com.example.ledgerscanner.base.ui.theme.Green500
 import com.example.ledgerscanner.base.ui.theme.Grey200
 import com.example.ledgerscanner.base.ui.theme.Grey500
 import com.example.ledgerscanner.base.ui.theme.Grey800
 import com.example.ledgerscanner.base.ui.theme.Grey900
-import com.example.ledgerscanner.base.ui.theme.Green500
 import com.example.ledgerscanner.base.ui.theme.Orange200
 import com.example.ledgerscanner.base.ui.theme.Orange50
 import com.example.ledgerscanner.base.ui.theme.Orange500
@@ -45,8 +47,6 @@ import com.example.ledgerscanner.database.entity.getAnswersForQuestionIndex
 import com.example.ledgerscanner.database.entity.getQuestionConfidence
 
 private const val LOW_CONFIDENCE_WARNING_THRESHOLD = 0.70
-private const val FORCE_REVIEW_WIDGET_FOR_TEST = true
-private val TEST_REVIEW_QUESTIONS = listOf(1, 4, 8) // Q2, Q5, Q9
 
 @Composable
 fun ReviewRequiredCard(
@@ -57,9 +57,7 @@ fun ReviewRequiredCard(
     modifier: Modifier = Modifier
 ) {
     val questionsToReview = scanResultEntity.getLowConfidenceQuestionIndices(
-        totalQuestions = examEntity.totalQuestions,
-        forceFallback = FORCE_REVIEW_WIDGET_FOR_TEST,
-        fallbackQuestions = TEST_REVIEW_QUESTIONS
+        totalQuestions = examEntity.totalQuestions
     )
     if (questionsToReview.isEmpty()) return
 
@@ -73,29 +71,47 @@ fun ReviewRequiredCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = Orange600,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = "Review Low Confidence Answers",
-                    style = AppTypography.text16Bold,
-                    color = Orange800
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Orange600,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Review Low Confidence Answers",
+                        style = AppTypography.text16Bold,
+                        color = Orange800
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = Orange200
+                ) {
+                    Text(
+                        text = "${questionsToReview.size}",
+                        style = AppTypography.text12Bold,
+                        color = Orange800,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             Text(
                 text = "${questionsToReview.size} question${if (questionsToReview.size > 1) "s" else ""} need manual review. Tap option to fix.",
                 style = AppTypography.text14Regular,
-                color = Grey800
+                color = Grey800,
+                modifier = Modifier.padding(bottom = 2.dp)
             )
 
             questionsToReview.forEach { questionIndex ->
@@ -132,76 +148,92 @@ private fun QuestionReviewItem(
     confidence: Double?,
     onAnswerSelected: (Int?) -> Unit
 ) {
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .background(White, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(vertical = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+//        border = BorderStroke(1.dp, Grey200),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Q${questionIndex + 1}",
-                style = AppTypography.text16Bold,
-                color = Grey900
-            )
-            confidence?.let {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "Confidence ${(it * 100).toInt()}%",
-                    style = AppTypography.text12Medium,
-                    color = if (it < LOW_CONFIDENCE_WARNING_THRESHOLD) Orange700 else Grey500
+                    text = "Q${questionIndex + 1}",
+                    style = AppTypography.text16Bold,
+                    color = Grey900
+                )
+                confidence?.let {
+                    Text(
+                        text = "Confidence ${(it * 100).toInt()}%",
+                        style = AppTypography.text12Medium,
+                        color = if (it < LOW_CONFIDENCE_WARNING_THRESHOLD) Orange700 else Grey500
+                    )
+                }
+            }
+
+            confidence?.let {
+                LinearProgressIndicator(
+                    progress = { it.coerceIn(0.0, 1.0).toFloat() },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (it < LOW_CONFIDENCE_WARNING_THRESHOLD) Orange500 else Green500,
+                    trackColor = Grey200
                 )
             }
-        }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            repeat(optionCount) { option ->
-                val isSelected = selectedAnswers.contains(option)
-                val isCorrectSelection = isSelected && correctAnswer == option
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(optionCount) { option ->
+                    val isSelected = selectedAnswers.contains(option)
+                    val isCorrectSelection = isSelected && correctAnswer == option
+                    OptionBubble(
+                        text = ('A' + option).toString(),
+                        selected = isSelected,
+                        containerColor = when {
+                            isCorrectSelection -> Green500
+                            isSelected -> Orange500
+                            else -> White
+                        },
+                        borderColor = when {
+                            originalDetectedAnswers.contains(option) -> Orange500
+                            isCorrectSelection -> Green500
+                            isSelected -> Orange500
+                            else -> Grey200
+                        },
+                        onClick = { onAnswerSelected(option) }
+                    )
+                }
                 OptionBubble(
-                    text = ('A' + option).toString(),
-                    selected = isSelected,
-                    containerColor = when {
-                        isCorrectSelection -> Green500
-                        isSelected -> Orange500
-                        else -> White
-                    },
-                    borderColor = when {
-                        originalDetectedAnswers.contains(option) -> Orange500
-                        isCorrectSelection -> Green500
-                        isSelected -> Orange500
-                        else -> Grey200
-                    },
-                    onClick = { onAnswerSelected(option) }
+                    text = "-",
+                    selected = selectedAnswers.isEmpty(),
+                    containerColor = if (selectedAnswers.isEmpty()) Orange500 else White,
+                    borderColor = if (originalDetectedAnswers.isEmpty()) Orange500 else Grey200,
+                    onClick = { onAnswerSelected(null) }
                 )
             }
-            OptionBubble(
-                text = "-",
-                selected = selectedAnswers.isEmpty(),
-                containerColor = if (selectedAnswers.isEmpty()) Orange500 else White,
-                borderColor = if (originalDetectedAnswers.isEmpty()) Orange500 else Grey200,
-                onClick = { onAnswerSelected(null) }
-            )
-        }
 
-        if (selectedAnswers.size > 1) {
-            Text(
-                text = "Multiple marks detected: ${selectedAnswers.joinToString(", ") { ('A' + it).toString() }}",
-                style = AppTypography.text14SemiBold,
-                color = Red500
-            )
-        }
+            if (selectedAnswers.size > 1) {
+                Text(
+                    text = "Multiple marks detected: ${selectedAnswers.joinToString(", ") { ('A' + it).toString() }}",
+                    style = AppTypography.text14SemiBold,
+                    color = Red500
+                )
+            }
 
-        if (correctAnswer != null && correctAnswer >= 0) {
-            Text(
-                text = "Correct Answer: ${('A' + correctAnswer)}",
-                style = AppTypography.text14Regular.copy(fontWeight = FontWeight.Medium),
-                color = Grey500
-            )
+            if (correctAnswer != null && correctAnswer >= 0) {
+                Text(
+                    text = "Correct Answer: ${('A' + correctAnswer)}",
+                    style = AppTypography.text13Medium,
+                    color = Grey500
+                )
+            }
         }
     }
 }
@@ -210,10 +242,10 @@ private fun QuestionReviewItem(
 private fun OptionBubble(
     text: String,
     selected: Boolean,
-    containerColor: androidx.compose.ui.graphics.Color,
-    borderColor: androidx.compose.ui.graphics.Color,
+    containerColor: Color,
+    borderColor: Color,
     onClick: () -> Unit,
-    size: Dp = 44.dp
+    size: Dp = 36.dp
 ) {
     Surface(
         modifier = Modifier
@@ -231,7 +263,7 @@ private fun OptionBubble(
         ) {
             Text(
                 text = text,
-                style = AppTypography.text16Bold,
+                style = AppTypography.text14Bold,
                 color = if (selected) White else Grey900
             )
         }
@@ -239,15 +271,10 @@ private fun OptionBubble(
 }
 
 private fun ScanResultEntity.getLowConfidenceQuestionIndices(
-    totalQuestions: Int,
-    forceFallback: Boolean,
-    fallbackQuestions: List<Int>
+    totalQuestions: Int
 ): List<Int> {
     val keys = lowConfidenceQuestions?.keys?.toList().orEmpty()
-    if (keys.isEmpty()) {
-        if (!forceFallback) return emptyList()
-        return fallbackQuestions.filter { it in 0 until totalQuestions }.distinct().sorted()
-    }
+    if (keys.isEmpty()) return emptyList()
     val zeroBased = keys.any { it == 0 }
 
     return keys.mapNotNull { raw ->
