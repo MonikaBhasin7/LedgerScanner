@@ -179,7 +179,8 @@ fun ScannedSheetsScreen(
                                                             ScanResultActivity.launchScanResultScreen(
                                                                 context,
                                                                 examEntity,
-                                                                sheet
+                                                                sheet,
+                                                                isViewMode = true
                                                             )
                                                         },
                                                         modifier = Modifier.padding(
@@ -205,6 +206,14 @@ fun ScannedSheetsScreen(
                                                         onLongClick = { sheetId ->
                                                             scanResultViewModel.enterSelectionMode()
                                                             scanResultViewModel.toggleSheetSelection(sheetId)
+                                                        },
+                                                        onViewDetails = { sheet ->
+                                                            ScanResultActivity.launchScanResultScreen(
+                                                                context,
+                                                                examEntity,
+                                                                sheet,
+                                                                isViewMode = true
+                                                            )
                                                         }
                                                     )
                                                 }

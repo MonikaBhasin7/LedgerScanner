@@ -28,6 +28,7 @@ fun StudentDetailsSection(
     enrollmentNumber: String? = null,
     studentDetailsRef: MutableState<StudentDetailsForScanResult>,
     barcodeLocked: Boolean,
+    isReadOnly: Boolean = false,
     onBarcodeChange: (String) -> Unit,
     onScanBarcode: () -> Unit
 ) {
@@ -74,7 +75,12 @@ fun StudentDetailsSection(
             GenericTextField(
                 value = studentName ?: "",
                 label = "Name",
-                onValueChange = { studentName = it },
+                onValueChange = { value ->
+                    if (!isReadOnly) {
+                        studentName = value
+                    }
+                },
+                readOnly = isReadOnly,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -83,14 +89,19 @@ fun StudentDetailsSection(
             GenericTextField(
                 value = rollNumber?.toString() ?: "",
                 label = "Roll number",
-                onValueChange = { rollNumber = it.toIntOrNull() },
+                onValueChange = { value ->
+                    if (!isReadOnly) {
+                        rollNumber = value.toIntOrNull()
+                    }
+                },
+                readOnly = isReadOnly,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(Modifier.height(12.dp))
 
-            if (barcodeId.isNullOrBlank()) {
+            if (barcodeId.isNullOrBlank() && !isReadOnly) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -100,19 +111,22 @@ fun StudentDetailsSection(
                         value = barcodeValue ?: "",
                         label = "Barcode Id",
                         onValueChange = { value ->
-                            if (!barcodeLocked) {
+                            if (!barcodeLocked && !isReadOnly) {
                                 onBarcodeChange(value)
                             }
                         },
-                        readOnly = barcodeLocked,
+                        readOnly = barcodeLocked || isReadOnly,
                         modifier = Modifier.weight(1f)
                     )
 
-                    IconButton(onClick = onScanBarcode) {
+                    IconButton(
+                        onClick = onScanBarcode,
+                        enabled = !isReadOnly
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.QrCodeScanner,
                             contentDescription = "Scan Barcode",
-                            tint = Blue500
+                            tint = if (isReadOnly) Grey900 else Blue500
                         )
                     }
                 }
@@ -121,11 +135,11 @@ fun StudentDetailsSection(
                     value = barcodeValue ?: "",
                     label = "Barcode Id",
                     onValueChange = { value ->
-                        if (!barcodeLocked) {
+                        if (!barcodeLocked && !isReadOnly) {
                             onBarcodeChange(value)
                         }
                     },
-                    readOnly = barcodeLocked,
+                    readOnly = barcodeLocked || isReadOnly,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

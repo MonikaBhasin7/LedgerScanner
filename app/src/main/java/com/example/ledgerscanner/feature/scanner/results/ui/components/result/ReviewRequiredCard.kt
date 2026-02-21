@@ -54,6 +54,7 @@ fun ReviewRequiredCard(
     examEntity: ExamEntity,
     originalScanResultEntity: ScanResultEntity = scanResultEntity,
     onAnswerChange: (questionIndex: Int, selectedOption: Int?) -> Unit,
+    isReadOnly: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val questionsToReview = scanResultEntity.getLowConfidenceQuestionIndices(
@@ -108,7 +109,11 @@ fun ReviewRequiredCard(
             }
 
             Text(
-                text = "${questionsToReview.size} question${if (questionsToReview.size > 1) "s" else ""} need manual review. Tap option to fix.",
+                text = if (isReadOnly) {
+                    "${questionsToReview.size} question${if (questionsToReview.size > 1) "s" else ""} flagged for manual review."
+                } else {
+                    "${questionsToReview.size} question${if (questionsToReview.size > 1) "s" else ""} need manual review. Tap option to fix."
+                },
                 style = AppTypography.text14Regular,
                 color = Grey800,
                 modifier = Modifier.padding(bottom = 2.dp)
@@ -129,8 +134,11 @@ fun ReviewRequiredCard(
                     originalDetectedAnswers = originalDetectedAnswers,
                     correctAnswer = correctAnswer,
                     confidence = confidence,
+                    isReadOnly = isReadOnly,
                     onAnswerSelected = { selected ->
-                        onAnswerChange(questionIndex, selected)
+                        if (!isReadOnly) {
+                            onAnswerChange(questionIndex, selected)
+                        }
                     }
                 )
             }
@@ -146,6 +154,7 @@ private fun QuestionReviewItem(
     originalDetectedAnswers: List<Int>,
     correctAnswer: Int?,
     confidence: Double?,
+    isReadOnly: Boolean,
     onAnswerSelected: (Int?) -> Unit
 ) {
     Card(
@@ -207,6 +216,7 @@ private fun QuestionReviewItem(
                             isSelected -> Orange500
                             else -> Grey200
                         },
+                        enabled = !isReadOnly,
                         onClick = { onAnswerSelected(option) }
                     )
                 }
@@ -215,6 +225,7 @@ private fun QuestionReviewItem(
                     selected = selectedAnswers.isEmpty(),
                     containerColor = if (selectedAnswers.isEmpty()) Orange500 else White,
                     borderColor = if (originalDetectedAnswers.isEmpty()) Orange500 else Grey200,
+                    enabled = !isReadOnly,
                     onClick = { onAnswerSelected(null) }
                 )
             }
@@ -244,6 +255,7 @@ private fun OptionBubble(
     selected: Boolean,
     containerColor: Color,
     borderColor: Color,
+    enabled: Boolean,
     onClick: () -> Unit,
     size: Dp = 36.dp
 ) {
@@ -251,7 +263,7 @@ private fun OptionBubble(
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         shape = CircleShape,
         color = containerColor,
         border = BorderStroke(2.dp, borderColor)

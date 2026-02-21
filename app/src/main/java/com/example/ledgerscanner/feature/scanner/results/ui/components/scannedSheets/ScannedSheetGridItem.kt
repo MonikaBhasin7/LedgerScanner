@@ -330,7 +330,8 @@ fun ScannedSheetGridRow(
     selectedSheets: Set<Int>,
     selectionMode: Boolean,
     onCardClick: (Int) -> Unit,
-    onLongClick: (Int) -> Unit
+    onLongClick: (Int) -> Unit,
+    onViewDetails: (ScanResultEntity) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -346,6 +347,7 @@ fun ScannedSheetGridRow(
                     selectionMode = selectionMode,
                     onCardClick = { onCardClick(sheet.id) },
                     onLongClick = { onLongClick(sheet.id) },
+                    onViewDetails = { onViewDetails(sheet) },
                     modifier = Modifier.weight(1f)
                 )
             }

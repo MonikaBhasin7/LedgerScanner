@@ -1,7 +1,6 @@
 package com.example.ledgerscanner.feature.scanner.results.ui.screen
 
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -35,7 +34,6 @@ import com.example.ledgerscanner.feature.scanner.results.ui.components.result.Ac
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.OmrSheetPreview
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.QuestionDetailsSection
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ReviewRequiredCard
-import com.example.ledgerscanner.feature.scanner.results.ui.components.result.SaveStatusDialog
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.ScoreSummaryCard
 import com.example.ledgerscanner.feature.scanner.results.ui.components.result.StudentDetailsSection
 import com.example.ledgerscanner.feature.scanner.results.utils.updateAnswerAndRecalculate
@@ -62,9 +60,8 @@ fun ScanResultScreen(
     val barcodeLockedState = remember { mutableStateOf(!scanResultEntity.barCode.isNullOrBlank()) }
     val hasBarcode = !barcodeValueState.value.isNullOrBlank()
 
-    val totalSheetCounts by scanResultViewModel.sheetsCountByExamId.collectAsState()
     val saveSheetResponse by scanResultViewModel.saveSheetState.collectAsState()
-    var onScanNextSelected by remember { mutableStateOf(false) }
+    val isSaving = saveSheetResponse is UiState.Loading
 
 
     val barcodeScanLauncher = rememberLauncherForActivityResult(
@@ -79,49 +76,55 @@ fun ScanResultScreen(
     }
 
     val saveAndContinue: () -> Unit = {
-        scanResultViewModel.saveSheet(
-            studentDetailsRef.value,
-            editableScanResult,
-            examEntity.id
-        )
+        if (!isSaving) {
+            scanResultViewModel.resetSaveSheetState()
+            scanResultViewModel.saveSheet(
+                studentDetailsRef.value,
+                editableScanResult,
+                examEntity.id
+            )
+        }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(Unit, isViewMode) {
         scanResultViewModel.resetSaveSheetState()
     }
 
-    LaunchedEffect(saveSheetResponse) {
-        if (saveSheetResponse is UiState.Error) {
-            Toast.makeText(
-                context,
-                (saveSheetResponse as UiState.Error<Long>).message,
-                Toast.LENGTH_SHORT
-            ).show()
+    LaunchedEffect(saveSheetResponse, isViewMode) {
+        if (isViewMode) return@LaunchedEffect
+
+        when (saveSheetResponse) {
+            is UiState.Success -> {
+                scanResultViewModel.resetSaveSheetState()
+                handleBack()
+            }
+            is UiState.Error -> Unit
+            else -> Unit
         }
     }
 
     Scaffold(
         topBar = {
             GenericToolbar(
-                title = "Scan Result",
+                title = if (isViewMode) "Result Details" else "Scan Result",
                 onBackClick = handleBack,
             )
         },
         bottomBar = {
-            ActionButtonsSection(
-                onSaveAndContinue = saveAndContinue,
-                onRetryScan = {
-                    scanResultViewModel.resetSaveSheetState()
-                    handleBack()
-                },
-                onScanNext = {
-                    onScanNextSelected = true
-                    saveAndContinue()
-                },
-                onViewAllSheets = { /* Navigate to scanned sheets */ },
-                sheetCount = totalSheetCounts,
-                isSaveEnabled = hasBarcode,
-            )
+            if (!isViewMode) {
+                ActionButtonsSection(
+                    onSaveAndContinue = {
+                        saveAndContinue()
+                    },
+                    onRetryScan = {
+                        scanResultViewModel.resetSaveSheetState()
+                        handleBack()
+                    },
+                    isSaveEnabled = hasBarcode,
+                    isActionInProgress = isSaving,
+                    saveState = saveSheetResponse,
+                )
+            }
         },
         containerColor = Grey100
     ) { paddingValues ->
@@ -145,6 +148,7 @@ fun ScanResultScreen(
                 enrollmentNumber = editableScanResult.enrollmentNumber,
                 studentDetailsRef = studentDetailsRef,
                 barcodeLocked = barcodeLockedState.value,
+                isReadOnly = isViewMode,
                 onBarcodeChange = { value ->
                     if (!barcodeLockedState.value) {
                         barcodeValueState.value = value
@@ -176,6 +180,7 @@ fun ScanResultScreen(
                         selectedOption = selectedOption
                     )
                 },
+                isReadOnly = isViewMode,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
@@ -190,16 +195,5 @@ fun ScanResultScreen(
 
             Spacer(Modifier.height(24.dp))
         }
-
-        SaveStatusDialog(
-            saveSheetResponse = saveSheetResponse,
-            onScanNextSelected = onScanNextSelected,
-            onDismiss = {
-                if (saveSheetResponse is UiState.Success) {
-                    scanResultViewModel.resetSaveSheetState()
-                    handleBack()
-                }
-            }
-        )
     }
 }
