@@ -3,6 +3,7 @@ package com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.vie
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ledgerscanner.base.errors.ErrorMessages
 import com.example.ledgerscanner.base.network.UiState
 import com.example.ledgerscanner.base.ui.components.ButtonType
 import com.example.ledgerscanner.database.entity.ExamEntity
@@ -25,6 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ExamListViewModel @Inject constructor(
     val repository: ExamRepository,
+    private val scanResultRepository: ScanResultRepository,
 ) : ViewModel() {
 
     private val _examList = MutableStateFlow<UiState<List<ExamEntity>>>(UiState.Loading())
@@ -38,6 +40,9 @@ class ExamListViewModel @Inject constructor(
 
     private val _updateExamStatusState = MutableStateFlow<UiState<Unit>>(UiState.Loading())
     val updateExamStatusState = _updateExamStatusState.asStateFlow()
+    private val _exportResultsState =
+        MutableStateFlow<UiState<ExportResultPayload>>(UiState.Idle())
+    val exportResultsState = _exportResultsState.asStateFlow()
 
     private val _allExams = MutableStateFlow<List<ExamEntity>>(emptyList())
     private var currentSearchQuery: String = ""
@@ -141,6 +146,30 @@ class ExamListViewModel @Inject constructor(
         _updateExamStatusState.value = UiState.Loading()
     }
 
+    fun exportResults(examEntity: ExamEntity) {
+        viewModelScope.launch {
+            _exportResultsState.value = UiState.Loading()
+            try {
+                val exportFile = scanResultRepository.exportResultsCsv(examEntity)
+                _exportResultsState.value = UiState.Success(
+                    ExportResultPayload(
+                        filePath = exportFile.absolutePath,
+                        examName = examEntity.examName
+                    )
+                )
+            } catch (_: CancellationException) {
+                // Ignore cancellation; user likely changed action quickly.
+            } catch (e: Exception) {
+                val message = e.message?.takeIf { it.isNotBlank() } ?: ErrorMessages.EXPORT_FAILED
+                _exportResultsState.value = UiState.Error(message)
+            }
+        }
+    }
+
+    fun resetExportResultsState() {
+        _exportResultsState.value = UiState.Idle()
+    }
+
     fun getExamActionForStatus(
         status: ExamStatus,
         hasScannedSheets: Boolean = false
@@ -212,3 +241,8 @@ class ExamListViewModel @Inject constructor(
         }
     }
 }
+
+data class ExportResultPayload(
+    val filePath: String,
+    val examName: String
+)

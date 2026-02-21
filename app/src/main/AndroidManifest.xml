@@ -61,6 +61,9 @@
             android:name=".feature.scanner.statistics.activity.ExamStatisticsActivity"
             android:theme="@style/Theme.LedgerScanner" />
         <activity
+            android:name=".feature.scanner.statistics.activity.ExportResultsActivity"
+            android:theme="@style/Theme.LedgerScanner" />
+        <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:exported="false"
             android:theme="@style/Theme.UCrop" />

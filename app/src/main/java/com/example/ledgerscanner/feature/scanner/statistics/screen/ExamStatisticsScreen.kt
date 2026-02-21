@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +73,7 @@ import com.example.ledgerscanner.base.utils.rememberBackHandler
 import com.example.ledgerscanner.database.entity.ExamEntity
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.ExamStatistics
 import com.example.ledgerscanner.feature.scanner.exam.domain.model.QuestionStat
+import com.example.ledgerscanner.feature.scanner.statistics.activity.ExportResultsActivity
 import com.example.ledgerscanner.feature.scanner.statistics.viewModel.ExamStatisticsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -88,6 +90,7 @@ fun ExamStatisticsScreen(
     examStatisticsViewModel: ExamStatisticsViewModel = hiltViewModel(),
     examEntity: ExamEntity,
 ) {
+    val context = LocalContext.current
     val statistics by examStatisticsViewModel.statistics.collectAsStateWithLifecycle()
     val isLoading by examStatisticsViewModel.isLoading.collectAsStateWithLifecycle()
     val handleBack = rememberBackHandler(navController)
@@ -111,7 +114,11 @@ fun ExamStatisticsScreen(
                     ToolbarAction.Icon(
                         icon = Icons.Default.Download,
                         contentDescription = "Download",
-                        onClick = { /* Download */ }
+                        onClick = {
+                            context.startActivity(
+                                ExportResultsActivity.launch(context, examEntity)
+                            )
+                        }
                     )
                 )
             )
@@ -260,7 +267,11 @@ fun ExamStatisticsScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { /* Export report */ },
+                            onClick = {
+                                context.startActivity(
+                                    ExportResultsActivity.launch(context, examEntity)
+                                )
+                            },
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))

@@ -95,6 +95,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.example.ledgerscanner.auth.AuthState
 import com.example.ledgerscanner.auth.LogoutViewModel
 import com.example.ledgerscanner.auth.TokenStore
@@ -137,6 +138,7 @@ import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.comp
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.FilterChips
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.component.SearchBar
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.dialog.TemplatePickerDialog
+import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.viewmodel.ExportResultPayload
 import com.example.ledgerscanner.feature.scanner.exam.presentation.examlist.viewmodel.ExamListViewModel
 import com.example.ledgerscanner.feature.scanner.exam.presentation.createexam.activity.CreateExamActivity
 import com.example.ledgerscanner.feature.scanner.results.ui.activity.ScanResultActivity
@@ -145,6 +147,7 @@ import com.example.ledgerscanner.feature.scanner.scan.model.Template
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.CreateTemplateActivity
 import com.example.ledgerscanner.feature.scanner.scan.ui.activity.ScanBaseActivity
 import com.example.ledgerscanner.feature.scanner.statistics.activity.ExamStatisticsActivity
+import com.example.ledgerscanner.feature.scanner.statistics.activity.ExportResultsActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -152,6 +155,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -235,6 +239,7 @@ class ExamListingActivity : ComponentActivity() {
         val deleteState by viewModel.deleteExamState.collectAsState()
         val duplicateState by viewModel.duplicateExamState.collectAsState()
         val updateExamStatusState by viewModel.updateExamStatusState.collectAsState()
+        val exportResultsState by viewModel.exportResultsState.collectAsState()
         val examStatistics by scanResultViewModel.examStatsCache.collectAsState()
         var pendingCompletedExamId by remember { mutableStateOf<Int?>(null) }
         var celebratingExamId by remember { mutableStateOf<Int?>(null) }
@@ -329,6 +334,26 @@ class ExamListingActivity : ComponentActivity() {
                 }
 
                 else -> {}
+            }
+        }
+
+        LaunchedEffect(exportResultsState) {
+            when (val state = exportResultsState) {
+                is UiState.Loading -> {
+                    Toast.makeText(context, "Preparing export file...", Toast.LENGTH_SHORT).show()
+                }
+
+                is UiState.Success -> {
+                    shareExportedResults(state.data)
+                    viewModel.resetExportResultsState()
+                }
+
+                is UiState.Error -> {
+                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    viewModel.resetExportResultsState()
+                }
+
+                else -> Unit
             }
         }
 
@@ -835,8 +860,7 @@ class ExamListingActivity : ComponentActivity() {
             }
 
             ExamAction.ExportResults -> {
-                // TODO: Export results
-                Toast.makeText(context, "Export Results - Coming soon", Toast.LENGTH_SHORT).show()
+                startActivity(ExportResultsActivity.launch(context, examEntity))
             }
 
             ExamAction.Archive -> {
@@ -896,5 +920,41 @@ class ExamListingActivity : ComponentActivity() {
     private fun formatTimestamp(timestamp: Long): String {
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         return sdf.format(Date(timestamp))
+    }
+
+    private fun shareExportedResults(payload: ExportResultPayload?) {
+        if (payload == null) {
+            Toast.makeText(this, "Export file unavailable", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val exportFile = File(payload.filePath)
+        if (!exportFile.exists()) {
+            Toast.makeText(this, "Export file not found", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val fileUri = FileProvider.getUriForFile(
+            this,
+            "${packageName}.provider",
+            exportFile
+        )
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(Intent.EXTRA_STREAM, fileUri)
+            putExtra(Intent.EXTRA_SUBJECT, "Exam Results - ${payload.examName}")
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "Exported results for ${payload.examName}"
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        runCatching {
+            startActivity(Intent.createChooser(shareIntent, "Share results CSV"))
+        }.onFailure {
+            Toast.makeText(this, "No app available to share file", Toast.LENGTH_SHORT).show()
+        }
     }
 }
