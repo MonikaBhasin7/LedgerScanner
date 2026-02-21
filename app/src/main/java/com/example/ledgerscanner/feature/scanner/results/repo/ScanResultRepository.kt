@@ -416,7 +416,8 @@ class ScanResultRepository @Inject constructor(
 
     suspend fun exportResultsPdfIndividualZip(
         examEntity: ExamEntity,
-        config: ExportCsvConfig = ExportCsvConfig()
+        config: ExportCsvConfig = ExportCsvConfig(),
+        onProgress: ((current: Int, total: Int) -> Unit)? = null
     ): File = withContext(Dispatchers.IO) {
         val results = scanResultDao.getAllByExamIdOnce(examEntity.id)
         if (results.isEmpty()) {
@@ -430,7 +431,9 @@ class ScanResultRepository @Inject constructor(
         val tempDir = File(exportsDir, "tmp_pdf_$timestamp").apply { mkdirs() }
         val zipFile = File(exportsDir, "${sanitizeFileName(baseName)}_${timestamp}_individual.zip")
 
-        sortedResults.forEach { result ->
+        val total = sortedResults.size.coerceAtLeast(1)
+        sortedResults.forEachIndexed { index, result ->
+            onProgress?.invoke(index + 1, total)
             val studentRef = result.enrollmentNumber
                 ?.takeIf { it.isNotBlank() }
                 ?.let { "_$it" }

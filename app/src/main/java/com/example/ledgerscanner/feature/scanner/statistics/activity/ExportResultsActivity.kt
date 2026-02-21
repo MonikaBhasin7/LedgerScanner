@@ -50,6 +50,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -160,6 +161,7 @@ private fun ExportResultsScreen(
     val sheetCount by viewModel.sheetCount.collectAsStateWithLifecycle()
     val exportState by viewModel.exportState.collectAsStateWithLifecycle()
     val previewState by viewModel.previewState.collectAsStateWithLifecycle()
+    val exportProgress by viewModel.exportProgress.collectAsStateWithLifecycle()
 
     var selectedFormat by remember { mutableStateOf(ExportFormat.CSV) }
     var exportOptions by remember { mutableStateOf(ExportOptionState()) }
@@ -273,6 +275,7 @@ private fun ExportResultsScreen(
         bottomBar = {
             ExportBottomBar(
                 isLoading = exportState is UiState.Loading,
+                onCancel = { viewModel.cancelExport() },
                 onPreview = {
                     if (!hasAtLeastOneExportOption(exportOptions)) {
                         Toast.makeText(
@@ -340,7 +343,8 @@ private fun ExportResultsScreen(
                     selectedSort = selectedSort,
                     onSortClick = { showSortMenu = true },
                     fileName = fileName,
-                    onFileNameChange = { fileName = it }
+                    onFileNameChange = { fileName = it },
+                    selectedFormat = selectedFormat
                 )
                 DropdownMenu(
                     expanded = showSortMenu,
@@ -367,6 +371,12 @@ private fun ExportResultsScreen(
 
             item {
                 InfoBanner(sheetCount = sheetCount)
+            }
+
+            if (exportState is UiState.Loading) {
+                item {
+                    ExportProgressCard(progressText = exportProgress.orEmpty())
+                }
             }
 
             item {
@@ -549,7 +559,8 @@ private fun SortAndNamingCard(
     selectedSort: ScanResultRepository.ExportSortBy,
     onSortClick: () -> Unit,
     fileName: String,
-    onFileNameChange: (String) -> Unit
+    onFileNameChange: (String) -> Unit,
+    selectedFormat: ExportFormat
 ) {
     ExportCard(title = "Sort & File Name", subtitle = null) {
         Surface(
@@ -588,10 +599,18 @@ private fun SortAndNamingCard(
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "${fileName.ifBlank { "results_export" }}.csv",
+            text = "${sanitizeForDisplayFileName(fileName.ifBlank { "results_export" })}.${selectedFormat.fileExtension()}",
             style = AppTypography.text12Regular,
             color = Grey700
         )
+        if (sanitizeForDisplayFileName(fileName) != fileName.trim()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Invalid filename characters will be replaced automatically.",
+                style = AppTypography.text12Regular,
+                color = Grey500
+            )
+        }
     }
 }
 
@@ -659,8 +678,26 @@ private fun InfoBanner(sheetCount: Int) {
 }
 
 @Composable
+private fun ExportProgressCard(progressText: String) {
+    ExportCard(title = "Export in progress", subtitle = null) {
+        LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth(),
+            color = Blue500,
+            trackColor = Grey200
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = progressText.ifBlank { "Preparing export..." },
+            style = AppTypography.text12Regular,
+            color = Grey700
+        )
+    }
+}
+
+@Composable
 private fun ExportBottomBar(
     isLoading: Boolean,
+    onCancel: () -> Unit,
     onPreview: () -> Unit,
     onExport: () -> Unit
 ) {
@@ -699,6 +736,15 @@ private fun ExportBottomBar(
                 style = AppTypography.text14SemiBold,
                 color = White
             )
+        }
+
+        if (isLoading) {
+            TextButton(
+                onClick = onCancel,
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text(text = "Cancel", style = AppTypography.text14SemiBold, color = Grey700)
+            }
         }
     }
 }
@@ -880,6 +926,14 @@ private fun ExportFormat.toPreviewLabel(): String {
         ExportFormat.CSV -> "CSV"
         ExportFormat.PDF_COMBINED -> "PDF (Combined)"
         ExportFormat.PDF_INDIVIDUAL -> "PDF (Individual ZIP)"
+    }
+}
+
+private fun ExportFormat.fileExtension(): String {
+    return when (this) {
+        ExportFormat.CSV -> "csv"
+        ExportFormat.PDF_COMBINED -> "pdf"
+        ExportFormat.PDF_INDIVIDUAL -> "zip"
     }
 }
 

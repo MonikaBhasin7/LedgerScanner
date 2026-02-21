@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,9 @@ class ExportResultsViewModel @Inject constructor(
     val exportState: StateFlow<UiState<ExportedFilePayload>> = _exportState.asStateFlow()
     private val _previewState = MutableStateFlow<UiState<ScanResultRepository.ExportPreviewPayload>>(UiState.Idle())
     val previewState: StateFlow<UiState<ScanResultRepository.ExportPreviewPayload>> = _previewState.asStateFlow()
+    private val _exportProgress = MutableStateFlow<String?>(null)
+    val exportProgress: StateFlow<String?> = _exportProgress.asStateFlow()
+    private var exportJob: Job? = null
 
     fun loadSheetCount(examId: Int) {
         viewModelScope.launch {
@@ -44,8 +48,10 @@ class ExportResultsViewModel @Inject constructor(
     }
 
     fun exportCsv(examEntity: ExamEntity, config: ScanResultRepository.ExportCsvConfig) {
-        viewModelScope.launch {
+        exportJob?.cancel()
+        exportJob = viewModelScope.launch {
             _exportState.value = UiState.Loading()
+            _exportProgress.value = "Preparing CSV..."
             try {
                 val exportedFile = scanResultRepository.exportResultsCsv(examEntity, config)
                 _exportState.value = UiState.Success(
@@ -56,19 +62,24 @@ class ExportResultsViewModel @Inject constructor(
                         suggestedExtension = "csv"
                     )
                 )
+                _exportProgress.value = null
             } catch (_: CancellationException) {
-                // ignore cancellation
+                _exportState.value = UiState.Idle()
+                _exportProgress.value = null
             } catch (e: Exception) {
                 _exportState.value = UiState.Error(
                     e.message?.takeIf { it.isNotBlank() } ?: ErrorMessages.EXPORT_FAILED
                 )
+                _exportProgress.value = null
             }
         }
     }
 
     fun exportPdfCombined(examEntity: ExamEntity, config: ScanResultRepository.ExportCsvConfig) {
-        viewModelScope.launch {
+        exportJob?.cancel()
+        exportJob = viewModelScope.launch {
             _exportState.value = UiState.Loading()
+            _exportProgress.value = "Generating PDF report..."
             try {
                 val exportedFile = scanResultRepository.exportResultsPdfCombined(examEntity, config)
                 _exportState.value = UiState.Success(
@@ -79,21 +90,31 @@ class ExportResultsViewModel @Inject constructor(
                         suggestedExtension = "pdf"
                     )
                 )
+                _exportProgress.value = null
             } catch (_: CancellationException) {
-                // ignore cancellation
+                _exportState.value = UiState.Idle()
+                _exportProgress.value = null
             } catch (e: Exception) {
                 _exportState.value = UiState.Error(
                     e.message?.takeIf { it.isNotBlank() } ?: ErrorMessages.EXPORT_FAILED
                 )
+                _exportProgress.value = null
             }
         }
     }
 
     fun exportPdfIndividual(examEntity: ExamEntity, config: ScanResultRepository.ExportCsvConfig) {
-        viewModelScope.launch {
+        exportJob?.cancel()
+        exportJob = viewModelScope.launch {
             _exportState.value = UiState.Loading()
+            _exportProgress.value = "Preparing individual reports..."
             try {
-                val exportedFile = scanResultRepository.exportResultsPdfIndividualZip(examEntity, config)
+                val exportedFile = scanResultRepository.exportResultsPdfIndividualZip(
+                    examEntity,
+                    config
+                ) { current, total ->
+                    _exportProgress.value = "Generating reports $current/$total..."
+                }
                 _exportState.value = UiState.Success(
                     ExportedFilePayload(
                         path = exportedFile.absolutePath,
@@ -102,12 +123,15 @@ class ExportResultsViewModel @Inject constructor(
                         suggestedExtension = "zip"
                     )
                 )
+                _exportProgress.value = null
             } catch (_: CancellationException) {
-                // ignore cancellation
+                _exportState.value = UiState.Idle()
+                _exportProgress.value = null
             } catch (e: Exception) {
                 _exportState.value = UiState.Error(
                     e.message?.takeIf { it.isNotBlank() } ?: ErrorMessages.EXPORT_FAILED
                 )
+                _exportProgress.value = null
             }
         }
     }
@@ -139,6 +163,14 @@ class ExportResultsViewModel @Inject constructor(
 
     fun resetExportState() {
         _exportState.value = UiState.Idle()
+        _exportProgress.value = null
+    }
+
+    fun cancelExport() {
+        exportJob?.cancel()
+        exportJob = null
+        _exportState.value = UiState.Idle()
+        _exportProgress.value = null
     }
 
     fun resetPreviewState() {
